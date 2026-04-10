@@ -3,71 +3,52 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import {
-  BarChart2, TrendingUp, DollarSign, RefreshCw,
-  BookOpen, Settings, ChevronDown, ChevronRight,
-  LogOut, Building2
-} from 'lucide-react'
+
+const S = {
+  sidebar: { width: 240, minHeight: '100vh', background: '#12121a', borderRight: '1px solid #1e1e2e', display: 'flex', flexDirection: 'column', flexShrink: 0 },
+  logo: { padding: '20px 16px', borderBottom: '1px solid #1e1e2e', display: 'flex', alignItems: 'center', gap: 10 },
+  logoIcon: { width: 32, height: 32, background: '#00e676', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#000', fontSize: 14 },
+  logoText: { fontWeight: 700, color: '#fff', fontSize: 15 },
+  select: { margin: '12px', padding: '8px 10px', background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 8, color: '#ccc', fontSize: 13, width: 'calc(100% - 24px)' },
+  nav: { flex: 1, padding: '8px 0', overflowY: 'auto' },
+  navItem: (active) => ({ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', color: active ? '#00e676' : '#9ca3af', background: active ? 'rgba(0,230,118,0.08)' : 'transparent', borderLeft: active ? '2px solid #00e676' : '2px solid transparent', fontSize: 14, fontWeight: active ? 600 : 400, textDecoration: 'none', transition: 'all 0.15s' }),
+  subItem: (active) => ({ display: 'flex', alignItems: 'center', padding: '7px 16px 7px 42px', cursor: 'pointer', color: active ? '#00e676' : '#6b7280', fontSize: 13, textDecoration: 'none', background: active ? 'rgba(0,230,118,0.05)' : 'transparent' }),
+  chevron: (open) => ({ marginLeft: 'auto', transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', fontSize: 12 }),
+  footer: { padding: '12px 16px', borderTop: '1px solid #1e1e2e' },
+  logoutBtn: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: '1px solid #2a2a3e', borderRadius: 8, color: '#9ca3af', fontSize: 13, cursor: 'pointer', width: '100%' },
+}
 
 const navItems = [
-  {
-    label: 'DRE',
-    icon: BarChart2,
-    href: '/dashboard/dre',
-    children: [
-      { label: 'DRE Geral', href: '/dashboard/dre' },
-      { label: 'DRE Detalhado', href: '/dashboard/dre/detalhado' },
-      { label: 'Analise', href: '/dashboard/dre/analise' },
-      { label: 'Comparativo', href: '/dashboard/dre/comparativo' },
-    ]
-  },
-  {
-    label: 'Orcamento',
-    icon: TrendingUp,
-    href: '/dashboard/orcamento',
-  },
-  {
-    label: 'Fluxo de Caixa',
-    icon: DollarSign,
-    href: '/dashboard/fluxo-caixa',
-    children: [
-      { label: 'Fluxo Geral', href: '/dashboard/fluxo-caixa' },
-      { label: 'Analise', href: '/dashboard/fluxo-caixa/analise' },
-      { label: 'Projecao', href: '/dashboard/fluxo-caixa/projecao' },
-      { label: 'Comparativo', href: '/dashboard/fluxo-caixa/comparativo' },
-    ]
-  },
-  {
-    label: 'Ciclo Financeiro',
-    icon: RefreshCw,
-    href: '/dashboard/ciclo-financeiro',
-  },
-  {
-    label: 'Plano de Contas',
-    icon: BookOpen,
-    href: '/dashboard/plano-contas',
-    children: [
-      { label: 'Plano', href: '/dashboard/plano-contas' },
-      { label: 'Auditoria', href: '/dashboard/plano-contas/auditoria' },
-    ]
-  },
-  {
-    label: 'Configuracoes',
-    icon: Settings,
-    href: '/dashboard/configuracoes',
-    children: [
-      { label: 'Perfil', href: '/dashboard/configuracoes/perfil' },
-      { label: 'Empresas', href: '/dashboard/configuracoes/empresas' },
-    ]
-  },
+  { label: 'DRE', href: '/dashboard/dre', icon: '📊', children: [
+    { label: 'DRE Geral', href: '/dashboard/dre' },
+    { label: 'DRE Detalhado', href: '/dashboard/dre/detalhado' },
+    { label: 'Analise', href: '/dashboard/dre/analise' },
+    { label: 'Comparativo', href: '/dashboard/dre/comparativo' },
+  ]},
+  { label: 'Orcamento', href: '/dashboard/orcamento', icon: '📈' },
+  { label: 'Fluxo de Caixa', href: '/dashboard/fluxo-caixa', icon: '💰', children: [
+    { label: 'Fluxo Geral', href: '/dashboard/fluxo-caixa' },
+    { label: 'Analise', href: '/dashboard/fluxo-caixa/analise' },
+    { label: 'Projecao', href: '/dashboard/fluxo-caixa/projecao' },
+    { label: 'Comparativo', href: '/dashboard/fluxo-caixa/comparativo' },
+  ]},
+  { label: 'Ciclo Financeiro', href: '/dashboard/ciclo-financeiro', icon: '🔄' },
+  { label: 'Plano de Contas', href: '/dashboard/plano-contas', icon: '📋', children: [
+    { label: 'Plano', href: '/dashboard/plano-contas' },
+    { label: 'Auditoria', href: '/dashboard/plano-contas/auditoria' },
+  ]},
+  { label: 'Configuracoes', href: '/dashboard/configuracoes', icon: '⚙️', children: [
+    { label: 'Perfil', href: '/dashboard/configuracoes/perfil' },
+    { label: 'Empresas', href: '/dashboard/configuracoes/empresas' },
+  ]},
 ]
 
-export default function Sidebar({ empresa, empresas = [], onEmpresaChange }) {
+export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
   const pathname = usePathname()
   const router = useRouter()
-  const [expanded, setExpanded] = useState({ DRE: true })
+  const [openMenus, setOpenMenus] = useState({ '/dashboard/dre': true })
 
-  const toggle = (label) => setExpanded(prev => ({ ...prev, [label]: !prev[label] }))
+  const toggleMenu = (href) => setOpenMenus(prev => ({ ...prev, [href]: !prev[href] }))
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -75,75 +56,40 @@ export default function Sidebar({ empresa, empresas = [], onEmpresaChange }) {
   }
 
   return (
-    <aside className="w-60 min-h-screen bg-[#0d0d14] border-r border-gray-800 flex flex-col">
-      <div className="px-4 py-5 border-b border-gray-800">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-emerald-500 rounded-md flex items-center justify-center">
-            <span className="text-white font-bold text-xs">F</span>
-          </div>
-          <span className="text-white font-semibold text-sm">Financial Dashboard</span>
-        </div>
+    <div style={S.sidebar}>
+      <div style={S.logo}>
+        <div style={S.logoIcon}>F</div>
+        <span style={S.logoText}>Financial Dashboard</span>
       </div>
 
-      {empresas.length > 0 && (
-        <div className="px-3 py-3 border-b border-gray-800">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Building2 size={12} className="text-gray-400" />
-            <span className="text-gray-400 text-xs">Empresa</span>
-          </div>
-          <select
-            value={empresa}
-            onChange={(e) => onEmpresaChange(e.target.value)}
-            className="w-full bg-[#1a1a24] border border-gray-700 rounded-md px-2 py-1.5 text-white text-xs focus:outline-none focus:border-emerald-500"
-          >
-            {empresas.map(e => (
-              <option key={e.id} value={e.id}>{e.nome}</option>
-            ))}
-          </select>
-        </div>
+      {empresas && empresas.length > 1 && (
+        <select style={S.select} value={empresa} onChange={e => onEmpresaChange(e.target.value)}>
+          {empresas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+        </select>
       )}
 
-      <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon
+      <nav style={S.nav}>
+        {navItems.map(item => {
           const isActive = pathname.startsWith(item.href)
-          const isOpen = expanded[item.label]
-
+          const isOpen = openMenus[item.href]
           return (
-            <div key={item.label}>
+            <div key={item.href}>
               {item.children ? (
-                <button
-                  onClick={() => toggle(item.label)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    isActive ? 'bg-emerald-600/20 text-emerald-400' : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Icon size={15} />
-                  <span className="flex-1 text-left">{item.label}</span>
-                  {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                </button>
+                <div style={S.navItem(isActive)} onClick={() => toggleMenu(item.href)}>
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                  <span style={S.chevron(isOpen)}>▾</span>
+                </div>
               ) : (
-                <Link
-                  href={item.href}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    isActive ? 'bg-emerald-600/20 text-emerald-400' : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Icon size={15} />
+                <Link href={item.href} style={S.navItem(isActive)}>
+                  <span>{item.icon}</span>
                   <span>{item.label}</span>
                 </Link>
               )}
               {item.children && isOpen && (
-                <div className="ml-4 mt-0.5 space-y-0.5">
+                <div>
                   {item.children.map(child => (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${
-                        pathname === child.href ? 'text-emerald-400 bg-emerald-600/10' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                      }`}
-                    >
-                      <span className="w-1 h-1 rounded-full bg-current" />
+                    <Link key={child.href} href={child.href} style={S.subItem(pathname === child.href)}>
                       {child.label}
                     </Link>
                   ))}
@@ -154,15 +100,11 @@ export default function Sidebar({ empresa, empresas = [], onEmpresaChange }) {
         })}
       </nav>
 
-      <div className="px-3 py-4 border-t border-gray-800">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
-        >
-          <LogOut size={15} />
-          <span>Sair</span>
+      <div style={S.footer}>
+        <button style={S.logoutBtn} onClick={handleLogout}>
+          <span>🚪</span> Sair
         </button>
       </div>
-    </aside>
+    </div>
   )
 }

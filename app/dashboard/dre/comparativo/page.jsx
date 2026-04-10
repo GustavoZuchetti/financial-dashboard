@@ -1,97 +1,94 @@
 'use client'
 import { useState } from 'react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
-const S = {
-  page: { color: '#e5e7eb' },
-  header: { marginBottom: 24 },
-  title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
-  subtitle: { color: '#6b7280', fontSize: 14, margin: '4px 0 0' },
-  filters: { display: 'flex', gap: 12, marginBottom: 24, alignItems: 'center' },
-  select: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 8, padding: '8px 14px', color: '#fff', fontSize: 13 },
-  card: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '24px', marginBottom: 16 },
-  cardTitle: { fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 16 },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { textAlign: 'left', color: '#6b7280', fontSize: 11, fontWeight: 600, padding: '10px 12px', borderBottom: '1px solid #1e1e2e', textTransform: 'uppercase' },
-  td: { padding: '12px', borderBottom: '1px solid #1e1e2e', fontSize: 14, color: '#e5e7eb' },
-  tdRight: { padding: '12px', borderBottom: '1px solid #1e1e2e', fontSize: 14, textAlign: 'right' },
-  bold: { fontWeight: 700, color: '#fff' },
-}
+const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(v)
 
-const dados = [
-  { conta: 'Receita Bruta', p1: 850, p2: 785, tipo: 'pos' },
-  { conta: 'Deducoes', p1: -85, p2: -79, tipo: 'neg' },
-  { conta: 'Receita Liquida', p1: 765, p2: 706, tipo: 'total' },
-  { conta: 'CPV / CMV', p1: -306, p2: -282, tipo: 'neg' },
-  { conta: 'Lucro Bruto', p1: 459, p2: 424, tipo: 'total' },
-  { conta: 'Despesas Operacionais', p1: -183, p2: -170, tipo: 'neg' },
-  { conta: 'EBITDA', p1: 276, p2: 254, tipo: 'total' },
-  { conta: 'D&A', p1: -41, p2: -38, tipo: 'neg' },
-  { conta: 'EBIT', p1: 235, p2: 216, tipo: 'total' },
-  { conta: 'Resultado Financeiro', p1: -27, p2: -25, tipo: 'neg' },
-  { conta: 'Lucro Antes IR', p1: 208, p2: 191, tipo: 'total' },
-  { conta: 'IR / CSLL', p1: -42, p2: -38, tipo: 'neg' },
-  { conta: 'Lucro Liquido', p1: 166, p2: 153, tipo: 'lucro' },
+const MOCK_WATERFALL_A = [
+  { name: 'Receita Bruta', range: [0, 913960], value: 913960, type: 'total' },
+  { name: 'Deduções', range: [828960, 913960], value: -85000, type: 'negative' },
+  { name: 'Receita Líquida', range: [0, 828960], value: 828960, type: 'total' },
+  { name: 'Custos Variáveis', range: [522960, 828960], value: -306000, type: 'negative' },
+  { name: 'Lucro Bruto', range: [0, 522960], value: 522960, type: 'total' },
+  { name: 'Despesas Fixas', range: [339960, 522960], value: -183000, type: 'negative' },
+  { name: 'EBITDA', range: [0, 339960], value: 339960, type: 'total' },
+  { name: 'Resultado Final', range: [0, 207960], value: 207960, type: 'total' }
 ]
 
+const MOCK_WATERFALL_B = [
+  { name: 'Receita Bruta', range: [0, 1527911], value: 1527911, type: 'total' },
+  { name: 'Deduções', range: [1427911, 1527911], value: -100000, type: 'negative' },
+  { name: 'Receita Líquida', range: [0, 1427911], value: 1427911, type: 'total' },
+  { name: 'Custos Variáveis', range: [1127911, 1427911], value: -300000, type: 'negative' },
+  { name: 'Lucro Bruto', range: [0, 1127911], value: 1127911, type: 'total' },
+  { name: 'Despesas Fixas', range: [827911, 1127911], value: -300000, type: 'negative' },
+  { name: 'EBITDA', range: [0, 827911], value: 827911, type: 'total' },
+  { name: 'Resultado Final', range: [0, 500000], value: 500000, type: 'total' }
+]
+
+const S = {
+  card: { backgroundColor: '#1f2937', borderRadius: '8px', padding: '20px', border: '1px solid #374151' },
+  kpiTitle: { fontSize: '12px', color: '#9ca3af', marginBottom: '4px' },
+  kpiValue: { fontSize: '18px', fontWeight: 'bold' },
+  sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', color: '#f3f4f6' }
+}
+
+const KPICard = ({ title, value, color = '#10b981' }) => (
+  <div style={{ ...S.card, padding: '12px' }}>
+    <div style={S.kpiTitle}>{title}</div>
+    <div style={{ ...S.kpiValue, color }}>{value}</div>
+  </div>
+)
+
+const DREColumn = ({ title, date, waterfallData, kpis }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ ...S.card, padding: '12px', textAlign: 'center' }}>📅 {date}</div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+      <KPICard title="Receita Bruta" value={kpis.receita} />
+      <KPICard title="Margem Contribuição" value={kpis.margem} />
+      <KPICard title="EBITDA" value={kpis.ebitda} color={kpis.ebitda.startsWith('-') ? '#ef4444' : '#10b981'} />
+      <KPICard title="Resultado Líquido" value={kpis.resLiq} color={kpis.resLiq.startsWith('-') ? '#ef4444' : '#10b981'} />
+      <KPICard title="Resultado Final" value={kpis.resFinal} color={kpis.resFinal.startsWith('-') ? '#ef4444' : '#10b981'} />
+    </div>
+    <div style={S.card}>
+      <h3 style={S.sectionTitle}>Da Receita ao Lucro</h3>
+      <div style={{ height: '300px' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={waterfallData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} angle={-25} textAnchor="end" interval={0} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} tickFormatter={fmt} />
+            <Bar dataKey="range">
+              {waterfallData.map((entry, i) => (
+                <Cell key={i} fill={entry.type === 'total' ? '#10b981' : '#ef4444'} fillOpacity={entry.type === 'total' ? 0.8 : 1} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  </div>
+)
+
 export default function DREComparativo() {
-  const [per1, setPer1] = useState('abr-2026')
-  const [per2, setPer2] = useState('mar-2026')
-
-  const periodos = ['jan-2026','fev-2026','mar-2026','abr-2026','mai-2026','jun-2026']
-
   return (
-    <div style={S.page}>
-      <div style={S.header}>
-        <h1 style={S.title}>DRE Comparativo</h1>
-        <p style={S.subtitle}>Comparacao entre periodos</p>
+    <div style={{ padding: '24px', color: '#e5e7eb' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>DRE Comparativo</h1>
+        <div style={{ ...S.card, padding: '8px 16px' }}>3 empresas selecionadas</div>
       </div>
-      <div style={S.filters}>
-        <select style={S.select} value={per1} onChange={e => setPer1(e.target.value)}>
-          {periodos.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
-        <span style={{color:'#6b7280'}}>vs</span>
-        <select style={S.select} value={per2} onChange={e => setPer2(e.target.value)}>
-          {periodos.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
-      </div>
-      <div style={S.card}>
-        <div style={S.cardTitle}>Comparativo DRE - {per1.toUpperCase()} vs {per2.toUpperCase()}</div>
-        <table style={S.table}>
-          <thead>
-            <tr>
-              <th style={S.th}>Conta</th>
-              <th style={{...S.th, textAlign:'right'}}>{per1}</th>
-              <th style={{...S.th, textAlign:'right'}}>{per2}</th>
-              <th style={{...S.th, textAlign:'right'}}>Variacao R$</th>
-              <th style={{...S.th, textAlign:'right'}}>Variacao %</th>
-            </tr>
-          </thead>
-          <tbody>
-            {dados.map((d, i) => {
-              const isTotal = d.tipo === 'total' || d.tipo === 'lucro'
-              const varR = d.p1 - d.p2
-              const varPct = d.p2 !== 0 ? ((varR / Math.abs(d.p2)) * 100).toFixed(1) : '0.0'
-              const isPos = d.tipo === 'neg' ? varR <= 0 : varR >= 0
-              return (
-                <tr key={i}>
-                  <td style={{...S.td, ...(isTotal ? S.bold : {})}}>{d.conta}</td>
-                  <td style={{...S.tdRight, ...(isTotal ? S.bold : {}), color: d.tipo === 'lucro' ? '#00e676' : d.p1 < 0 ? '#ef4444' : '#e5e7eb'}}>
-                    R$ {Math.abs(d.p1).toLocaleString('pt-BR')} mil
-                  </td>
-                  <td style={{...S.tdRight, color: d.p2 < 0 ? '#ef4444' : '#9ca3af'}}>
-                    R$ {Math.abs(d.p2).toLocaleString('pt-BR')} mil
-                  </td>
-                  <td style={{...S.tdRight, color: isPos ? '#00e676' : '#ef4444'}}>
-                    {varR > 0 ? '+' : ''}{varR.toLocaleString('pt-BR')} mil
-                  </td>
-                  <td style={{...S.tdRight, color: isPos ? '#00e676' : '#ef4444'}}>
-                    {Number(varPct) > 0 ? '+' : ''}{varPct}%
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+        <DREColumn 
+          date="01/01/2026 → 30/04/2026" 
+          waterfallData={MOCK_WATERFALL_A}
+          kpis={{ receita: 'R$ 913.960', margem: '74,3%', ebitda: '-20,0%', resLiq: '-36,8%', resFinal: '-65,4%' }}
+        />
+        <DREColumn 
+          date="01/10/2025 → 30/04/2026" 
+          waterfallData={MOCK_WATERFALL_B}
+          kpis={{ receita: 'R$ 1.527.911', margem: '74,9%', ebitda: '-25,7%', resLiq: '-49,3%', resFinal: '-78,3%' }}
+        />
       </div>
     </div>
   )

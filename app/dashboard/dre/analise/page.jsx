@@ -1,117 +1,83 @@
 'use client'
 import { useState } from 'react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts'
+
+const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(v)
+
+const MOCK_HISTORICO = [
+  { name: 'Jan/26', receita: 191000, custos: 42000, ebitda: 30000, resLiq: -15000, resFinal: -25000 },
+  { name: 'Fev/26', receita: 233000, custos: 40000, ebitda: 40000, resLiq: -18000, resFinal: -28000 },
+  { name: 'Mar/26', receita: 226000, custos: 47000, ebitda: 35000, resLiq: -22000, resFinal: -32000 },
+  { name: 'Abr/26', receita: 262000, custos: 42000, ebitda: 50000, resLiq: -25000, resFinal: -35000 }
+]
+
+const MOCK_CLIENTES = [
+  { name: 'AEC CENTRO DE CONTATOS', valor: 572000 },
+  { name: 'Ingressosa.com Ltda', valor: 90000 },
+  { name: 'VX CONSULT E SERVICES', valor: 36000 },
+  { name: 'OMINT SERVICOS DE SAUDE', valor: 34000 }
+]
 
 const S = {
-  page: { color: '#e5e7eb' },
-  header: { marginBottom: 24 },
-  title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
-  subtitle: { color: '#6b7280', fontSize: 14, margin: '4px 0 0' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 },
-  card: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '24px' },
-  cardTitle: { fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 16 },
-  kpiLabel: { fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', marginBottom: 8 },
-  kpiValue: { fontSize: 28, fontWeight: 800 },
-  kpiSub: { fontSize: 12, color: '#6b7280', marginTop: 4 },
-  bar: { height: 8, borderRadius: 4, background: '#1e1e2e', marginBottom: 12 },
-  barFill: (pct, color) => ({ height: 8, borderRadius: 4, background: color, width: `${pct}%` }),
-  metricRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #1e1e2e' },
-  metricLabel: { fontSize: 13, color: '#9ca3af' },
-  metricValue: { fontSize: 14, fontWeight: 700 },
-  badge: (ok) => ({ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: ok ? 'rgba(0,230,118,0.1)' : 'rgba(239,68,68,0.1)', color: ok ? '#00e676' : '#ef4444' }),
+  card: { backgroundColor: '#1f2937', borderRadius: '8px', padding: '20px', border: '1px solid #374151' },
+  sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', color: '#f3f4f6' }
 }
-
-const indicadores = [
-  { label: 'Margem Bruta', valor: 54.0, meta: 55.0, cor: '#00e676' },
-  { label: 'Margem EBITDA', valor: 32.5, meta: 35.0, cor: '#3b82f6' },
-  { label: 'Margem Liquida', valor: 18.1, meta: 20.0, cor: '#8b5cf6' },
-  { label: 'Margem EBIT', valor: 27.6, meta: 30.0, cor: '#f59e0b' },
-  { label: 'Margem Operacional', valor: 21.5, meta: 25.0, cor: '#ec4899' },
-]
 
 export default function DREAnalise() {
   return (
-    <div style={S.page}>
-      <div style={S.header}>
-        <h1 style={S.title}>Analise DRE</h1>
-        <p style={S.subtitle}>Indicadores de rentabilidade e performance financeira</p>
+    <div style={{ padding: '24px', color: '#e5e7eb' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>DRE Análise</h1>
       </div>
 
-      <div style={S.grid}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
         <div style={S.card}>
-          <div style={S.kpiLabel}>Receita Bruta</div>
-          <div style={{...S.kpiValue, color: '#00e676'}}>R$ 850 mil</div>
-          <div style={S.kpiSub}>+8.3% vs mes anterior</div>
-        </div>
-        <div style={S.card}>
-          <div style={S.kpiLabel}>Lucro Bruto</div>
-          <div style={{...S.kpiValue, color: '#3b82f6'}}>R$ 459 mil</div>
-          <div style={S.kpiSub}>Margem: 54.0%</div>
-        </div>
-        <div style={S.card}>
-          <div style={S.kpiLabel}>Lucro Liquido</div>
-          <div style={{...S.kpiValue, color: '#8b5cf6'}}>R$ 153,8 mil</div>
-          <div style={S.kpiSub}>Margem: 18.1%</div>
-        </div>
-      </div>
-
-      <div style={S.grid2}>
-        <div style={S.card}>
-          <div style={S.cardTitle}>Margens de Rentabilidade</div>
-          {indicadores.map((ind, i) => (
-            <div key={i} style={{marginBottom: 16}}>
-              <div style={{display:'flex', justifyContent:'space-between', marginBottom: 6}}>
-                <span style={{fontSize: 13, color: '#e5e7eb'}}>{ind.label}</span>
-                <span style={{fontSize: 13, fontWeight: 700, color: ind.valor >= ind.meta ? '#00e676' : '#f59e0b'}}>{ind.valor}%</span>
-              </div>
-              <div style={S.bar}>
-                <div style={S.barFill(ind.valor, ind.cor)} />
-              </div>
-              <div style={{fontSize: 11, color: '#6b7280'}}>Meta: {ind.meta}% - {ind.valor >= ind.meta ? 'Atingido' : `Falta ${(ind.meta - ind.valor).toFixed(1)}%`}</div>
-            </div>
-          ))}
+          <h2 style={S.sectionTitle}>DRE Acumulado</h2>
+          <div style={{ height: '300px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={MOCK_HISTORICO}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={fmt} />
+                <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} />
+                <Legend iconType="circle" />
+                <Line type="monotone" dataKey="receita" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="ebitda" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="resFinal" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div style={S.card}>
-          <div style={S.cardTitle}>Indicadores Financeiros</div>
-          {[
-            { label: 'ROE (Retorno sobre PL)', valor: '23.5%', ok: true },
-            { label: 'ROA (Retorno sobre Ativo)', valor: '12.8%', ok: true },
-            { label: 'ROIC', valor: '18.2%', ok: true },
-            { label: 'Indice de Eficiencia', valor: '67.3%', ok: false },
-            { label: 'Alavancagem Financeira', valor: '1.84x', ok: true },
-            { label: 'Cobertura de Juros', valor: '9.1x', ok: true },
-            { label: 'Crescimento da Receita (YoY)', valor: '+12.4%', ok: true },
-            { label: 'Crescimento do Lucro (YoY)', valor: '+8.7%', ok: true },
-          ].map((m, i) => (
-            <div key={i} style={S.metricRow}>
-              <span style={S.metricLabel}>{m.label}</span>
-              <div style={{display:'flex', gap: 8, alignItems:'center'}}>
-                <span style={{...S.metricValue, color: m.ok ? '#00e676' : '#f59e0b'}}>{m.valor}</span>
-                <span style={S.badge(m.ok)}>{m.ok ? 'OK' : 'Atencao'}</span>
-              </div>
-            </div>
-          ))}
+          <h2 style={S.sectionTitle}>Receitas por Cliente</h2>
+          <div style={{ height: '300px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={MOCK_CLIENTES} layout="vertical" margin={{ left: 50 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#374151" />
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} width={120} />
+                <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} formatter={(v) => fmt(v)} />
+                <Bar dataKey="valor" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
       <div style={S.card}>
-        <div style={S.cardTitle}>Composicao de Custos e Despesas</div>
-        <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16}}>
-          {[
-            { label: 'CPV / CMV', valor: 'R$ 306 mil', pct: '36.0%', cor: '#ef4444' },
-            { label: 'Deducoes', valor: 'R$ 85 mil', pct: '10.0%', cor: '#f59e0b' },
-            { label: 'Desp. Operacionais', valor: 'R$ 183 mil', pct: '21.5%', cor: '#8b5cf6' },
-            { label: 'Desp. Financeiras', valor: 'R$ 27 mil', pct: '3.2%', cor: '#3b82f6' },
-          ].map((item, i) => (
-            <div key={i} style={{textAlign:'center'}}>
-              <div style={{width:80,height:80,borderRadius:'50%',background:`conic-gradient(${item.cor} 0% ${item.pct}, #1e1e2e ${item.pct} 100%)`,margin:'0 auto 12px',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <div style={{width:50,height:50,borderRadius:'50%',background:'#12121a',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'#fff'}}>{item.pct}</div>
-              </div>
-              <div style={{fontSize:13,color:'#e5e7eb',fontWeight:600}}>{item.label}</div>
-              <div style={{fontSize:12,color:item.cor}}>{item.valor}</div>
-            </div>
-          ))}
+        <h2 style={S.sectionTitle}>Evolução Operacional (%)</h2>
+        <div style={{ height: '250px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={MOCK_HISTORICO}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} />
+              <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} />
+              <Line type="monotone" dataKey="ebitda" stroke="#8b5cf6" strokeWidth={2} name="Margem EBITDA" />
+              <Line type="monotone" dataKey="receita" stroke="#10b981" strokeWidth={2} name="Margem Bruta" />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

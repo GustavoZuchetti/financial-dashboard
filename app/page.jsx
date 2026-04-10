@@ -3,12 +3,31 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+const S = {
+  page: { minHeight: '100vh', background: 'linear-gradient(135deg, #0a0a0f 0%, #12121a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  container: { width: '100%', maxWidth: 400 },
+  header: { textAlign: 'center', marginBottom: 32 },
+  logoWrap: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 },
+  logoIcon: { width: 44, height: 44, background: '#00e676', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#000', fontSize: 20 },
+  title: { fontSize: 28, fontWeight: 800, color: '#fff', margin: 0 },
+  subtitle: { color: '#6b7280', fontSize: 14, margin: '4px 0 0' },
+  card: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 16, padding: 32 },
+  cardTitle: { fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 24 },
+  error: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', color: '#f87171', fontSize: 14, marginBottom: 16 },
+  label: { display: 'block', color: '#9ca3af', fontSize: 13, fontWeight: 500, marginBottom: 6 },
+  input: { width: '100%', background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' },
+  inputFocus: { borderColor: '#00e676' },
+  fieldWrap: { marginBottom: 16 },
+  btn: (loading) => ({ width: '100%', background: loading ? '#065f46' : '#00e676', color: loading ? '#a7f3d0' : '#000', border: 'none', borderRadius: 10, padding: '13px', fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: 8, transition: 'all 0.2s' }),
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [focusField, setFocusField] = useState(null)
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -24,56 +43,55 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">F</span>
-            </div>
-            <h1 className="text-2xl font-bold text-white">Financial Dashboard</h1>
+    <div style={S.page}>
+      <div style={S.container}>
+        <div style={S.header}>
+          <div style={S.logoWrap}>
+            <div style={S.logoIcon}>F</div>
+            <h1 style={S.title}>Financial Dashboard</h1>
           </div>
-          <p className="text-gray-400 text-sm">Plataforma de gestao financeira estrategica</p>
+          <p style={S.subtitle}>Plataforma de gestao financeira estrategica</p>
         </div>
-        <div className="bg-[#12121a] border border-gray-800 rounded-xl p-8">
-          <h2 className="text-white font-semibold text-lg mb-6">Entrar na sua conta</h2>
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4">
-              <p className="text-red-400 text-sm">{error}</p>
-            </div>
-          )}
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-gray-400 text-sm mb-1.5">E-mail</label>
+
+        <div style={S.card}>
+          <h2 style={S.cardTitle}>Entrar na sua conta</h2>
+          {error && <div style={S.error}>{error}</div>}
+          <form onSubmit={handleLogin}>
+            <div style={S.fieldWrap}>
+              <label style={S.label}>E-mail</label>
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[#1a1a24] border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                onChange={e => setEmail(e.target.value)}
+                onFocus={() => setFocusField('email')}
+                onBlur={() => setFocusField(null)}
+                style={{ ...S.input, ...(focusField === 'email' ? S.inputFocus : {}) }}
                 placeholder="seu@email.com"
                 required
               />
             </div>
-            <div>
-              <label className="block text-gray-400 text-sm mb-1.5">Senha</label>
+            <div style={S.fieldWrap}>
+              <label style={S.label}>Senha</label>
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#1a1a24] border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                onChange={e => setPassword(e.target.value)}
+                onFocus={() => setFocusField('password')}
+                onBlur={() => setFocusField(null)}
+                style={{ ...S.input, ...(focusField === 'password' ? S.inputFocus : {}) }}
                 placeholder="••••••••"
                 required
               />
             </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-colors text-sm"
-            >
+            <button type="submit" style={S.btn(loading)} disabled={loading}>
               {loading ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
         </div>
+
+        <p style={{ textAlign: 'center', color: '#374151', fontSize: 12, marginTop: 16 }}>
+          Financial Dashboard &copy; 2026
+        </p>
       </div>
     </div>
   )

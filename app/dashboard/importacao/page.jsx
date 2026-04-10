@@ -164,7 +164,7 @@ const ImportacaoPage = () => {
               <button onClick={() => setIsModalOpen(false)} className="text-zinc-500 hover:text-white transition-colors">
                 <X className="w-6 h-6" />
               </button>
-            </div>Fix: Replace heroicons with lucide-react and implement modal logic
+            </div>
             
             <div className="space-y-4">
               <div>

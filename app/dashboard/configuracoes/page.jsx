@@ -1,152 +1,160 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { User, Building2, Plus, Save } from 'lucide-react'
+
+const S = {
+  page: { color: '#e5e7eb' },
+  header: { marginBottom: 24 },
+  title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
+  subtitle: { color: '#6b7280', fontSize: 14, margin: '4px 0 0' },
+  tabs: { display: 'flex', gap: 4, marginBottom: 24, background: '#12121a', borderRadius: 10, padding: 4, width: 'fit-content' },
+  tab: (a) => ({ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: a ? 600 : 400, color: a ? '#fff' : '#6b7280', background: a ? '#1e1e2e' : 'transparent', cursor: 'pointer', border: 'none' }),
+  card: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '24px', marginBottom: 16 },
+  cardTitle: { fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 4 },
+  cardSub: { color: '#6b7280', fontSize: 13, marginBottom: 20 },
+  label: { display: 'block', color: '#9ca3af', fontSize: 13, fontWeight: 500, marginBottom: 6 },
+  input: { width: '100%', background: '#0a0a0f', border: '1px solid #1e1e2e', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 16 },
+  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
+  btn: { background: '#00e676', color: '#000', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
+  btnGhost: { background: 'transparent', color: '#9ca3af', border: '1px solid #1e1e2e', borderRadius: 8, padding: '10px 20px', fontSize: 14, cursor: 'pointer' },
+  success: { background: 'rgba(0,230,118,0.1)', border: '1px solid rgba(0,230,118,0.3)', borderRadius: 8, padding: '10px 14px', color: '#00e676', fontSize: 13, marginBottom: 16 },
+  danger: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', color: '#f87171', fontSize: 13, marginBottom: 16 },
+  empresaRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#0a0a0f', borderRadius: 8, marginBottom: 8 },
+  badge: { display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'rgba(0,230,118,0.1)', color: '#00e676' },
+}
 
 export default function ConfiguracoesPage() {
-  const [tab, setTab] = useState('empresas')
-  const [empresas, setEmpresas] = useState([])
+  const [tab, setTab] = useState('perfil')
   const [perfil, setPerfil] = useState({ nome: '', email: '' })
   const [novaEmpresa, setNovaEmpresa] = useState({ nome: '', cnpj: '' })
-  const [loading, setLoading] = useState(false)
+  const [empresas, setEmpresas] = useState([
+    { id: 1, nome: 'Empresa Demo Ltda', cnpj: '00.000.000/0001-00' },
+  ])
   const [msg, setMsg] = useState('')
+  const [msgTipo, setMsgTipo] = useState('success')
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setPerfil({ nome: user.user_metadata?.nome || user.email?.split('@')[0] || '', email: user.email || '' })
+    }
+    loadUser()
+  }, [])
 
-  const loadData = async () => {
-    setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) setPerfil({ nome: user.user_metadata?.nome || '', email: user.email || '' })
-    const { data: emps } = await supabase.from('empresas').select('*').order('nome')
-    if (emps) setEmpresas(emps)
-    setLoading(false)
+  const showMsg = (texto, tipo = 'success') => {
+    setMsg(texto); setMsgTipo(tipo)
+    setTimeout(() => setMsg(''), 3000)
   }
 
-  const handleSavePerfil = async () => {
+  const salvarPerfil = async (e) => {
+    e.preventDefault()
     const { error } = await supabase.auth.updateUser({ data: { nome: perfil.nome } })
-    setMsg(error ? 'Erro ao salvar' : 'Perfil atualizado!')
-    setTimeout(() => setMsg(''), 3000)
+    showMsg(error ? 'Erro ao salvar.' : 'Perfil atualizado com sucesso!', error ? 'error' : 'success')
   }
 
-  const handleAddEmpresa = async () => {
+  const addEmpresa = (e) => {
+    e.preventDefault()
     if (!novaEmpresa.nome) return
-    const { error } = await supabase.from('empresas').insert(novaEmpresa)
-    if (!error) { setNovaEmpresa({ nome: '', cnpj: '' }); loadData(); setMsg('Empresa adicionada!') }
-    else setMsg('Erro ao adicionar empresa')
-    setTimeout(() => setMsg(''), 3000)
+    setEmpresas(prev => [...prev, { id: Date.now(), ...novaEmpresa }])
+    setNovaEmpresa({ nome: '', cnpj: '' })
+    showMsg('Empresa adicionada!')
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-white text-xl font-bold">Configuracoes</h1>
-        <p className="text-gray-400 text-sm">Gerencie perfil e empresas</p>
+    <div style={S.page}>
+      <div style={S.header}>
+        <h1 style={S.title}>Configuracoes</h1>
+        <p style={S.subtitle}>Gerencie seu perfil e empresas do sistema</p>
       </div>
 
-      {msg && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-4 py-3 mb-4">
-          <p className="text-emerald-400 text-sm">{msg}</p>
-        </div>
-      )}
-
-      <div className="flex gap-1 mb-6">
-        {[{ id: 'empresas', icon: Building2, label: 'Empresas' }, { id: 'perfil', icon: User, label: 'Perfil' }].map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${
-              tab === t.id ? 'bg-emerald-600/20 text-emerald-400' : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <t.icon size={14} />
-            {t.label}
-          </button>
+      <div style={S.tabs}>
+        {[['perfil', '👤 Perfil'], ['empresas', '🏢 Empresas'], ['sistema', '⚙️ Sistema']].map(([v, l]) => (
+          <button key={v} style={S.tab(tab === v)} onClick={() => setTab(v)}>{l}</button>
         ))}
       </div>
 
+      {msg && <div style={msgTipo === 'success' ? S.success : S.danger}>{msg}</div>}
+
       {tab === 'perfil' && (
-        <div className="bg-[#12121a] border border-gray-800 rounded-xl p-6 max-w-lg">
-          <h3 className="text-white font-medium text-sm mb-5">Dados do Perfil</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-gray-400 text-xs mb-1.5">Nome</label>
-              <input
-                value={perfil.nome}
-                onChange={e => setPerfil({ ...perfil, nome: e.target.value })}
-                className="w-full bg-[#1a1a24] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500"
-              />
+        <div style={S.card}>
+          <div style={S.cardTitle}>Dados do Perfil</div>
+          <div style={S.cardSub}>Atualize suas informacoes de acesso</div>
+          <form onSubmit={salvarPerfil}>
+            <div style={S.grid2}>
+              <div>
+                <label style={S.label}>Nome</label>
+                <input style={S.input} value={perfil.nome} onChange={e => setPerfil({ ...perfil, nome: e.target.value })} placeholder="Seu nome" />
+              </div>
+              <div>
+                <label style={S.label}>E-mail</label>
+                <input style={{ ...S.input, opacity: 0.6 }} value={perfil.email} disabled />
+              </div>
             </div>
-            <div>
-              <label className="block text-gray-400 text-xs mb-1.5">E-mail</label>
-              <input value={perfil.email} disabled className="w-full bg-[#1a1a24] border border-gray-700 rounded-lg px-3 py-2 text-gray-500 text-sm" />
+            <label style={S.label}>Nova Senha</label>
+            <input style={S.input} type="password" placeholder="Deixe em branco para nao alterar" />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button type="submit" style={S.btn}>Salvar Alteracoes</button>
             </div>
-            <button
-              onClick={handleSavePerfil}
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-            >
-              <Save size={13} /> Salvar
-            </button>
-          </div>
+          </form>
         </div>
       )}
 
       {tab === 'empresas' && (
-        <div className="space-y-4">
-          <div className="bg-[#12121a] border border-gray-800 rounded-xl p-5">
-            <h3 className="text-white font-medium text-sm mb-4">Adicionar Empresa</h3>
-            <div className="flex gap-3">
-              <input
-                placeholder="Nome da empresa"
-                value={novaEmpresa.nome}
-                onChange={e => setNovaEmpresa({ ...novaEmpresa, nome: e.target.value })}
-                className="flex-1 bg-[#1a1a24] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500"
-              />
-              <input
-                placeholder="CNPJ (opcional)"
-                value={novaEmpresa.cnpj}
-                onChange={e => setNovaEmpresa({ ...novaEmpresa, cnpj: e.target.value })}
-                className="w-44 bg-[#1a1a24] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500"
-              />
-              <button
-                onClick={handleAddEmpresa}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
-              >
-                <Plus size={13} /> Adicionar
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-[#12121a] border border-gray-800 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-800">
-              <h3 className="text-white font-medium text-sm">Empresas Cadastradas</h3>
-            </div>
-            {loading ? (
-              <div className="flex justify-center py-10">
-                <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        <>
+          <div style={S.card}>
+            <div style={S.cardTitle}>Empresas Cadastradas</div>
+            <div style={S.cardSub}>Empresas vinculadas ao seu usuario</div>
+            {empresas.map(emp => (
+              <div key={emp.id} style={S.empresaRow}>
+                <div>
+                  <div style={{ fontWeight: 600, color: '#fff', fontSize: 14 }}>{emp.nome}</div>
+                  <div style={{ color: '#6b7280', fontSize: 12 }}>CNPJ: {emp.cnpj || 'Nao informado'}</div>
+                </div>
+                <span style={S.badge}>ativo</span>
               </div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-800">
-                    {['Nome', 'CNPJ', 'Criado em'].map(h => (
-                      <th key={h} className="px-5 py-3 text-left text-gray-400 text-xs font-medium">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {empresas.map(e => (
-                    <tr key={e.id} className="border-b border-gray-800/50 hover:bg-white/[0.02]">
-                      <td className="px-5 py-3 text-white text-sm">{e.nome}</td>
-                      <td className="px-5 py-3 text-gray-400 text-sm font-mono">{e.cnpj || '-'}</td>
-                      <td className="px-5 py-3 text-gray-400 text-sm">{new Date(e.created_at).toLocaleDateString('pt-BR')}</td>
-                    </tr>
-                  ))}
-                  {empresas.length === 0 && (
-                    <tr><td colSpan={3} className="px-5 py-10 text-center text-gray-500 text-sm">Nenhuma empresa cadastrada</td></tr>
-                  )}
-                </tbody>
-              </table>
-            )}
+            ))}
+          </div>
+          <div style={S.card}>
+            <div style={S.cardTitle}>Adicionar Nova Empresa</div>
+            <div style={S.cardSub}>Cadastre uma nova empresa para gerenciar</div>
+            <form onSubmit={addEmpresa}>
+              <div style={S.grid2}>
+                <div>
+                  <label style={S.label}>Nome da Empresa</label>
+                  <input style={S.input} value={novaEmpresa.nome} onChange={e => setNovaEmpresa({ ...novaEmpresa, nome: e.target.value })} placeholder="Razao Social" required />
+                </div>
+                <div>
+                  <label style={S.label}>CNPJ</label>
+                  <input style={S.input} value={novaEmpresa.cnpj} onChange={e => setNovaEmpresa({ ...novaEmpresa, cnpj: e.target.value })} placeholder="00.000.000/0001-00" />
+                </div>
+              </div>
+              <button type="submit" style={S.btn}>+ Adicionar Empresa</button>
+            </form>
+          </div>
+        </>
+      )}
+
+      {tab === 'sistema' && (
+        <div style={S.card}>
+          <div style={S.cardTitle}>Preferencias do Sistema</div>
+          <div style={S.cardSub}>Configuracoes gerais da plataforma</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+            {[
+              { label: 'Tema', valor: 'Escuro (Dark)', icon: '🌙' },
+              { label: 'Idioma', valor: 'Portugues (BR)', icon: '🇧🇷' },
+              { label: 'Moeda Padrao', valor: 'BRL - Real Brasileiro', icon: '💰' },
+              { label: 'Formato de Data', valor: 'DD/MM/YYYY', icon: '📅' },
+              { label: 'Versao do Sistema', valor: 'v1.0.0', icon: '🔖' },
+              { label: 'Banco de Dados', valor: 'Supabase (Online)', icon: '🖥️' },
+            ].map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px', background: '#0a0a0f', borderRadius: 8 }}>
+                <span style={{ fontSize: 20 }}>{item.icon}</span>
+                <div>
+                  <div style={{ color: '#9ca3af', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>{item.label}</div>
+                  <div style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{item.valor}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

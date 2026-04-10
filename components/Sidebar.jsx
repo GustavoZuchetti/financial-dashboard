@@ -37,6 +37,7 @@ const navItems = [
     { label: 'Plano', href: '/dashboard/plano-contas' },
     { label: 'Auditoria', href: '/dashboard/plano-contas/auditoria' },
   ]},
+    { label: 'Importação / De-Para', href: '/dashboard/importacao', icon: '📥' },
   { label: 'Configuracoes', href: '/dashboard/configuracoes', icon: '⚙️', children: [
     { label: 'Perfil', href: '/dashboard/configuracoes/perfil' },
     { label: 'Empresas', href: '/dashboard/configuracoes/empresas' },

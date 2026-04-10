@@ -2,13 +2,13 @@
 
 import React, { useState } from 'react';
 import { 
-  ArrowDownTrayIcon, 
-  PlusIcon, 
-  PencilSquareIcon, 
-  TrashIcon,
-  ChevronDownIcon,
-  XMarkIcon
-} from '@heroicons/react/24/outline';
+  Download, 
+  Plus, 
+  Pencil, 
+  Trash2,
+  ChevronDown,
+  X
+} from 'lucide-react';
 
 const ImportacaoPage = () => {
   const [activeTab, setActiveTab] = useState('mapeamento');
@@ -46,7 +46,7 @@ const ImportacaoPage = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <ArrowDownTrayIcon className="w-6 h-6" />
+            <Download className="w-6 h-6" />
             Importação / De-Para
           </h1>
           <p className="text-zinc-400 text-sm mt-1">
@@ -87,7 +87,7 @@ const ImportacaoPage = () => {
           onClick={() => setIsModalOpen(true)}
           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 transition-colors active:scale-95"
         >
-          <PlusIcon className="w-4 h-4" />
+          <Plus className="w-4 h-4" />
           Criar Mapeamento de Categoria
         </button>
       </div>
@@ -102,7 +102,7 @@ const ImportacaoPage = () => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-zinc-400">Mapeamentos: {group.items.length}</span>
-                <ChevronDownIcon className="w-4 h-4 text-zinc-500" />
+                <ChevronDown className="w-4 h-4 text-zinc-500" />
               </div>
             </div>
             
@@ -139,10 +139,10 @@ const ImportacaoPage = () => {
                       <td className="p-4">
                         <div className="flex justify-end gap-2">
                           <button className="p-1.5 hover:bg-zinc-700 rounded transition-colors text-zinc-400 hover:text-white">
-                            <PencilSquareIcon className="w-4 h-4" />
+                            <Pencil className="w-4 h-4" />
                           </button>
                           <button className="p-1.5 hover:bg-red-900/30 rounded transition-colors text-zinc-400 hover:text-red-500">
-                            <TrashIcon className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -162,9 +162,9 @@ const ImportacaoPage = () => {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">Novo Mapeamento</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-zinc-500 hover:text-white transition-colors">
-                <XMarkIcon className="w-6 h-6" />
+                <X className="w-6 h-6" />
               </button>
-            </div>
+            </div>Fix: Replace heroicons with lucide-react and implement modal logic
             
             <div className="space-y-4">
               <div>

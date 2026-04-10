@@ -268,13 +268,14 @@ export default function ImportacaoPage() {
           style={S.tab(abaAtiva === 'grupos')}
           onClick={() => setAbaAtiva('grupos')}
         >
+                      Grupo de Categorias
           
         </button>
         <button
           style={S.tab(abaAtiva === 'mapeamento')}
           onClick={() => setAbaAtiva('mapeamento')}
         >
-          Grupo de Categorias
+                      Mapeamento de Categorias
         </button>
       </div>
 

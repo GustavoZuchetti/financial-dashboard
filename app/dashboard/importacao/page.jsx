@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import UploadExcel from '@/components/UploadExcel'
 
 const MAPEAMENTOS_MOCK = [
   {
@@ -267,13 +268,13 @@ export default function ImportacaoPage() {
           style={S.tab(abaAtiva === 'grupos')}
           onClick={() => setAbaAtiva('grupos')}
         >
-          Grupo de Categorias
+          
         </button>
         <button
           style={S.tab(abaAtiva === 'mapeamento')}
           onClick={() => setAbaAtiva('mapeamento')}
         >
-          Mapeamento de Categorias
+          Grupo de Categorias
         </button>
       </div>
 

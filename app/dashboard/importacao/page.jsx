@@ -18,12 +18,12 @@ import { supabase } from '@/lib/supabase';
 const ImportacaoPage = () => {
   const [activeTab, setActiveTab] = useState('grupo');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newMapping, setNewMapping] = useState({ erp: '', category: '' });
   const [importStep, setImportStep] = useState('upload'); // 'upload' | 'validation'
   const [importData, setImportData] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState(null); // { type: 'success' | 'error', message: string }
   const [empresaId, setEmpresaId] = useState(null);
-
   const [mappings, setMappings] = useState([
     {
       group: 'RECEITA BRUTA',
@@ -102,6 +102,25 @@ const ImportacaoPage = () => {
               data: new Date().toLocaleDateString('pt-BR')
             }
           ]
+        };
+      }
+      return group;
+    }));
+  };
+
+  const handleSaveNewMapping = () => {
+    if (!newMapping.erp || !newMapping.category) return;
+    handleAddMapping(newMapping.erp, newMapping.category);
+    setIsModalOpen(false);
+    setNewMapping({ erp: '', category: '' });
+  };
+
+  const handleDeleteMapping = (groupId, itemId) => {
+    setMappings(prev => prev.map(group => {
+      if (group.group === groupId) {
+        return {
+          ...group,
+          items: group.items.filter(item => item.id !== itemId)
         };
       }
       return group;
@@ -248,7 +267,7 @@ const ImportacaoPage = () => {
             </div>
           </div>
 
-          {activeTab === 'grupo' && (
+          <div className={activeTab === 'grupo' ? 'block' : 'hidden'}>
             <div className="space-y-6">
               <UploadExcel onFileSelect={handleFileSelect} mappings={mappings} onAddMapping={handleAddMapping} />
               {importData && (
@@ -262,9 +281,9 @@ const ImportacaoPage = () => {
                 </div>
               )}
             </div>
-          )}
+          </div>
 
-          {activeTab === 'mapeamento' && (
+          <div className={activeTab === 'mapeamento' ? 'block' : 'hidden'}>
             <div>
               <div className="flex justify-end mb-4">
                 <button onClick={() => setIsModalOpen(true)} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 transition-colors">
@@ -305,7 +324,10 @@ const ImportacaoPage = () => {
                               <td className="p-3 text-center">{item.fluxo && '✓'}</td>
                               <td className="p-3 text-right">
                                 <Pencil className="w-4 h-4 inline mr-2 cursor-pointer text-zinc-500 hover:text-white transition-colors"/>
-                                <Trash2 className="w-4 h-4 inline cursor-pointer text-zinc-500 hover:text-red-500 transition-colors"/>
+                                <Trash2 
+                                  onClick={() => handleDeleteMapping(group.group, item.id)}
+                                  className="w-4 h-4 inline cursor-pointer text-zinc-500 hover:text-red-500 transition-colors"
+                                />
                               </td>
                             </tr>
                           ))}
@@ -316,7 +338,7 @@ const ImportacaoPage = () => {
                 ))}
               </div>
             </div>
-          )}
+          </div>
         </>
       ) : (
         /* Step: Final Validation Detail */
@@ -371,16 +393,16 @@ const ImportacaoPage = () => {
                           <AlertCircle className="w-5 h-5 text-red-500 inline" />
                         }
                       </td>
-                      <td className="p-4 font-mono text-zinc-300">{item.__validation?.accountValue || 'N/A'}</td>
+                      <td className="p-4 font-mono text-zinc-300">{item.__validation?.accountValue || \'N/A\'}</td>
                       <td className="p-4 font-bold text-zinc-200">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                          parseFloat(String(item['Valor'] || item['valor'] || 0).replace(/\./g, '').replace(',', '.'))
+                        {new Intl.NumberFormat(\'pt-BR\', { style: \'currency\', currency: \'BRL\' }).format(
+                          parseFloat(String(item[\'Valor\'] || item[\'valor\'] || 0).replace(/\./g, \'\').replace(\',\', \'.\'))
                         )}
                       </td>
                       <td className="p-4 text-zinc-400">
                         {item.__validation?.isValid ? 
                           <span className="text-green-800 text-[10px] font-bold uppercase">Pronto para importar</span> : 
-                          <span className="text-red-400 font-medium italic">{item.__validation?.errors.join(', ')}</span>
+                          <span className="text-red-400 font-medium italic">{item.__validation?.errors.join(\', \')}</span>
                         }
                       </td>
                     </tr>
@@ -403,19 +425,36 @@ const ImportacaoPage = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-zinc-400 mb-1">Categoria do ERP</label>
-                <input type="text" className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 outline-none text-white focus:border-green-500" placeholder="Ex: Venda de Mercadorias" />
+                <input 
+                  type="text" 
+                  value={newMapping.erp}
+                  onChange={(e) => setNewMapping(prev => ({ ...prev, erp: e.target.value }))}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 outline-none text-white focus:border-green-500" 
+                  placeholder="Ex: Venda de Mercadorias" 
+                />
               </div>
               <div>
                 <label className="block text-sm text-zinc-400 mb-1">Categoria do Sistema</label>
-                <select className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 outline-none text-white focus:border-green-500">
-                  <option>Receita de Serviços</option>
-                  <option>Receita de Produtos</option>
-                  <option>Deduções</option>
+                <select 
+                  value={newMapping.category}
+                  onChange={(e) => setNewMapping(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 outline-none text-white focus:border-green-500"
+                >
+                  <option value="">Selecione...</option>
+                  {mappings.map(g => (
+                    <option key={g.group} value={g.group}>{g.group}</option>
+                  ))}
                 </select>
               </div>
               <div className="flex gap-3 pt-4">
                 <button onClick={() => setIsModalOpen(false)} className="flex-1 bg-zinc-800 py-2 rounded-md border border-zinc-700 hover:bg-zinc-700 transition-colors">Cancelar</button>
-                <button className="flex-1 bg-green-600 py-2 rounded-md hover:bg-green-700 transition-colors">Salvar</button>
+                <button 
+                  onClick={handleSaveNewMapping}
+                  disabled={!newMapping.erp || !newMapping.category}
+                  className="flex-1 bg-green-600 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
+                >
+                  Salvar
+                </button>
               </div>
             </div>
           </div>

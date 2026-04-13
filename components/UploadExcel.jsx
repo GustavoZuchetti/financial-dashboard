@@ -262,10 +262,10 @@ export default function UploadExcel({ onFileSelect }) {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-[11px] border-collapse">
+            <div className="overflow-auto max-h-[450px]">
+              <table className="w-full text-left text-[11px] border-collapse" style={{ minWidth: '1200px' }}>
                 <thead>
-                  <tr className="bg-zinc-800/30 text-zinc-500 border-b border-zinc-800">
+                  <tr className="bg-zinc-800/30 text-zinc-500 border-b border-zinc-800 sticky top-0 z-10">
                     <th className="p-3 w-8">#</th>
                     {headers.map(h => <th key={h} className="p-3 font-medium truncate max-w-[150px]">{h}</th>)}
                   </tr>

@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Download,
   Plus,
@@ -9,42 +9,74 @@ import {
   X,
   CheckCircle2,
   AlertCircle,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from 'lucide-react';
 import UploadExcel from '@/components/UploadExcel';
+import { supabase } from '@/lib/supabase';
 
 const ImportacaoPage = () => {
   const [activeTab, setActiveTab] = useState('grupo');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [importStep, setImportStep] = useState('upload'); // 'upload' | 'validation'
   const [importData, setImportData] = useState(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState(null); // { type: 'success' | 'error', message: string }
+  const [empresaId, setEmpresaId] = useState(null);
 
   const [mappings, setMappings] = useState([
     {
       group: 'RECEITA BRUTA',
-      type: 'Receita Bruta',
+      type: 'receita',
       items: [
-        { id: 1, erp: 'Receita de Serviços', categoria: 'Receita de Serviços', dre: true, fluxo: true, data: '30/01/2025' },
-        { id: 2, erp: 'Receita de Produtos', categoria: 'Receita de Produtos', dre: true, fluxo: true, data: '23/07/2025' },
+        { id: 1, erp: 'Receita de Serviços', categoria: 'Receita de Serviços', dre: true, fluxo: true },
+        { id: 2, erp: 'Receita de Produtos', categoria: 'Receita de Produtos', dre: true, fluxo: true },
       ]
     },
     {
       group: 'OUTROS RECEBIMENTOS',
-      type: 'Receita Bruta',
+      type: 'receita',
       items: [
-        { id: 3, erp: 'Devoluções de Pagamentos', categoria: 'Devoluções de Pagamentos', dre: true, fluxo: true, data: '20/03/2025' },
+        { id: 3, erp: 'Devoluções de Pagamentos', categoria: 'Devoluções de Pagamentos', dre: true, fluxo: true },
       ]
     },
     {
       group: 'IMPOSTOS SOBRE RECEITA',
-      type: 'Deduções',
+      type: 'despesa',
       items: [
-        { id: 4, erp: 'COFINS', categoria: 'COFINS', dre: true, fluxo: false, data: '15/02/2025' },
-        { id: 5, erp: 'PIS', categoria: 'PIS', dre: true, fluxo: false, data: '15/02/2025' },
-        { id: 6, erp: 'ISS', categoria: 'ISS', dre: true, fluxo: true, data: '15/02/2025' },
+        { id: 4, erp: 'COFINS', categoria: 'COFINS', dre: true, fluxo: false },
+        { id: 5, erp: 'PIS', categoria: 'PIS', dre: true, fluxo: false },
+        { id: 6, erp: 'ISS', categoria: 'ISS', dre: true, fluxo: true },
       ]
     }
   ]);
+
+  // Carregar empresa e mapeamentos salvos
+  useEffect(() => {
+    const init = async () => {
+      // Carregar empresa
+      const { data: empresas } = await supabase.from('empresas').select('id').limit(1);
+      if (empresas && empresas.length > 0) {
+        setEmpresaId(empresas[0].id);
+      }
+
+      // Carregar mapeamentos do localStorage (fallback para persistência rápida)
+      const savedMappings = localStorage.getItem('financial_mappings');
+      if (savedMappings) {
+        try {
+          setMappings(JSON.parse(savedMappings));
+        } catch (e) {
+          console.error('Erro ao carregar mapeamentos:', e);
+        }
+      }
+    };
+    init();
+  }, []);
+
+  // Salvar mapeamentos sempre que mudarem
+  useEffect(() => {
+    localStorage.setItem('financial_mappings', JSON.stringify(mappings));
+  }, [mappings]);
 
   const handleFileSelect = (payload) => {
     setImportData(payload);
@@ -52,6 +84,83 @@ const ImportacaoPage = () => {
 
   const handleContinue = () => {
     setImportStep('validation');
+  };
+
+  const handleAddMapping = (erpName, categoryName) => {
+    setMappings(prev => prev.map(group => {
+      if (group.group === categoryName) {
+        return {
+          ...group,
+          items: [
+            ...group.items,
+            {
+              id: Date.now(),
+              erp: erpName,
+              categoria: erpName,
+              dre: true,
+              fluxo: true,
+              data: new Date().toLocaleDateString('pt-BR')
+            }
+          ]
+        };
+      }
+      return group;
+    }));
+  };
+
+  const handleFinalImport = async () => {
+    if (!importData || !empresaId) {
+      setImportStatus({ type: 'error', message: 'Empresa não identificada ou dados ausentes.' });
+      return;
+    }
+
+    setIsImporting(true);
+    setImportStatus(null);
+
+    try {
+      const recordsToInsert = importData.map(row => {
+        // Encontrar o tipo (receita/custo/despesa) baseado no mapeamento
+        let tipo = 'despesa';
+        mappings.forEach(g => {
+          if (g.items.some(i => i.erp.toLowerCase() === row.__validation.accountValue.toLowerCase())) {
+            tipo = g.type;
+          }
+        });
+
+        // Limpar valor
+        const valorRaw = row['Valor'] || row['valor'] || 0;
+        const valor = Math.abs(parseFloat(String(valorRaw).replace(/\./g, '').replace(',', '.')));
+
+        // Tratar data (formato esperado YYYY-MM-DD)
+        let dataStr = row['Data'] || row['data'];
+        if (dataStr && dataStr.includes('/')) {
+          const [d, m, y] = dataStr.split('/');
+          dataStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+
+        return {
+          empresa_id: empresaId,
+          data: dataStr || new Date().toISOString().split('T')[0],
+          descricao: row['Nome'] || row['nome'] || row['Descrição'] || '',
+          tipo: tipo,
+          valor: valor,
+          categoria: row.__validation.accountValue
+        };
+      });
+
+      const { error } = await supabase.from('lancamentos').insert(recordsToInsert);
+      
+      if (error) throw error;
+
+      setImportStatus({ type: 'success', message: `${recordsToInsert.length} lançamentos importados com sucesso para o DRE!` });
+      setImportData(null);
+      setImportStep('upload');
+    } catch (err) {
+      console.error(err);
+      setImportStatus({ type: 'error', message: `Erro na importação: ${err.message}` });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const getValidationResults = () => {
@@ -77,7 +186,6 @@ const ImportacaoPage = () => {
               : 'Validação final de itens para importação'}
           </p>
         </div>
-
         {importStep === 'validation' && (
           <button 
             onClick={() => setImportStep('upload')}
@@ -87,6 +195,17 @@ const ImportacaoPage = () => {
           </button>
         )}
       </div>
+
+      {/* Status Messages */}
+      {importStatus && (
+        <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
+          importStatus.type === 'success' ? 'bg-green-950/30 border border-green-900/50 text-green-400' : 'bg-red-950/30 border border-red-900/50 text-red-400'
+        }`}>
+          {importStatus.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+          <span className="text-sm font-medium">{importStatus.message}</span>
+          <button onClick={() => setImportStatus(null)} className="ml-auto text-zinc-500 hover:text-white"><X className="w-4 h-4" /></button>
+        </div>
+      )}
 
       {/* Company Selection Card */}
       <div className="bg-zinc-900 rounded-lg p-4 mb-6 border border-zinc-800">
@@ -131,7 +250,7 @@ const ImportacaoPage = () => {
 
           {activeTab === 'grupo' && (
             <div className="space-y-6">
-              <UploadExcel onFileSelect={handleFileSelect} mappings={mappings} />
+              <UploadExcel onFileSelect={handleFileSelect} mappings={mappings} onAddMapping={handleAddMapping} />
               {importData && (
                 <div className="flex justify-end pt-4">
                   <button 
@@ -221,15 +340,18 @@ const ImportacaoPage = () => {
             <div className="p-4 bg-zinc-800/50 border-b border-zinc-800 flex justify-between items-center">
               <h3 className="font-bold text-sm text-zinc-200 uppercase tracking-widest">Resumo da Validação Item a Item</h3>
               <div className="flex gap-2">
-                 <button className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-md text-xs border border-zinc-700">Exportar Log</button>
-                 <button 
-                  disabled={validCount < validationResults.length}
-                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-6 py-2 rounded-md text-xs font-bold shadow-lg shadow-green-900/20"
-                 >
-                   Concluir Importação
-                 </button>
+                <button className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-md text-xs border border-zinc-700">Exportar Log</button>
+                <button 
+                  disabled={validCount < validationResults.length || isImporting}
+                  onClick={handleFinalImport}
+                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-6 py-2 rounded-md text-xs font-bold shadow-lg shadow-green-900/20 flex items-center gap-2"
+                >
+                  {isImporting ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  {isImporting ? 'Importando...' : 'Concluir Importação'}
+                </button>
               </div>
             </div>
+
             <div className="overflow-auto max-h-[500px]">
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="sticky top-0 bg-zinc-900 z-10 border-b border-zinc-800">
@@ -242,7 +364,7 @@ const ImportacaoPage = () => {
                 </thead>
                 <tbody className="divide-y divide-zinc-800/50">
                   {validationResults.map((item, idx) => (
-                    <tr key={idx} className={`hover:bg-zinc-800/10 \${!item.__validation?.isValid ? 'bg-red-950/10' : ''}`}>
+                    <tr key={idx} className={`hover:bg-zinc-800/10 ${!item.__validation?.isValid ? 'bg-red-950/10' : ''}`}>
                       <td className="p-4 text-center">
                         {item.__validation?.isValid ? 
                           <CheckCircle2 className="w-5 h-5 text-green-600 inline" /> : 
@@ -252,7 +374,7 @@ const ImportacaoPage = () => {
                       <td className="p-4 font-mono text-zinc-300">{item.__validation?.accountValue || 'N/A'}</td>
                       <td className="p-4 font-bold text-zinc-200">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                          parseFloat(String(item['Valor'] || item['valor'] || 0).replace(/\\./g, '').replace(',', '.'))
+                          parseFloat(String(item['Valor'] || item['valor'] || 0).replace(/\./g, '').replace(',', '.'))
                         )}
                       </td>
                       <td className="p-4 text-zinc-400">

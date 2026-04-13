@@ -19,24 +19,24 @@ const ImportacaoPage = () => {
       group: 'RECEITA BRUTA',
       type: 'Receita Bruta',
       items: [
-        { id: 1, erp: 'Receita de Serviços', oxy: 'Receita de Serviços', dre: true, fluxo: true, data: '30/01/2025' },
-        { id: 2, erp: 'Receita de Produtos', oxy: 'Receita de Produtos', dre: true, fluxo: true, data: '23/07/2025' },
+        { id: 1, erp: 'Receita de Serviços', categoria: 'Receita de Serviços', dre: true, fluxo: true, data: '30/01/2025' },
+        { id: 2, erp: 'Receita de Produtos', categoria: 'Receita de Produtos', dre: true, fluxo: true, data: '23/07/2025' },
       ]
     },
     {
       group: 'OUTROS RECEBIMENTOS',
       type: 'Receita Bruta',
       items: [
-        { id: 3, erp: 'Devoluções de Pagamentos', oxy: 'Devoluções de Pagamentos', dre: true, fluxo: true, data: '20/03/2025' },
+        { id: 3, erp: 'Devoluções de Pagamentos', categoria: 'Devoluções de Pagamentos', dre: true, fluxo: true, data: '20/03/2025' },
       ]
     },
     {
       group: 'IMPOSTOS SOBRE RECEITA',
       type: 'Deduções',
       items: [
-        { id: 4, erp: 'COFINS', oxy: 'COFINS', dre: true, fluxo: false, data: '15/02/2025' },
-        { id: 5, erp: 'PIS', oxy: 'PIS', dre: true, fluxo: false, data: '15/02/2025' },
-        { id: 6, erp: 'ISS', oxy: 'ISS', dre: true, fluxo: true, data: '15/02/2025' },
+        { id: 4, erp: 'COFINS', categoria: 'COFINS', dre: true, fluxo: false, data: '15/02/2025' },
+        { id: 5, erp: 'PIS', categoria: 'PIS', dre: true, fluxo: false, data: '15/02/2025' },
+        { id: 6, erp: 'ISS', categoria: 'ISS', dre: true, fluxo: true, data: '15/02/2025' },
       ]
     }
   ]);
@@ -150,7 +150,7 @@ const ImportacaoPage = () => {
                           />
                         </th>
                         <th className="p-3 font-medium">Categoria do ERP</th>
-                        <th className="p-3 font-medium">Categoria da OXY</th>
+                        <th className="p-3 font-medium">Categoria do Sistema</th>
                         <th className="p-3 font-medium text-center">DRE</th>
                         <th className="p-3 font-medium text-center">Fluxo de Caixa</th>
                         <th className="p-3 font-medium">Data da Criação</th>
@@ -167,7 +167,7 @@ const ImportacaoPage = () => {
                             />
                           </td>
                           <td className="p-3 text-zinc-200 font-medium">{item.erp}</td>
-                          <td className="p-3 text-zinc-300">{item.oxy}</td>
+                          <td className="p-3 text-zinc-300">{item.categoria}</td>
                           <td className="p-3 text-center">
                             {item.dre && <span className="text-green-500 text-base">✓</span>}
                           </td>
@@ -220,7 +220,7 @@ const ImportacaoPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm text-zinc-400 mb-1">Categoria OXY</label>
+                <label className="block text-sm text-zinc-400 mb-1">Categoria do Sistema</label>
                 <select className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none text-white">
                   <option>Receita de Serviços</option>
                   <option>Receita de Produtos</option>

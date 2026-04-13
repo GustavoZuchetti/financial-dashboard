@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useMemo, useEffect } from 'react'
 import * as XLSX from 'xlsx'
-import { CheckCircle2, AlertCircle, Clock, ChevronLeft, ChevronRight, FileText, X } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Clock, ChevronLeft, ChevronRight, FileText, X, Settings2 } from 'lucide-react'
 
 // --- Helpers ---
 const isValidFile = (file) => {
@@ -10,21 +10,10 @@ const isValidFile = (file) => {
   return name.endsWith('.xlsx') || name.endsWith('.csv')
 }
 
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
-}
-
-// Função robusta para converter serial do Excel ou datas em string
 const formatExcelDate = (value) => {
   if (value === null || value === undefined || value === '') return ''
-  
-  // Se for um número (serial do Excel)
   let num = parseFloat(String(value).replace(',', '.'))
-  if (!isNaN(num) && num > 30000 && num < 60000) { // Range razoável para datas (1982 a 2064)
+  if (!isNaN(num) && num > 30000 && num < 60000) {
     try {
       const date = XLSX.SSF.parse_date_code(num)
       const d = String(date.d).padStart(2, '0')
@@ -35,20 +24,38 @@ const formatExcelDate = (value) => {
       return String(value)
     }
   }
-  
   return String(value)
 }
 
-const validateRow = (row) => {
+const validateRow = (row, mappings = []) => {
   const errors = []
-  if (!row['Nome'] && !row['nome']) errors.push('Nome ausente')
-  const valorRaw = row['Valor'] || row['valor'] || row['Valor Pago/Recebido']
-  const valor = parseFloat(String(valorRaw).replace(',', '.'))
-  if (isNaN(valor)) errors.push('Valor inválido')
   
+  // Tenta achar o campo de conta/nome
+  const accountField = Object.keys(row).find(k => 
+    k.toLowerCase().includes('nome') || 
+    k.toLowerCase().includes('conta') || 
+    k.toLowerCase().includes('categoria')
+  )
+  const accountValue = accountField ? String(row[accountField] || '').trim() : ''
+
+  if (!accountValue) {
+    errors.push('Nome/Conta ausente')
+  } else {
+    // Validação de mapeamento (De-Para)
+    const allMappedAccounts = mappings.flatMap(g => g.items.map(i => i.erp.toLowerCase()))
+    if (!allMappedAccounts.includes(accountValue.toLowerCase())) {
+      errors.push(`Conta "${accountValue}" não mapeada no sistema`)
+    }
+  }
+
+  const valorRaw = row['Valor'] || row['valor'] || row['Valor Pago/Recebido']
+  const valor = parseFloat(String(valorRaw).replace(/\./g, '').replace(',', '.'))
+  if (isNaN(valor)) errors.push('Valor numérico inválido')
+
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
+    accountValue
   }
 }
 
@@ -66,7 +73,7 @@ const S = {
   btnGhost: { background: 'transparent', color: '#a1a1aa', border: '1px solid #27272a', borderRadius: 6, padding: '8px 16px', fontSize: 12, cursor: 'pointer' },
 }
 
-export default function UploadExcel({ onFileSelect }) {
+export default function UploadExcel({ onFileSelect, mappings = [] }) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
   const [status, setStatus] = useState('idle') // idle | processing | success | error
@@ -74,11 +81,13 @@ export default function UploadExcel({ onFileSelect }) {
   const [headers, setHeaders] = useState([])
   const [errorMsg, setErrorMsg] = useState('')
   
+  // Modal De-Para
+  const [editingRow, setEditingRow] = useState(null)
+  
   // Paginação
   const [currentPage, setCurrentPage] = useState(1)
   const [filter, setFilter] = useState('all') // all | error
   const rowsPerPage = 10
-
   const fileInputRef = useRef(null)
 
   const processFile = async (file) => {
@@ -87,29 +96,19 @@ export default function UploadExcel({ onFileSelect }) {
       setStatus('error')
       return
     }
-
     setSelectedFile(file)
     setStatus('processing')
     setErrorMsg('')
-
     try {
       const buffer = await file.arrayBuffer()
       const isCSV = file.name.toLowerCase().endsWith('.csv')
-      
-      const workbook = XLSX.read(buffer, { 
-        type: isCSV ? 'string' : 'array',
-        cellDates: false 
-      })
-      
+      const workbook = XLSX.read(buffer, { type: isCSV ? 'string' : 'array', cellDates: false })
       const sheetName = workbook.SheetNames[0]
       const sheet = workbook.Sheets[sheetName]
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
+      
+      if (rows.length === 0) throw new Error('O arquivo está vazio.')
 
-      if (rows.length === 0) {
-        throw new Error('O arquivo está vazio.')
-      }
-
-      // Normalização de colunas de data
       const dateColumns = ['Data', 'Competência', 'Data de vencimento', 'Liquidação', 'data', 'competencia']
       
       const processed = rows.map((row, index) => {
@@ -122,7 +121,7 @@ export default function UploadExcel({ onFileSelect }) {
         return {
           ...newRow,
           __id: index,
-          __validation: validateRow(newRow)
+          __validation: validateRow(newRow, mappings)
         }
       })
 
@@ -170,14 +169,8 @@ export default function UploadExcel({ onFileSelect }) {
 
   return (
     <div className="space-y-4">
-      <input 
-        ref={fileInputRef} 
-        type="file" 
-        accept=".xlsx,.csv" 
-        onChange={handleFileChange} 
-        className="hidden" 
-      />
-
+      <input ref={fileInputRef} type="file" accept=".xlsx,.csv" onChange={handleFileChange} className="hidden" />
+      
       {status === 'idle' && (
         <div 
           style={S.uploadArea(isDragging)}
@@ -237,46 +230,42 @@ export default function UploadExcel({ onFileSelect }) {
               <div className="flex items-center gap-4">
                 <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Prévia dos Dados</span>
                 <div className="flex gap-1">
-                  <button 
-                    onClick={() => {setFilter('all'); setCurrentPage(1)}}
-                    className={`px-2 py-1 text-[10px] rounded border ${filter === 'all' ? 'bg-zinc-700 border-zinc-600 text-white' : 'border-zinc-800 text-zinc-500'}`}
-                  >Todos</button>
-                  <button 
-                    onClick={() => {setFilter('error'); setCurrentPage(1)}}
-                    className={`px-2 py-1 text-[10px] rounded border ${filter === 'error' ? 'bg-red-900 text-red-200 border-red-800' : 'border-zinc-800 text-zinc-500'}`}
-                  >Erros ({data.filter(r => !r.__validation.isValid).length})</button>
+                  <button onClick={() => {setFilter('all'); setCurrentPage(1)}} className={`px-2 py-1 text-[10px] rounded border ${filter === 'all' ? 'bg-zinc-700 border-zinc-600 text-white' : 'border-zinc-800 text-zinc-500'}`}>Todos</button>
+                  <button onClick={() => {setFilter('error'); setCurrentPage(1)}} className={`px-2 py-1 text-[10px] rounded border ${filter === 'error' ? 'bg-red-900 text-red-200 border-red-800' : 'border-zinc-800 text-zinc-500'}`}>Erros ({data.filter(r => !r.__validation.isValid).length})</button>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button 
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(p => p - 1)}
-                  className="p-1 rounded hover:bg-zinc-800 disabled:opacity-30"
-                ><ChevronLeft className="w-4 h-4" /></button>
+                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-1 rounded hover:bg-zinc-800 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
                 <span className="text-[10px] text-zinc-400">Pág {currentPage} de {totalPages || 1}</span>
-                <button 
-                  disabled={currentPage === totalPages || totalPages === 0}
-                  onClick={() => setCurrentPage(p => p + 1)}
-                  className="p-1 rounded hover:bg-zinc-800 disabled:opacity-30"
-                ><ChevronRight className="w-4 h-4" /></button>
+                <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(p => p + 1)} className="p-1 rounded hover:bg-zinc-800 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
               </div>
             </div>
 
-            <div className="overflow-auto max-h-[450px]">
+            <div className="overflow-auto max-h-[450px] border border-zinc-800/50 rounded-lg custom-scrollbar">
               <table className="w-full text-left text-[11px] border-collapse" style={{ minWidth: '1200px' }}>
-                <thead>
-                  <tr className="bg-zinc-800/30 text-zinc-500 border-b border-zinc-800 sticky top-0 z-10">
+                <thead className="sticky top-0 bg-zinc-900 shadow-sm z-10">
+                  <tr className="bg-zinc-800/30 text-zinc-500 border-b border-zinc-800">
                     <th className="p-3 w-8">#</th>
                     {headers.map(h => <th key={h} className="p-3 font-medium truncate max-w-[150px]">{h}</th>)}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/50">
                   {paginatedData.map((row) => (
-                    <tr key={row.__id} className={`hover:bg-zinc-800/20 ${!row.__validation.isValid ? 'bg-red-900/5' : ''}`}>
+                    <tr 
+                      key={row.__id} 
+                      onClick={() => !row.__validation.isValid && setEditingRow(row)}
+                      className={`hover:bg-zinc-800/20 cursor-pointer ${!row.__validation.isValid ? 'bg-red-900/5' : ''}`}
+                    >
                       <td className="p-3">
                         {row.__validation.isValid ? 
                           <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> : 
-                          <AlertCircle className="w-3.5 h-3.5 text-red-500" title={row.__validation.errors.join(", ")} />
+                          <div className="relative group">
+                            <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+                            {/* Tooltip */}
+                            <div className="absolute left-6 top-1/2 -translate-y-1/2 hidden group-hover:block z-50 bg-red-900 text-white text-[10px] p-2 rounded shadow-xl border border-red-700 whitespace-nowrap">
+                              {row.__validation.errors.join(", ")}
+                            </div>
+                          </div>
                         }
                       </td>
                       {headers.map(h => (
@@ -288,6 +277,53 @@ export default function UploadExcel({ onFileSelect }) {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal De-Para Localizado */}
+      {editingRow && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-zinc-800 bg-zinc-800/50 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Settings2 className="w-5 h-5 text-green-500" />
+                <h3 className="font-bold text-zinc-200">Configurar De-Para</h3>
+              </div>
+              <button onClick={() => setEditingRow(null)} className="text-zinc-500 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <div className="p-6 space-y-5">
+              <div className="p-3 bg-red-900/10 border border-red-900/30 rounded-lg">
+                <p className="text-[10px] uppercase font-bold text-red-500 mb-1">Erro Identificado</p>
+                <p className="text-xs text-red-200">{editingRow.__validation.errors[0]}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1">Conta no ERP (Origem)</label>
+                  <div className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-3 text-sm text-zinc-300 font-mono">
+                    {editingRow.__validation.accountValue}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1">Categoria no Sistema (Destino)</label>
+                  <select className="w-full bg-zinc-950 border border-zinc-700 rounded-md p-3 text-sm text-white outline-none focus:border-green-600 transition-colors">
+                    <option value="">Selecione uma categoria...</option>
+                    {mappings.map(g => (
+                      <optgroup key={g.group} label={g.group}>
+                        <option value={g.group}>{g.group} (Novo Item)</option>
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button onClick={() => setEditingRow(null)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-3 rounded-lg font-bold text-sm transition-colors">Cancelar</button>
+                <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-sm transition-colors shadow-lg shadow-green-900/20">Salvar e Validar</button>
+              </div>
             </div>
           </div>
         </div>

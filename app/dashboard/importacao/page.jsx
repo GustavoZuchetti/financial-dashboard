@@ -28,6 +28,7 @@ const ImportacaoPage = () => {
   const [empresaId, setEmpresaId] = useState(null);
   const [isEmpresaModalOpen, setIsEmpresaModalOpen] = useState(false);
   const [empresas, setEmpresas] = useState([]);
+  const [isLoaded, setIsLoaded] = useState(false);
   
   const [mappings, setMappings] = useState([
     {
@@ -97,35 +98,47 @@ const ImportacaoPage = () => {
       // Carregar lista de empresas para o modal
       const { data: allEmpresas } = await supabase.from('empresas').select('*').order('nome');
       if (allEmpresas) setEmpresas(allEmpresas);
+
+      setIsLoaded(true);
     };
 
     loadSavedState();
   }, []);
 
-  // Persistir mudanças no localStorage
+  // Persistir mudanças no localStorage (APENAS APÓS O CARREGAMENTO INICIAL)
   useEffect(() => {
-    if (empresaId) localStorage.setItem('empresa_id', empresaId);
-  }, [empresaId]);
-
-  useEffect(() => {
-    localStorage.setItem('financial_mappings', JSON.stringify(mappings));
-  }, [mappings]);
-
-  useEffect(() => {
-    if (importData) {
-      localStorage.setItem('financial_import_data', JSON.stringify(importData));
-    } else {
-      localStorage.removeItem('financial_import_data');
+    if (isLoaded && empresaId) {
+      localStorage.setItem('empresa_id', empresaId);
     }
-  }, [importData]);
+  }, [empresaId, isLoaded]);
 
   useEffect(() => {
-    localStorage.setItem('financial_import_step', importStep);
-  }, [importStep]);
+    if (isLoaded) {
+      localStorage.setItem('financial_mappings', JSON.stringify(mappings));
+    }
+  }, [mappings, isLoaded]);
 
   useEffect(() => {
-    localStorage.setItem('financial_import_active_tab', activeTab);
-  }, [activeTab]);
+    if (isLoaded) {
+      if (importData) {
+        localStorage.setItem('financial_import_data', JSON.stringify(importData));
+      } else {
+        localStorage.removeItem('financial_import_data');
+      }
+    }
+  }, [importData, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('financial_import_step', importStep);
+    }
+  }, [importStep, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('financial_import_active_tab', activeTab);
+    }
+  }, [activeTab, isLoaded]);
 
   const handleFileSelect = (payload) => {
     setImportData(payload);

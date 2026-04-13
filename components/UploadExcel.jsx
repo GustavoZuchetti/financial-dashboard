@@ -25,7 +25,6 @@ const formatExcelDate = (value) => {
       return String(value)
     }
   }
-
   const strValue = String(value).trim()
   if (strValue.match(/^\d{4}-\d{2}-\d{2}/)) {
     const [y, m, d] = strValue.split('T')[0].split('-')
@@ -54,13 +53,11 @@ const validateRow = (row, mappings = []) => {
       errors.push(`Conta "${accountValue}" não mapeada no sistema`)
     }
   }
-
   const valorRaw = row['Valor'] || row['valor'] || row['Valor Pago/Recebido'] || row['Total']
   const valorStr = String(valorRaw || '0').replace(/\./g, '').replace(',', '.')
   const valor = parseFloat(valorStr)
   
   if (isNaN(valor)) errors.push('Valor numérico inválido')
-
   return {
     isValid: errors.length === 0,
     errors,
@@ -96,28 +93,40 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping 
   const rowsPerPage = 10
   const fileInputRef = useRef(null)
 
+  // Re-validar dados quando os mapeamentos mudarem (ex: adicionados em outra aba)
+  useEffect(() => {
+    if (data.length > 0) {
+      setData(prev => prev.map(row => ({
+        ...row,
+        __validation: validateRow(row, mappings)
+      })));
+    }
+  }, [mappings]);
+
+  // Sincronizar dados com o componente pai automaticamente
+  useEffect(() => {
+    if (status === 'success' && data.length > 0) {
+      onFileSelect?.(data);
+    }
+  }, [data, status, onFileSelect]);
+
   const processFile = async (file) => {
     if (!file || !isValidFile(file)) {
       setErrorMsg('Por favor, selecione um arquivo .xlsx ou .csv válido.')
       setStatus('error')
       return
     }
-
     setSelectedFile(file)
     setStatus('processing')
     setErrorMsg('')
-
     try {
       const buffer = await file.arrayBuffer()
       const workbook = XLSX.read(buffer, { type: 'array', cellDates: false })
       const sheetName = workbook.SheetNames[0]
       const sheet = workbook.Sheets[sheetName]
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
-
       if (rows.length === 0) throw new Error('O arquivo está vazio.')
-
       const dateColumns = ['Data', 'Competência', 'Data de vencimento', 'Liquidação', 'data', 'competencia']
-
       const processed = rows.map((row, index) => {
         const newRow = { ...row }
         Object.keys(newRow).forEach(key => {
@@ -131,7 +140,6 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping 
           __validation: validateRow(newRow, mappings)
         }
       })
-
       setData(processed)
       setHeaders(Object.keys(rows[0]))
       setStatus('success')
@@ -148,18 +156,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping 
     
     const accountName = editingRow.__validation.accountValue;
     onAddMapping?.(accountName, selectedCategory);
-
-    // Atualiza o estado local para refletir a validação instantaneamente
-    setData(prev => prev.map(row => {
-      if (row.__validation.accountValue === accountName) {
-        return { 
-          ...row, 
-          __validation: { ...row.__validation, isValid: true, errors: [] } 
-        };
-      }
-      return row;
-    }));
-
+    // O useEffect já cuidará de re-validar a data local e notificar o pai
     setEditingRow(null);
     setSelectedCategory('');
   };
@@ -193,6 +190,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping 
     setData([])
     setStatus('idle')
     if (fileInputRef.current) fileInputRef.current.value = ''
+    onFileSelect?.(null);
   }
 
   return (
@@ -214,14 +212,12 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping 
           </div>
         </div>
       )}
-
       {status === 'processing' && (
         <div className="p-12 bg-zinc-900 border border-zinc-800 rounded-xl flex flex-col items-center gap-4">
           <Clock className="w-8 h-8 text-green-500 animate-pulse" />
           <p className="text-sm text-zinc-400">Processando e validando dados...</p>
         </div>
       )}
-
       {status === 'error' && (
         <div className="p-6 bg-red-950/20 border border-red-900/50 rounded-xl flex flex-col items-center gap-3">
           <AlertCircle className="w-8 h-8 text-red-500" />
@@ -229,7 +225,6 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping 
           <button style={S.btnGhost} onClick={handleReset}>Tentar outro arquivo</button>
         </div>
       )}
-
       {status === 'success' && (
         <div className="space-y-4 animate-in fade-in duration-500">
           <div className="flex items-center justify-between p-4 bg-green-950/20 border border-green-900/30 rounded-xl">
@@ -247,7 +242,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping 
                 onClick={() => onFileSelect?.(data)}
                 className="hover:scale-105 active:scale-95 transition-transform shadow-lg shadow-green-900/20"
               >
-                Continuar Importação
+                Arquivo Selecionado ✓
               </button>
             </div>
           </div>
@@ -267,7 +262,6 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping 
                 <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(p => p + 1)} className="p-1 rounded hover:bg-zinc-800 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
               </div>
             </div>
-
             <div className="overflow-auto max-h-[450px] border border-zinc-800/50 rounded-lg custom-scrollbar">
               <table className="w-full text-left text-[11px] border-collapse" style={{ minWidth: '1200px' }}>
                 <thead className="sticky top-0 bg-zinc-900 shadow-sm z-10">

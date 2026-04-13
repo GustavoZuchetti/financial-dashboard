@@ -45,12 +45,35 @@ const KPICard = ({ title, value, color = '#10b981' }) => (
   </div>
 )
 
+const S = {
+  card: { backgroundColor: '#1f2937', borderRadius: '8px', padding: '20px', border: '1px solid #374151' },
+  kpiTitle: { fontSize: '13px', color: '#9ca3af', marginBottom: '8px' },
+  kpiValue: { fontSize: '22px', fontWeight: 'bold' },
+  sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f3f4f6' },
+  btnImport: { background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }
+}
+
+const KPICard = ({ title, value, color = '#10b981' }) => (
+  <div style={S.card}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div>
+        <div style={S.kpiTitle}>{title}</div>
+        <div style={{ ...S.kpiValue, color }}>{value}</div>
+      </div>
+      <div style={{ color: '#6b7280', fontSize: '12px' }}>ⓘ</div>
+    </div>
+  </div>
+)
+
 export default function DREGeral() {
   return (
     <div style={{ color: '#e5e7eb', padding: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>DRE</h1>
         <div style={{ display: 'flex', gap: '12px' }}>
+          <button style={S.btnImport} onClick={() => window.location.href='/dashboard/importacao'}>
+            📥 Importar XLSx
+          </button>
           <div style={{ ...S.card, padding: '8px 16px' }}>3 empresas selecionadas</div>
           <div style={{ ...S.card, padding: '8px 16px' }}>📅 01/01/2026 → 30/04/2026</div>
         </div>
@@ -84,24 +107,24 @@ export default function DREGeral() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginBottom: '24px' }}>
-         <div style={S.card}>
-            <h2 style={S.sectionTitle}>Operação direta ⓘ</h2>
-            <div style={{ height: '300px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={MOCK_OPERACAO}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={fmt} />
-                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
-                  <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} />
-                  <Bar dataKey="receita" fill="#10b981" barSize={30} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="custos" fill="#ef4444" barSize={30} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="margem" fill="#0ea5e9" barSize={30} radius={[4, 4, 0, 0]} />
-                  <Line yAxisId="right" type="monotone" dataKey="margemPerc" stroke="#fff" strokeWidth={2} dot={{ r: 4, fill: '#fff' }} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-         </div>
+        <div style={S.card}>
+          <h2 style={S.sectionTitle}>Operação direta ⓘ</h2>
+          <div style={{ height: '300px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={MOCK_OPERACAO}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={fmt} />
+                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+                <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} />
+                <Bar dataKey="receita" fill="#10b981" barSize={30} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="custos" fill="#ef4444" barSize={30} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="margem" fill="#0ea5e9" barSize={30} radius={[4, 4, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="margemPerc" stroke="#fff" strokeWidth={2} dot={{ r: 4, fill: '#fff' }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>

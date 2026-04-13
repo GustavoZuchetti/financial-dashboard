@@ -6,13 +6,18 @@ import {
   Pencil,
   Trash2,
   ChevronDown,
-  X
+  X,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight
 } from 'lucide-react';
 import UploadExcel from '@/components/UploadExcel';
 
 const ImportacaoPage = () => {
   const [activeTab, setActiveTab] = useState('grupo');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [importStep, setImportStep] = useState('upload'); // 'upload' | 'validation'
+  const [importData, setImportData] = useState(null);
 
   const [mappings, setMappings] = useState([
     {
@@ -41,17 +46,67 @@ const ImportacaoPage = () => {
     }
   ]);
 
+  const handleFileSelect = (payload) => {
+    setImportData(payload);
+  };
+
+  const handleContinue = () => {
+    setImportStep('validation');
+  };
+
+  // Lógica de validação: verifica se a conta da planilha existe no mapeamento do sistema
+  const getValidationResults = () => {
+    if (!importData) return [];
+    
+    // Flatten mappings to get all ERP accounts mapped
+    const allMappedAccounts = mappings.flatMap(g => g.items.map(i => i.erp.toLowerCase()));
+    
+    return importData.data.map((row, idx) => {
+      // Tenta achar uma coluna que pareça ser a de conta/categoria
+      const accountField = Object.keys(row).find(k => 
+        k.toLowerCase().includes('nome') || 
+        k.toLowerCase().includes('conta') || 
+        k.toLowerCase().includes('categoria')
+      ) || Object.keys(row)[0];
+
+      const accountValue = String(row[accountField] || '');
+      const isMatched = allMappedAccounts.includes(accountValue.toLowerCase());
+
+      return {
+        id: idx,
+        account: accountValue,
+        status: isMatched ? 'valid' : 'invalid',
+        originalRow: row
+      };
+    });
+  };
+
+  const validationResults = getValidationResults();
+  const validCount = validationResults.filter(r => r.status === 'valid').length;
+
   return (
     <div className="p-6 bg-zinc-950 min-h-screen text-white">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Download className="w-6 h-6" />
-          Importação / De-Para
-        </h1>
-        <p className="text-zinc-400 text-sm mt-1">
-          Configure o mapeamento entre categorias do ERP e categorias do sistema
-        </p>
+      <div className="mb-6 flex justify-between items-end">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Download className="w-6 h-6" />
+            Importação / De-Para
+          </h1>
+          <p className="text-zinc-400 text-sm mt-1">
+            {importStep === 'upload' 
+              ? 'Configure o mapeamento entre categorias do ERP e categorias do sistema'
+              : 'Validação de contas importadas vs mapeamento do sistema'}
+          </p>
+        </div>
+        {importStep === 'validation' && (
+          <button 
+            onClick={() => setImportStep('upload')}
+            className="text-zinc-400 hover:text-white text-sm flex items-center gap-1"
+          >
+            ← Voltar para Upload
+          </button>
+        )}
       </div>
 
       {/* Company Selection Card */}
@@ -67,131 +122,182 @@ const ImportacaoPage = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="mb-6">
-        <div className="border-b border-zinc-800">
-          <div className="flex gap-6">
-            <button
-              onClick={() => setActiveTab('grupo')}
-              className={`pb-3 px-2 text-sm font-medium transition-all relative ${
-                activeTab === 'grupo'
-                  ? 'text-green-500'
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-            >
-              Grupo de Categorias
-              {activeTab === 'grupo' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-500" />
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('mapeamento')}
-              className={`pb-3 px-2 text-sm font-medium transition-all relative ${
-                activeTab === 'mapeamento'
-                  ? 'text-green-500'
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-            >
-              Mapeamento de Categorias
-              {activeTab === 'mapeamento' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-500" />
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Tab: Grupo de Categorias - Importar XLSX */}
-      {activeTab === 'grupo' && (
-        <div>
-          <UploadExcel onFileSelect={(file) => console.log('Arquivo selecionado:', file)} />
-        </div>
-      )}
-
-      {/* Tab: Mapeamento de Categorias */}
-      {activeTab === 'mapeamento' && (
-        <div>
-          {/* Create Button */}
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 transition-colors active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              Criar Mapeamento de Categoria
-            </button>
-          </div>
-
-          {/* Mappings */}
-          <div className="space-y-6">
-            {mappings.map((group, gIdx) => (
-              <div key={gIdx} className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
-                {/* Group Header */}
-                <div className="p-4 bg-zinc-800/30 flex justify-between items-center">
-                  <div>
-                    <h3 className="font-bold text-zinc-200">{group.group}</h3>
-                    <p className="text-xs text-zinc-500">Tipo: {group.type}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-400">Mapeamentos: {group.items.length}</span>
-                    <ChevronDown className="w-4 h-4 text-zinc-500" />
-                  </div>
-                </div>
-
-                {/* Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="bg-zinc-800/20 text-zinc-400 uppercase text-xs">
-                        <th className="p-3 font-medium w-12">
-                          <input
-                            type="checkbox"
-                            className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-green-600 focus:ring-2 focus:ring-green-500 focus:ring-offset-0 focus:ring-offset-zinc-900"
-                          />
-                        </th>
-                        <th className="p-3 font-medium">Categoria do ERP</th>
-                        <th className="p-3 font-medium">Categoria do Sistema</th>
-                        <th className="p-3 font-medium text-center">DRE</th>
-                        <th className="p-3 font-medium text-center">Fluxo de Caixa</th>
-                        <th className="p-3 font-medium">Data da Criação</th>
-                        <th className="p-3 font-medium text-right">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-800/50">
-                      {group.items.map((item) => (
-                        <tr key={item.id} className="hover:bg-zinc-800/20 transition-colors">
-                          <td className="p-3">
-                            <input
-                              type="checkbox"
-                              className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-green-600 focus:ring-2 focus:ring-green-500 focus:ring-offset-0 focus:ring-offset-zinc-900"
-                            />
-                          </td>
-                          <td className="p-3 text-zinc-200 font-medium">{item.erp}</td>
-                          <td className="p-3 text-zinc-300">{item.categoria}</td>
-                          <td className="p-3 text-center">
-                            {item.dre && <span className="text-green-500 text-base">✓</span>}
-                          </td>
-                          <td className="p-3 text-center">
-                            {item.fluxo && <span className="text-green-500 text-base">✓</span>}
-                          </td>
-                          <td className="p-3 text-zinc-400">{item.data}</td>
-                          <td className="p-3">
-                            <div className="flex justify-end gap-1">
-                              <button className="p-2 hover:bg-zinc-700 rounded transition-colors text-zinc-400 hover:text-white">
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button className="p-2 hover:bg-red-900/30 rounded transition-colors text-zinc-400 hover:text-red-400">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+      {importStep === 'upload' ? (
+        <>
+          {/* Tabs */}
+          <div className="mb-6">
+            <div className="border-b border-zinc-800">
+              <div className="flex gap-6">
+                <button
+                  onClick={() => setActiveTab('grupo')}
+                  className={`pb-3 px-2 text-sm font-medium transition-all relative ${
+                    activeTab === 'grupo' ? 'text-green-500' : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  Grupo de Categorias
+                  {activeTab === 'grupo' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-500" />}
+                </button>
+                <button
+                  onClick={() => setActiveTab('mapeamento')}
+                  className={`pb-3 px-2 text-sm font-medium transition-all relative ${
+                    activeTab === 'mapeamento' ? 'text-green-500' : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  Mapeamento de Categorias
+                  {activeTab === 'mapeamento' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-500" />}
+                </button>
               </div>
-            ))}
+            </div>
+          </div>
+
+          {activeTab === 'grupo' && (
+            <div>
+              <UploadExcel onFileSelect={handleFileSelect} />
+              {importData && (
+                <div className="mt-6 flex justify-end">
+                  <button 
+                    onClick={handleContinue}
+                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-transform active:scale-95"
+                  >
+                    Continuar para Validação <ArrowRight className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'mapeamento' && (
+            <div>
+              <div className="flex justify-end mb-4">
+                <button onClick={() => setIsModalOpen(true)} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 transition-colors">
+                  <Plus className="w-4 h-4" /> Criar Mapeamento de Categoria
+                </button>
+              </div>
+              <div className="space-y-6">
+                {mappings.map((group, gIdx) => (
+                  <div key={gIdx} className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+                    <div className="p-4 bg-zinc-800/30 flex justify-between items-center">
+                      <div>
+                        <h3 className="font-bold text-zinc-200">{group.group}</h3>
+                        <p className="text-xs text-zinc-500">Tipo: {group.type}</p>
+                      </div>
+                      <ChevronDown className="w-4 h-4 text-zinc-500" />
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-zinc-800/20 text-zinc-400 uppercase text-xs">
+                          <tr>
+                            <th className="p-3 w-12"><input type="checkbox" className="w-4 h-4 rounded border-zinc-600 bg-zinc-800" /></th>
+                            <th className="p-3">Categoria do ERP</th>
+                            <th className="p-3">Categoria do Sistema</th>
+                            <th className="p-3 text-center">DRE</th>
+                            <th className="p-3 text-center">Fluxo</th>
+                            <th className="p-3 text-right">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-800/50">
+                          {group.items.map((item) => (
+                            <tr key={item.id} className="hover:bg-zinc-800/20">
+                              <td className="p-3"><input type="checkbox" className="w-4 h-4 rounded border-zinc-600 bg-zinc-800" /></td>
+                              <td className="p-3 text-zinc-200">{item.erp}</td>
+                              <td className="p-3 text-zinc-400">{item.categoria}</td>
+                              <td className="p-3 text-center">{item.dre && '✓'}</td>
+                              <td className="p-3 text-center">{item.fluxo && '✓'}</td>
+                              <td className="p-3 text-right"><Pencil className="w-4 h-4 inline mr-2 cursor-pointer"/><Trash2 className="w-4 h-4 inline cursor-pointer text-zinc-500"/></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        /* Step: Validation */
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg">
+              <div className="text-zinc-500 text-xs uppercase font-bold mb-1">Total de Itens</div>
+              <div className="text-2xl font-bold">{validationResults.length}</div>
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg border-l-4 border-l-green-600">
+              <div className="text-zinc-500 text-xs uppercase font-bold mb-1">Contas Validadas</div>
+              <div className="text-2xl font-bold text-green-500">{validCount}</div>
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg border-l-4 border-l-red-600">
+              <div className="text-zinc-500 text-xs uppercase font-bold mb-1">Atenção (Não Mapeadas)</div>
+              <div className="text-2xl font-bold text-red-500">{validationResults.length - validCount}</div>
+            </div>
+          </div>
+
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+            <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
+              <h3 className="font-bold">Detalhamento da Validação</h3>
+              <div className="flex gap-2">
+                 <button className="text-xs bg-zinc-800 px-3 py-1 rounded border border-zinc-700">Filtrar: Todos</button>
+                 <button className="text-xs bg-zinc-800/50 px-3 py-1 rounded border border-zinc-800 text-zinc-500">Filtrar: Pendentes</button>
+              </div>
+            </div>
+            <div className="overflow-x-auto max-h-[500px]">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 bg-zinc-900 shadow-md text-zinc-500 uppercase text-[10px] font-bold">
+                  <tr>
+                    <th className="p-4">Status</th>
+                    <th className="p-4">Conta na Planilha</th>
+                    <th className="p-4">Referência no Sistema</th>
+                    <th className="p-4 text-right">Ação Sugerida</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800">
+                  {validationResults.map((res) => (
+                    <tr key={res.id} className="hover:bg-zinc-800/30 transition-colors">
+                      <td className="p-4">
+                        {res.status === 'valid' ? (
+                          <div className="flex items-center gap-1.5 text-green-500 font-medium">
+                            <CheckCircle2 className="w-4 h-4" /> Validado
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-red-400 font-medium">
+                            <AlertCircle className="w-4 h-4" /> Não Mapeada
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-4 text-zinc-200 font-medium">{res.account}</td>
+                      <td className="p-4 text-zinc-500">
+                        {res.status === 'valid' ? res.account : '---'}
+                      </td>
+                      <td className="p-4 text-right">
+                        {res.status === 'valid' ? (
+                          <span className="text-zinc-600 text-xs">Pronto para importar</span>
+                        ) : (
+                          <button className="text-green-500 hover:underline text-xs font-bold">Criar De-Para</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-4">
+             <button 
+              onClick={() => setImportStep('upload')}
+              className="px-6 py-2 border border-zinc-700 rounded-md hover:bg-zinc-800 transition-colors"
+             >
+               Cancelar
+             </button>
+             <button 
+              disabled={validCount === 0}
+              className={`px-8 py-2 rounded-md font-bold transition-all ${
+                validCount > 0 ? 'bg-green-600 hover:bg-green-700 shadow-lg' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+              }`}
+             >
+               Finalizar Importação ({validCount} itens)
+             </button>
           </div>
         </div>
       )}
@@ -202,41 +308,24 @@ const ImportacaoPage = () => {
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl w-full max-w-md shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">Novo Mapeamento</h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-zinc-500 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
+              <button onClick={() => setIsModalOpen(false)} className="text-zinc-500 hover:text-white"><X className="w-6 h-6" /></button>
             </div>
-
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-zinc-400 mb-1">Categoria do ERP</label>
-                <input
-                  type="text"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none text-white"
-                  placeholder="Ex: Venda de Mercadorias"
-                />
+                <input type="text" className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 outline-none text-white" placeholder="Ex: Venda de Mercadorias" />
               </div>
               <div>
                 <label className="block text-sm text-zinc-400 mb-1">Categoria do Sistema</label>
-                <select className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none text-white">
+                <select className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 outline-none text-white">
                   <option>Receita de Serviços</option>
                   <option>Receita de Produtos</option>
                   <option>Deduções</option>
                 </select>
               </div>
               <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-md transition-colors border border-zinc-700"
-                >
-                  Cancelar
-                </button>
-                <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-md transition-colors">
-                  Salvar
-                </button>
+                <button onClick={() => setIsModalOpen(false)} className="flex-1 bg-zinc-800 py-2 rounded-md border border-zinc-700">Cancelar</button>
+                <button className="flex-1 bg-green-600 py-2 rounded-md">Salvar</button>
               </div>
             </div>
           </div>

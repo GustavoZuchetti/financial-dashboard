@@ -43,6 +43,7 @@ const S = {
   fileName: { color: '#e5e7eb', fontSize: 14, fontWeight: 600, marginBottom: 4 },
   fileMeta: { color: '#6b7280', fontSize: 12, marginBottom: 12 },
   btnUpload: { background: '#00e676', color: '#000', border: 'none', borderRadius: 8, padding: '12px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
+  btnContinue: { background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
   btnDisabled: { background: '#374151', color: '#6b7280', border: 'none', borderRadius: 8, padding: '12px 24px', fontSize: 14, fontWeight: 700, cursor: 'not-allowed' },
   btnNovo: { background: 'transparent', color: '#6b7280', border: '1px solid #374151', borderRadius: 8, padding: '12px 24px', fontSize: 14, cursor: 'pointer', marginLeft: 12 },
   hiddenInput: { display: 'none' },
@@ -50,7 +51,8 @@ const S = {
   alertSuccess: { background: '#021f0e', border: '1px solid #14532d', borderRadius: 8, padding: '12px 16px', marginTop: 16, color: '#86efac', fontSize: 13 },
   alertLoading: { background: '#0f172a', border: '1px solid #1e3a5f', borderRadius: 8, padding: '12px 16px', marginTop: 16, color: '#93c5fd', fontSize: 13 },
   previewBox: { background: '#0a0a0f', border: '1px solid #1e1e2e', borderRadius: 8, marginTop: 16, overflow: 'hidden' },
-  previewHeader: { background: '#111827', padding: '8px 16px', color: '#9ca3af', fontSize: 12, fontWeight: 600, letterSpacing: '0.05em' },
+  previewHeader: { background: '#111827', padding: '12px 16px', borderBottom: '1px solid #1e1e2e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  previewTitle: { color: '#9ca3af', fontSize: 12, fontWeight: 600, letterSpacing: '0.05em' },
   previewTable: { width: '100%', borderCollapse: 'collapse', fontSize: 12 },
   previewTh: { padding: '8px 12px', background: '#1f2937', color: '#d1d5db', fontWeight: 600, textAlign: 'left', borderBottom: '1px solid #374151' },
   previewTd: { padding: '6px 12px', color: '#9ca3af', borderBottom: '1px solid #1f2937' },
@@ -64,12 +66,14 @@ export default function UploadExcel({ onFileSelect }) {
   const [status, setStatus] = useState(null) // null | 'loading' | 'success' | 'error'
   const [statusMsg, setStatusMsg] = useState('')
   const [previewData, setPreviewData] = useState(null) // { headers, rows, totalRows }
+  const [showFullList, setShowFullList] = useState(false)
   const fileInputRef = useRef(null)
 
   const resetStatus = () => {
     setStatus(null)
     setStatusMsg('')
     setPreviewData(null)
+    setShowFullList(false)
   }
 
   const handleFileChosen = (file) => {
@@ -96,7 +100,6 @@ export default function UploadExcel({ onFileSelect }) {
     if (!selectedFile) return
     setStatus('loading')
     setStatusMsg('Processando arquivo...')
-    setPreviewData(null)
 
     try {
       const arrayBuffer = await selectedFile.arrayBuffer()
@@ -104,7 +107,6 @@ export default function UploadExcel({ onFileSelect }) {
 
       let workbook
       if (isCSV) {
-        // Le CSV com encoding UTF-8
         const decoder = new TextDecoder('utf-8')
         const text = decoder.decode(arrayBuffer)
         workbook = XLSX.read(text, { type: 'string' })
@@ -123,19 +125,23 @@ export default function UploadExcel({ onFileSelect }) {
       }
 
       const headers = Object.keys(rows[0])
-      const totalRows = rows.length
-      const previewRows = rows.slice(0, 5)
-
-      setPreviewData({ headers, rows: previewRows, totalRows })
+      setPreviewData({ headers, allRows: rows, totalRows: rows.length })
       setStatus('success')
-      setStatusMsg(`✅ Arquivo lido com sucesso! ${totalRows} registro(s) encontrado(s) na planilha "${sheetName}".`)
+      setStatusMsg(`Arquivo lido com sucesso! ${rows.length} registros encontrados.`)
 
-      if (onFileSelect) {
-        onFileSelect({ file: selectedFile, data: rows, headers, sheetName })
-      }
     } catch (err) {
       setStatus('error')
-      setStatusMsg(`❌ Erro ao processar o arquivo: ${err.message}`)
+      setStatusMsg(`Erro ao processar: ${err.message}`)
+    }
+  }
+
+  const handleContinue = () => {
+    if (previewData && onFileSelect) {
+      onFileSelect({
+        file: selectedFile,
+        data: previewData.allRows,
+        headers: previewData.headers
+      })
     }
   }
 
@@ -156,7 +162,6 @@ export default function UploadExcel({ onFileSelect }) {
         style={S.hiddenInput}
       />
 
-      {/* Zona de drop - oculta apos sucesso */}
       {status !== 'success' && (
         <div
           style={S.uploadArea(isDragging)}
@@ -171,12 +176,8 @@ export default function UploadExcel({ onFileSelect }) {
         </div>
       )}
 
-      {/* Mensagem de formato invalido */}
-      {fileError && (
-        <div style={S.alertError}>⚠️ {fileError}</div>
-      )}
+      {fileError && <div style={S.alertError}>⚠️ {fileError}</div>}
 
-      {/* Card do arquivo selecionado */}
       {selectedFile && status !== 'success' && (
         <div style={S.fileInfo}>
           <div style={S.fileName}>{getFileIcon(selectedFile)} {selectedFile.name}</div>
@@ -190,20 +191,11 @@ export default function UploadExcel({ onFileSelect }) {
           >
             {status === 'loading' ? 'Processando...' : 'Importar Arquivo'}
           </button>
-          <button style={S.btnNovo} onClick={handleNovoArquivo}>
-            Cancelar
-          </button>
+          <button style={S.btnNovo} onClick={handleNovoArquivo}>Cancelar</button>
         </div>
       )}
 
-      {/* Alerta de loading */}
-      {status === 'loading' && (
-        <div style={S.alertLoading}>
-          ⏳ {statusMsg}
-        </div>
-      )}
-
-      {/* Alerta de erro */}
+      {status === 'loading' && <div style={S.alertLoading}>⏳ {statusMsg}</div>}
       {status === 'error' && (
         <div style={S.alertError}>
           {statusMsg}
@@ -213,44 +205,52 @@ export default function UploadExcel({ onFileSelect }) {
         </div>
       )}
 
-      {/* Alerta de sucesso + preview */}
-      {status === 'success' && (
+      {status === 'success' && previewData && (
         <div>
           <div style={S.alertSuccess}>
-            {statusMsg}
-            <button style={{ ...S.btnNovo, marginLeft: 16, marginTop: 8, display: 'inline-block' }} onClick={handleNovoArquivo}>
-              Importar outro arquivo
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>✅ {statusMsg}</span>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button style={S.btnContinue} onClick={handleContinue}>Continuar Importação →</button>
+                <button style={S.btnNovo} onClick={handleNovoArquivo}>Trocar Arquivo</button>
+              </div>
+            </div>
           </div>
 
-          {previewData && previewData.headers.length > 0 && (
-            <div style={S.previewBox}>
-              <div style={S.previewHeader}>PRÉVIA DOS DADOS ({previewData.totalRows} linha{previewData.totalRows !== 1 ? 's' : ''})</div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={S.previewTable}>
-                  <thead>
-                    <tr>
-                      {previewData.headers.map((h, i) => (
-                        <th key={i} style={S.previewTh}>{h}</th>
+          <div style={S.previewBox}>
+            <div style={S.previewHeader}>
+              <div style={S.previewTitle}>PRÉVIA DOS DADOS ({previewData.totalRows} linhas)</div>
+              <button
+                style={{ ...S.btnNovo, padding: '4px 12px', fontSize: 11, margin: 0 }}
+                onClick={() => setShowFullList(!showFullList)}
+              >
+                {showFullList ? 'Ver apenas prévia' : 'Ver lista completa'}
+              </button>
+            </div>
+            <div style={{ overflowX: 'auto', maxHeight: showFullList ? '400px' : 'auto', overflowY: showFullList ? 'auto' : 'visible' }}>
+              <table style={S.previewTable}>
+                <thead>
+                  <tr>
+                    {previewData.headers.map((h, i) => (
+                      <th key={i} style={S.previewTh}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(showFullList ? previewData.allRows : previewData.allRows.slice(0, 5)).map((row, ri) => (
+                    <tr key={ri}>
+                      {previewData.headers.map((h, ci) => (
+                        <td key={ci} style={S.previewTd}>{String(row[h] ?? '')}</td>
                       ))}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {previewData.rows.map((row, ri) => (
-                      <tr key={ri}>
-                        {previewData.headers.map((h, ci) => (
-                          <td key={ci} style={S.previewTd}>{String(row[h] ?? '')}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {previewData.totalRows > 5 && (
-                <div style={S.previewMore}>... e mais {previewData.totalRows - 5} linha(s) não exibidas</div>
-              )}
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+            {!showFullList && previewData.totalRows > 5 && (
+              <div style={S.previewMore}>... e mais {previewData.totalRows - 5} linha(s) não exibidas</div>
+            )}
+          </div>
         </div>
       )}
     </div>

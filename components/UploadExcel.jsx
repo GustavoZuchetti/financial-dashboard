@@ -12,6 +12,7 @@ const isValidFile = (file) => {
 
 const formatExcelDate = (value) => {
   if (value === null || value === undefined || value === '') return ''
+  
   let num = parseFloat(String(value).replace(',', '.'))
   if (!isNaN(num) && num > 30000 && num < 60000) {
     try {
@@ -24,32 +25,40 @@ const formatExcelDate = (value) => {
       return String(value)
     }
   }
-  return String(value)
+
+  const strValue = String(value).trim()
+  if (strValue.match(/^\d{4}-\d{2}-\d{2}/)) {
+    const [y, m, d] = strValue.split('T')[0].split('-')
+    return `${d}/${m}/${y}`
+  }
+  
+  return strValue
 }
 
 const validateRow = (row, mappings = []) => {
   const errors = []
   
-  // Tenta achar o campo de conta/nome
   const accountField = Object.keys(row).find(k => 
     k.toLowerCase().includes('nome') || 
     k.toLowerCase().includes('conta') || 
-    k.toLowerCase().includes('categoria')
+    k.toLowerCase().includes('categoria') ||
+    k.toLowerCase().includes('histórico')
   )
   const accountValue = accountField ? String(row[accountField] || '').trim() : ''
-
+  
   if (!accountValue) {
     errors.push('Nome/Conta ausente')
   } else {
-    // Validação de mapeamento (De-Para)
     const allMappedAccounts = mappings.flatMap(g => g.items.map(i => i.erp.toLowerCase()))
     if (!allMappedAccounts.includes(accountValue.toLowerCase())) {
       errors.push(`Conta "${accountValue}" não mapeada no sistema`)
     }
   }
 
-  const valorRaw = row['Valor'] || row['valor'] || row['Valor Pago/Recebido']
-  const valor = parseFloat(String(valorRaw).replace(/\./g, '').replace(',', '.'))
+  const valorRaw = row['Valor'] || row['valor'] || row['Valor Pago/Recebido'] || row['Total']
+  const valorStr = String(valorRaw || '0').replace(/\./g, '').replace(',', '.')
+  const valor = parseFloat(valorStr)
+  
   if (isNaN(valor)) errors.push('Valor numérico inválido')
 
   return {
@@ -73,20 +82,17 @@ const S = {
   btnGhost: { background: 'transparent', color: '#a1a1aa', border: '1px solid #27272a', borderRadius: 6, padding: '8px 16px', fontSize: 12, cursor: 'pointer' },
 }
 
-export default function UploadExcel({ onFileSelect, mappings = [] }) {
+export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping }) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [status, setStatus] = useState('idle') // idle | processing | success | error
+  const [status, setStatus] = useState('idle') 
   const [data, setData] = useState([])
   const [headers, setHeaders] = useState([])
   const [errorMsg, setErrorMsg] = useState('')
-  
-  // Modal De-Para
   const [editingRow, setEditingRow] = useState(null)
-  
-  // Paginação
+  const [selectedCategory, setSelectedCategory] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
-  const [filter, setFilter] = useState('all') // all | error
+  const [filter, setFilter] = useState('all')
   const rowsPerPage = 10
   const fileInputRef = useRef(null)
 
@@ -96,21 +102,22 @@ export default function UploadExcel({ onFileSelect, mappings = [] }) {
       setStatus('error')
       return
     }
+
     setSelectedFile(file)
     setStatus('processing')
     setErrorMsg('')
+
     try {
       const buffer = await file.arrayBuffer()
-      const isCSV = file.name.toLowerCase().endsWith('.csv')
-      const workbook = XLSX.read(buffer, { type: isCSV ? 'string' : 'array', cellDates: false })
+      const workbook = XLSX.read(buffer, { type: 'array', cellDates: false })
       const sheetName = workbook.SheetNames[0]
       const sheet = workbook.Sheets[sheetName]
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
-      
+
       if (rows.length === 0) throw new Error('O arquivo está vazio.')
 
       const dateColumns = ['Data', 'Competência', 'Data de vencimento', 'Liquidação', 'data', 'competencia']
-      
+
       const processed = rows.map((row, index) => {
         const newRow = { ...row }
         Object.keys(newRow).forEach(key => {
@@ -135,6 +142,27 @@ export default function UploadExcel({ onFileSelect, mappings = [] }) {
       setStatus('error')
     }
   }
+
+  const handleConfirmMapping = () => {
+    if (!selectedCategory) return;
+    
+    const accountName = editingRow.__validation.accountValue;
+    onAddMapping?.(accountName, selectedCategory);
+
+    // Atualiza o estado local para refletir a validação instantaneamente
+    setData(prev => prev.map(row => {
+      if (row.__validation.accountValue === accountName) {
+        return { 
+          ...row, 
+          __validation: { ...row.__validation, isValid: true, errors: [] } 
+        };
+      }
+      return row;
+    }));
+
+    setEditingRow(null);
+    setSelectedCategory('');
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0]
@@ -197,7 +225,7 @@ export default function UploadExcel({ onFileSelect, mappings = [] }) {
       {status === 'error' && (
         <div className="p-6 bg-red-950/20 border border-red-900/50 rounded-xl flex flex-col items-center gap-3">
           <AlertCircle className="w-8 h-8 text-red-500" />
-          <p className="text-sm text-red-200">{errorMsg}</p>
+          <p className="text-sm text-red-200 font-medium">{errorMsg}</p>
           <button style={S.btnGhost} onClick={handleReset}>Tentar outro arquivo</button>
         </div>
       )}
@@ -217,8 +245,7 @@ export default function UploadExcel({ onFileSelect, mappings = [] }) {
               <button 
                 style={S.btnPrimary} 
                 onClick={() => onFileSelect?.(data)}
-                disabled={data.some(r => !r.__validation.isValid)}
-                className="disabled:opacity-50 disabled:cursor-not-allowed"
+                className="hover:scale-105 active:scale-95 transition-transform shadow-lg shadow-green-900/20"
               >
                 Continuar Importação
               </button>
@@ -261,7 +288,6 @@ export default function UploadExcel({ onFileSelect, mappings = [] }) {
                           <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> : 
                           <div className="relative group">
                             <AlertCircle className="w-3.5 h-3.5 text-red-500" />
-                            {/* Tooltip */}
                             <div className="absolute left-6 top-1/2 -translate-y-1/2 hidden group-hover:block z-50 bg-red-900 text-white text-[10px] p-2 rounded shadow-xl border border-red-700 whitespace-nowrap">
                               {row.__validation.errors.join(", ")}
                             </div>
@@ -282,7 +308,6 @@ export default function UploadExcel({ onFileSelect, mappings = [] }) {
         </div>
       )}
 
-      {/* Modal De-Para Localizado */}
       {editingRow && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
@@ -291,7 +316,7 @@ export default function UploadExcel({ onFileSelect, mappings = [] }) {
                 <Settings2 className="w-5 h-5 text-green-500" />
                 <h3 className="font-bold text-zinc-200">Configurar De-Para</h3>
               </div>
-              <button onClick={() => setEditingRow(null)} className="text-zinc-500 hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => {setEditingRow(null); setSelectedCategory('');}} className="text-zinc-500 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             
             <div className="p-6 space-y-5">
@@ -309,7 +334,11 @@ export default function UploadExcel({ onFileSelect, mappings = [] }) {
                 </div>
                 <div>
                   <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1">Categoria no Sistema (Destino)</label>
-                  <select className="w-full bg-zinc-950 border border-zinc-700 rounded-md p-3 text-sm text-white outline-none focus:border-green-600 transition-colors">
+                  <select 
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-md p-3 text-sm text-white outline-none focus:border-green-600 transition-colors"
+                  >
                     <option value="">Selecione uma categoria...</option>
                     {mappings.map(g => (
                       <optgroup key={g.group} label={g.group}>
@@ -321,8 +350,14 @@ export default function UploadExcel({ onFileSelect, mappings = [] }) {
               </div>
 
               <div className="pt-4 flex gap-3">
-                <button onClick={() => setEditingRow(null)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-3 rounded-lg font-bold text-sm transition-colors">Cancelar</button>
-                <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-sm transition-colors shadow-lg shadow-green-900/20">Salvar e Validar</button>
+                <button onClick={() => {setEditingRow(null); setSelectedCategory('');}} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-3 rounded-lg font-bold text-sm transition-colors">Cancelar</button>
+                <button 
+                  onClick={handleConfirmMapping}
+                  disabled={!selectedCategory}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold text-sm transition-colors shadow-lg shadow-green-900/20"
+                >
+                  Salvar e Validar
+                </button>
               </div>
             </div>
           </div>

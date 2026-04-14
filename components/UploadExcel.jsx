@@ -45,13 +45,12 @@ const validateRow = (row, mappings = []) => {
   if (!accountValue) {
     errors.push('Nome/Conta ausente')
   } else {
-    // Normalização para comparação: minúsculo e sem espaços extras
     const normalizedAccount = accountValue.toLowerCase().trim()
     const allMappedAccounts = mappings.flatMap(g => 
       g.items.map(i => (i.erp || '').toLowerCase().trim())
     )
-    
     if (!allMappedAccounts.includes(normalizedAccount)) {
+      errors.push('Conta não mapeada no sistema')
     }
   }
 
@@ -98,21 +97,17 @@ const S = {
   },
 }
 
-export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping, initialData }) {
+export default function UploadExcel({ onFileSelect, mappings = [], planoContas = [], onAddMapping, initialData }) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
-  
-  // Inicialização robusta do status e dados
   const [status, setStatus] = useState(initialData && initialData.length > 0 ? 'success' : 'idle')
   const [data, setData] = useState(initialData || [])
-  
   const [headers, setHeaders] = useState(() => {
     if (initialData && initialData.length > 0) {
       return Object.keys(initialData[0]).filter(k => !k.startsWith('__'))
     }
     return []
   })
-
   const [errorMsg, setErrorMsg] = useState('')
   const [editingRow, setEditingRow] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -121,38 +116,30 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping,
   const rowsPerPage = 10
   const fileInputRef = useRef(null)
 
-  // 1. Sincronizar dados iniciais quando eles mudarem no pai (ex: após carregamento do localStorage)
   useEffect(() => {
     if (initialData && initialData.length > 0) {
       setData(initialData);
       setHeaders(Object.keys(initialData[0]).filter(k => !k.startsWith('__')));
       setStatus('success');
     } else if (!initialData && status === 'success') {
-      // Se o pai limpou os dados, limpa aqui também
       handleReset();
     }
   }, [initialData]);
 
-  // 2. Re-validar dados sempre que os mapeamentos mudarem
-  // Importante: Re-validamos o 'data' local para manter a UI atualizada imediatamente
   useEffect(() => {
     if (data && data.length > 0) {
       const validated = data.map(row => ({
         ...row,
         __validation: validateRow(row, mappings)
       }));
-      
-      // Só atualiza se houver mudança real na validação para evitar loops infinitos
       const hasChanges = JSON.stringify(validated.map(r => r.__validation.isValid)) !== 
-                         JSON.stringify(data.map(r => r.__validation.isValid));
-      
+                        JSON.stringify(data.map(r => r.__validation.isValid));
       if (hasChanges) {
         setData(validated);
       }
     }
-  }, [mappings, data.length]); // Depende do tamanho da data também para disparar no primeiro load
+  }, [mappings, data.length]);
 
-  // 3. Sincronizar dados validados de volta para o componente pai
   useEffect(() => {
     if (status === 'success' && data.length > 0) {
       onFileSelect?.(data);
@@ -165,20 +152,16 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping,
       setStatus('error')
       return
     }
-
     setSelectedFile(file)
     setStatus('processing')
     setErrorMsg('')
-
     try {
       const buffer = await file.arrayBuffer()
       const workbook = XLSX.read(buffer, { type: 'array', cellDates: false })
       const sheetName = workbook.SheetNames[0]
       const sheet = workbook.Sheets[sheetName]
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
-
       if (rows.length === 0) throw new Error('O arquivo está vazio.')
-
       const dateColumns = ['Data', 'Competência', 'Data de vencimento', 'Liquidação', 'data', 'competencia']
       
       const processed = rows.map((row, index) => {
@@ -194,7 +177,6 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping,
           __validation: validateRow(newRow, mappings)
         }
       })
-
       setData(processed)
       setHeaders(Object.keys(rows[0]))
       setStatus('success')
@@ -393,21 +375,18 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping,
                       </td>
                       {headers.map(h => (
                         <td key={h} className="p-4 border-b border-zinc-800/50 text-xs text-zinc-300">
-                {
-                                (() => {
-                                  const value = row[h];
-                                  if (!value && value !== 0) return '-';
-                                  
-                                  // Se o header é relacionado a valor/moeda, formatar como BRL
-                                  if (h.toLowerCase().includes('valor') || h.toLowerCase().includes('total') || h.toLowerCase().includes('pago') || h.toLowerCase().includes('recebido')) {
-                                    const numValue = typeof value === 'number' ? value : parseFloat(String(value).replace(/\./g, '').replace(',', '.'));
-                                    if (isNaN(numValue)) return String(value);
-                                    return numValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                                  }
-                                  
-                                  return String(value);
-                                })()}
-                              
+                          {
+                            (() => {
+                              const value = row[h];
+                              if (!value && value !== 0) return '-';
+                              if (h.toLowerCase().includes('valor') || h.toLowerCase().includes('total') || h.toLowerCase().includes('pago') || h.toLowerCase().includes('recebido')) {
+                                const numValue = typeof value === 'number' ? value : parseFloat(String(value).replace(/\./g, '').replace(',', '.'));
+                                if (isNaN(numValue)) return String(value);
+                                return numValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                              }
+                              return String(value);
+                            })()
+                          }
                         </td>
                       ))}
                       <td className="p-4 border-b border-zinc-800/50 sticky right-0 bg-zinc-900/80 group-hover:bg-zinc-800 transition-colors">
@@ -446,7 +425,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping,
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Erro Identificado</label>
@@ -454,14 +433,12 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping,
                   {editingRow.__validation.errors[0]}
                 </div>
               </div>
-
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Conta no ERP (Origem)</label>
                 <div className="p-3 bg-zinc-800/50 border border-zinc-700 rounded-xl text-sm text-white font-mono">
                   {editingRow.__validation.accountValue}
                 </div>
               </div>
-
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Categoria no Sistema (Destino)</label>
                 <select
@@ -470,6 +447,8 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping,
                   className="w-full bg-zinc-950 border border-zinc-700 rounded-xl p-3 text-sm text-white outline-none focus:border-green-600 transition-all shadow-inner"
                 >
                   <option value="">Selecione uma categoria...</option>
+                  
+                  {/* Categorias Fixas */}
                   {mappings.map(g => (
                     <optgroup key={g.group} label={g.group.toUpperCase()}>
                       <option value={g.group}>{g.group} (Novo Item)</option>
@@ -478,8 +457,19 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping,
                       ))}
                     </optgroup>
                   ))}
+
+                  {/* Plano de Contas Real */}
+                  {planoContas.length > 0 && (
+                    <optgroup label="PLANO DE CONTAS (TODAS)">
+                      {planoContas.map(conta => (
+                        <option key={conta.id} value={conta.nome}>
+                          {conta.codigo} - {conta.nome}
+                        </option>
+                      ))}
+                    </optgroup>feat: permitir selecionar qualquer conta do plano de contas no mapeamento De-Para
+                  )}
                 </select>
-                <p className="text-[10px] text-zinc-500 mt-1 italic">Dica: Selecione uma categoria existente ou o grupo para criar uma nova.</p>
+                <p className="text-[10px] text-zinc-500 mt-1 italic">Dica: Selecione uma categoria existente ou uma conta do seu plano de contas real.</p>
               </div>
             </div>
 
@@ -495,8 +485,8 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping,
                 disabled={!selectedCategory}
                 className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all shadow-lg ${
                   selectedCategory 
-                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-green-900/20' 
-                    : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                  ? 'bg-green-600 hover:bg-green-700 text-white shadow-green-900/20' 
+                  : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
                 }`}
               >
                 Salvar e Validar

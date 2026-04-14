@@ -17,6 +17,7 @@ const ImportacaoPage = () => {
   const [empresas, setEmpresas] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [clienteMappings, setClienteMappings] = useState({});
+  const [planoContas, setPlanoContas] = useState([]);
   const [mappings, setMappings] = useState([
     { group: 'RECEITA BRUTA', type: 'receita', items: [
       { id: 1, erp: 'Receita de Serviços', categoria: 'Receita de Serviços', dre: true, fluxo: true },
@@ -40,18 +41,29 @@ const ImportacaoPage = () => {
         const { data: list } = await supabase.from('empresas').select('id').limit(1);
         if (list?.length > 0) setEmpresaId(list[0].id);
       }
+
       const savedMappings = localStorage.getItem('financial_mappings');
       if (savedMappings) { try { setMappings(JSON.parse(savedMappings)); } catch (e) {} }
+
       const savedImportData = localStorage.getItem('financial_import_data');
       if (savedImportData) { try { setImportData(JSON.parse(savedImportData)); } catch (e) {} }
+
       const savedStep = localStorage.getItem('financial_import_step');
       if (savedStep) setImportStep(savedStep);
+
       const savedTab = localStorage.getItem('financial_import_active_tab');
       if (savedTab) setActiveTab(savedTab);
+
       const savedClientes = localStorage.getItem('financial_cliente_mappings');
       if (savedClientes) { try { setClienteMappings(JSON.parse(savedClientes)); } catch (e) {} }
+
       const { data: allEmpresas } = await supabase.from('empresas').select('*').order('nome');
       if (allEmpresas) setEmpresas(allEmpresas);
+
+      // Carregar Plano de Contas do Supabase
+      const { data: plano } = await supabase.from('plano_contas').select('*').order('codigo');
+      if (plano) setPlanoContas(plano);
+
       setIsLoaded(true);
     };
     loadSavedState();
@@ -160,33 +172,6 @@ const ImportacaoPage = () => {
       const { error } = await supabase.from('lancamentos').insert(registros);
       if (error) throw error;
 
-      // Atualizar plano de contas no localStorage com novos clientes mapeados
-      const planoRaw = localStorage.getItem('plano_contas');
-      if (planoRaw) {
-        try {
-          const planoAtualizado = JSON.parse(planoRaw);
-          for (const [nomeCliente, map] of Object.entries(clienteMappings)) {
-            if (!map.contaContabil) continue;
-            const jaExiste = JSON.stringify(planoAtualizado).includes(nomeCliente);
-            if (!jaExiste) {
-              const grupoAlvo = planoAtualizado.find(g =>
-                map.tipo === 'receita' ? g.codigo === '3' : g.codigo === '4'
-              );
-              if (grupoAlvo && grupoAlvo.filhos) {
-                grupoAlvo.filhos.push({
-                  codigo: map.contaContabil,
-                  nome: nomeCliente,
-                  tipo: 'analitica',
-                  nivel: 3,
-                  saldo: 0,
-                });
-              }
-            }
-          }
-          localStorage.setItem('plano_contas', JSON.stringify(planoAtualizado));
-        } catch (e) { console.error('Erro ao atualizar plano de contas:', e); }
-      }
-
       setImportStatus({ type: 'success', message: `Importação concluída! ${registros.length} lançamentos gravados com sucesso.` });
       setImportData(null);
       setClienteMappings({});
@@ -215,7 +200,6 @@ const ImportacaoPage = () => {
     return (
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-white">Conclusão da Importação</h2>
-
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-zinc-800 rounded-xl p-4 text-center">
             <p className="text-3xl font-bold text-white">{totalRegistros}</p>
@@ -351,6 +335,7 @@ const ImportacaoPage = () => {
           <UploadExcel
             onFileSelect={handleFileSelect}
             mappings={mappings}
+            planoContas={planoContas}
             onAddMapping={handleAddMapping}
             initialData={importData}
           />

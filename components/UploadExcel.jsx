@@ -366,10 +366,10 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
                           { (() => {
                             const value = row[h];
                             if (!value && value !== 0) return '-';
-                            if (h.toLowerCase().includes(\'valor\') || h.toLowerCase().includes(\'total\') || h.toLowerCase().includes(\'pago\') || h.toLowerCase().includes(\'recebido\')) {
-                              const numValue = typeof value === \'number\' ? value : parseFloat(String(value).replace(/\\./g, \'\').replace(\',\', \'.\'));
+                            if (h.toLowerCase().includes('valor') || h.toLowerCase().includes('total') || h.toLowerCase().includes('pago') || h.toLowerCase().includes('recebido')) {
+                              const numValue = typeof value === 'number' ? value : parseFloat(String(value).replace(/\\./g, '').replace(',', '.'));
                               if (isNaN(numValue)) return String(value);
-                              return numValue.toLocaleString(\'pt-BR\', { style: \'currency\', currency: \'BRL\' });
+                              return numValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                             }
                             return String(value);
                           })() }
@@ -402,7 +402,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
                 <Settings2 className="w-5 h-5 text-green-500" /> Configurar De-Para
               </h3>
               <button
-                onClick={() => { setEditingRow(null); setSelectedCategory(\'\'); }}
+                onClick={() => { setEditingRow(null); setSelectedCategory(''); }}
                 className="text-zinc-500 hover:text-white transition-colors"
               >
                 <X className="w-6 h-6" />
@@ -462,7 +462,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
 
             <div className="p-6 border-t border-zinc-800 flex gap-3">
               <button
-                onClick={() => { setEditingRow(null); setSelectedCategory(\'\'); }}
+                onClick={() => { setEditingRow(null); setSelectedCategory(''); }}
                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-3 rounded-xl font-bold text-sm transition-all"
               >
                 Cancelar

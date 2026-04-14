@@ -59,11 +59,7 @@ const validateRow = (row, mappings = []) => {
   const valor = parseFloat(valorStr)
   if (isNaN(valor)) errors.push('Valor numérico inválido')
 
-  return { 
-    isValid: errors.length === 0, 
-    errors,
-    accountValue 
-  }
+  return { isValid: errors.length === 0, errors, accountValue }
 }
 
 const S = {
@@ -132,8 +128,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
         ...row,
         __validation: validateRow(row, mappings)
       }));
-      const hasChanges = JSON.stringify(validated.map(r => r.__validation.isValid)) !== 
-                        JSON.stringify(data.map(r => r.__validation.isValid));
+      const hasChanges = JSON.stringify(validated.map(r => r.__validation.isValid)) !== JSON.stringify(data.map(r => r.__validation.isValid));
       if (hasChanges) {
         setData(validated);
       }
@@ -163,7 +158,6 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
       if (rows.length === 0) throw new Error('O arquivo está vazio.')
       const dateColumns = ['Data', 'Competência', 'Data de vencimento', 'Liquidação', 'data', 'competencia']
-      
       const processed = rows.map((row, index) => {
         const newRow = { ...row }
         Object.keys(newRow).forEach(key => {
@@ -171,11 +165,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
             newRow[key] = formatExcelDate(newRow[key])
           }
         })
-        return {
-          ...newRow,
-          __id: index,
-          __validation: validateRow(newRow, mappings)
-        }
+        return { ...newRow, __id: index, __validation: validateRow(newRow, mappings) }
       })
       setData(processed)
       setHeaders(Object.keys(rows[0]))
@@ -248,29 +238,33 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
           onClick={() => fileInputRef.current?.click()}
         >
           <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center">
-              <FileText className="w-8 h-8 text-zinc-500" />
+            <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center text-zinc-500">
+              <Plus className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-lg font-medium text-white">Arraste e solte ou clique para selecionar</p>
-              <p className="text-sm text-zinc-500 mt-1">Aceito: .xlsx (Excel) ou .csv (UTF-8)</p>
+              <p className="text-white font-medium mb-1">Arraste e solte ou clique para selecionar</p>
+              <p className="text-sm text-zinc-500">Aceito: .xlsx (Excel) ou .csv (UTF-8)</p>
             </div>
           </div>
         </div>
       )}
 
       {status === 'processing' && (
-        <div className="p-12 text-center bg-zinc-900/50 rounded-xl border border-zinc-800">
-          <Clock className="w-10 h-10 text-green-500 animate-spin mx-auto mb-4" />
-          <p className="text-white">Processando e validando dados...</p>
+        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-12 text-center animate-pulse">
+          <Clock className="w-10 h-10 text-zinc-500 mx-auto mb-4" />
+          <p className="text-zinc-400">Processando e validando dados...</p>
         </div>
       )}
 
       {status === 'error' && (
-        <div className="p-8 text-center bg-red-900/10 rounded-xl border border-red-900/20">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-8 text-center">
           <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-4" />
           <p className="text-red-400 mb-6">{errorMsg}</p>
-          <button onClick={() => setStatus('idle')} style={S.btnPrimary} className="bg-red-600 hover:bg-red-700">
+          <button
+            onClick={() => setStatus('idle')}
+            style={S.btnPrimary}
+            className="bg-red-600 hover:bg-red-700"
+          >
             Tentar outro arquivo
           </button>
         </div>
@@ -317,9 +311,8 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
                   </button>
                 </div>
               </div>
-              
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
@@ -327,8 +320,8 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="text-[11px] font-bold text-zinc-500 uppercase">
-                    Pág <span className="text-white">{currentPage}</span> de {totalPages || 1}
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-2">
+                    Pág {currentPage} de {totalPages || 1}
                   </span>
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
@@ -341,66 +334,56 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1200px]">
+            <div className="overflow-x-auto overflow-y-auto max-h-[500px]">
+              <table className="w-full text-left border-collapse min-w-max">
                 <thead>
-                  <tr className="bg-zinc-900/50">
-                    <th className="p-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-800">Status</th>
-                    <th className="p-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-800">#</th>
+                  <tr className="bg-zinc-900/30">
+                    <th className="p-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-800 w-16">Status</th>
+                    <th className="p-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-800 w-16 text-center">#</th>
                     {headers.map(h => (
                       <th key={h} className="p-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-800">{h}</th>
                     ))}
-                    <th className="p-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-800 sticky right-0 bg-zinc-900/50">Ações</th>
+                    <th className="p-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-800 text-center sticky right-0 bg-zinc-900 z-10 shadow-[-4px_0_8px_rgba(0,0,0,0.2)]">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedData.map((row) => (
-                    <tr 
-                      key={row.__id} 
-                      className={`group hover:bg-zinc-800/30 transition-colors ${!row.__validation.isValid ? 'bg-red-500/5' : ''}`}
-                    >
-                      <td className="p-4 border-b border-zinc-800/50">
+                    <tr key={row.__id} className="border-b border-zinc-800/50 hover:bg-white/5 transition-colors group">
+                      <td className="p-4">
                         {row.__validation.isValid ? (
-                          <div title="Mapeamento Ok" className="w-6 h-6 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center">
-                            <CheckCircle2 className="w-4 h-4" />
+                          <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
                           </div>
                         ) : (
-                          <div title={row.__validation.errors.join(", ")} className="w-6 h-6 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center">
-                            <AlertCircle className="w-4 h-4" />
+                          <div className="w-6 h-6 rounded-full bg-red-500/10 flex items-center justify-center">
+                            <AlertCircle className="w-3.5 h-3.5 text-red-500" />
                           </div>
                         )}
                       </td>
-                      <td className="p-4 border-b border-zinc-800/50 text-[11px] font-mono text-zinc-500">
-                        {row.__id + 1}
-                      </td>
+                      <td className="p-4 text-xs text-zinc-600 font-mono text-center">{row.__id + 1}</td>
                       {headers.map(h => (
-                        <td key={h} className="p-4 border-b border-zinc-800/50 text-xs text-zinc-300">
-                          {
-                            (() => {
-                              const value = row[h];
-                              if (!value && value !== 0) return '-';
-                              if (h.toLowerCase().includes('valor') || h.toLowerCase().includes('total') || h.toLowerCase().includes('pago') || h.toLowerCase().includes('recebido')) {
-                                const numValue = typeof value === 'number' ? value : parseFloat(String(value).replace(/\./g, '').replace(',', '.'));
-                                if (isNaN(numValue)) return String(value);
-                                return numValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                              }
-                              return String(value);
-                            })()
-                          }
+                        <td key={h} className="p-4 text-xs text-zinc-400">
+                          { (() => {
+                            const value = row[h];
+                            if (!value && value !== 0) return '-';
+                            if (h.toLowerCase().includes(\'valor\') || h.toLowerCase().includes(\'total\') || h.toLowerCase().includes(\'pago\') || h.toLowerCase().includes(\'recebido\')) {
+                              const numValue = typeof value === \'number\' ? value : parseFloat(String(value).replace(/\\./g, \'\').replace(\',\', \'.\'));
+                              if (isNaN(numValue)) return String(value);
+                              return numValue.toLocaleString(\'pt-BR\', { style: \'currency\', currency: \'BRL\' });
+                            }
+                            return String(value);
+                          })() }
                         </td>
                       ))}
-                      <td className="p-4 border-b border-zinc-800/50 sticky right-0 bg-zinc-900/80 group-hover:bg-zinc-800 transition-colors">
-                        <div className="flex justify-end">
-                          {!row.__validation.isValid && (
-                            <button
-                              onClick={() => setEditingRow(row)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/10 text-green-500 border border-green-600/20 rounded-lg hover:bg-green-600/20 transition-all text-[10px] font-bold uppercase tracking-wider"
-                            >
-                              <Plus className="w-3 h-3" />
-                              Mapear
-                            </button>
-                          )}
-                        </div>
+                      <td className="p-4 text-center sticky right-0 bg-zinc-900 group-hover:bg-zinc-800/80 transition-colors z-10 shadow-[-4px_0_8px_rgba(0,0,0,0.2)]">
+                        {!row.__validation.isValid && (
+                          <button
+                            onClick={() => setEditingRow(row)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/10 text-green-500 border border-green-600/20 rounded-lg hover:bg-green-600/20 transition-all text-[10px] font-bold uppercase tracking-wider"
+                          >
+                            <Settings2 className="w-3 h-3" /> Mapear
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -412,20 +395,20 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
       )}
 
       {editingRow && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
-                  <Settings2 className="w-5 h-5 text-green-500" />
-                </div>
-                <h3 className="text-lg font-bold text-white">Configurar De-Para</h3>
-              </div>
-              <button onClick={() => { setEditingRow(null); setSelectedCategory(''); }} className="text-zinc-500 hover:text-white transition-colors">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-zinc-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Settings2 className="w-5 h-5 text-green-500" /> Configurar De-Para
+              </h3>
+              <button
+                onClick={() => { setEditingRow(null); setSelectedCategory(\'\'); }}
+                className="text-zinc-500 hover:text-white transition-colors"
+              >
                 <X className="w-6 h-6" />
               </button>
             </div>
-
+            
             <div className="p-6 space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Erro Identificado</label>
@@ -433,12 +416,14 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
                   {editingRow.__validation.errors[0]}
                 </div>
               </div>
+
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Conta no ERP (Origem)</label>
                 <div className="p-3 bg-zinc-800/50 border border-zinc-700 rounded-xl text-sm text-white font-mono">
                   {editingRow.__validation.accountValue}
                 </div>
               </div>
+
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Categoria no Sistema (Destino)</label>
                 <select
@@ -466,16 +451,18 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
                           {conta.codigo} - {conta.nome}
                         </option>
                       ))}
-                    </optgroup>feat: permitir selecionar qualquer conta do plano de contas no mapeamento De-Para
+                    </optgroup>
                   )}
                 </select>
-                <p className="text-[10px] text-zinc-500 mt-1 italic">Dica: Selecione uma categoria existente ou uma conta do seu plano de contas real.</p>
+                <p className="text-[10px] text-zinc-500 mt-2">
+                  Dica: Selecione uma categoria existente ou uma conta do seu plano de contas real.
+                </p>
               </div>
             </div>
 
-            <div className="p-6 bg-zinc-900/80 flex gap-3">
+            <div className="p-6 border-t border-zinc-800 flex gap-3">
               <button
-                onClick={() => { setEditingRow(null); setSelectedCategory(''); }}
+                onClick={() => { setEditingRow(null); setSelectedCategory(\'\'); }}
                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-3 rounded-xl font-bold text-sm transition-all"
               >
                 Cancelar
@@ -483,11 +470,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
               <button
                 onClick={handleConfirmMapping}
                 disabled={!selectedCategory}
-                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all shadow-lg ${
-                  selectedCategory 
-                  ? 'bg-green-600 hover:bg-green-700 text-white shadow-green-900/20' 
-                  : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                }`}
+                className="flex-[2] bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:hover:bg-green-600 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-green-900/20"
               >
                 Salvar e Validar
               </button>

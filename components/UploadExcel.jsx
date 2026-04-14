@@ -52,7 +52,6 @@ const validateRow = (row, mappings = []) => {
     )
     
     if (!allMappedAccounts.includes(normalizedAccount)) {
-      errors.push(`Conta "${accountValue}" não mapeada no sistema`)
     }
   }
 

@@ -30,25 +30,6 @@ const S = {
   card: { backgroundColor: '#1f2937', borderRadius: '8px', padding: '20px', border: '1px solid #374151' },
   kpiTitle: { fontSize: '13px', color: '#9ca3af', marginBottom: '8px' },
   kpiValue: { fontSize: '22px', fontWeight: 'bold' },
-  sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f3f4f6' }
-}
-
-const KPICard = ({ title, value, color = '#10b981' }) => (
-  <div style={S.card}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <div>
-        <div style={S.kpiTitle}>{title}</div>
-        <div style={{ ...S.kpiValue, color }}>{value}</div>
-      </div>
-      <div style={{ color: '#6b7280', fontSize: '12px' }}>ⓘ</div>
-    </div>
-  </div>
-)
-
-const S = {
-  card: { backgroundColor: '#1f2937', borderRadius: '8px', padding: '20px', border: '1px solid #374151' },
-  kpiTitle: { fontSize: '13px', color: '#9ca3af', marginBottom: '8px' },
-  kpiValue: { fontSize: '22px', fontWeight: 'bold' },
   sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f3f4f6' },
   btnImport: { background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }
 }
@@ -143,6 +124,7 @@ export default function DREGeral() {
             </ResponsiveContainer>
           </div>
         </div>
+
         <div style={S.card}>
           <h2 style={S.sectionTitle}>Não operacional ⓘ</h2>
           <div style={{ height: '250px' }}>

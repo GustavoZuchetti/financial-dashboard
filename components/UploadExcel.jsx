@@ -393,7 +393,21 @@ export default function UploadExcel({ onFileSelect, mappings = [], onAddMapping,
                       </td>
                       {headers.map(h => (
                         <td key={h} className="p-4 border-b border-zinc-800/50 text-xs text-zinc-300">
-                          {String(row[h] || '-')}
+                {
+                                (() => {
+                                  const value = row[h];
+                                  if (!value && value !== 0) return '-';
+                                  
+                                  // Se o header é relacionado a valor/moeda, formatar como BRL
+                                  if (h.toLowerCase().includes('valor') || h.toLowerCase().includes('total') || h.toLowerCase().includes('pago') || h.toLowerCase().includes('recebido')) {
+                                    const numValue = typeof value === 'number' ? value : parseFloat(String(value).replace(/\./g, '').replace(',', '.'));
+                                    if (isNaN(numValue)) return String(value);
+                                    return numValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                  }
+                                  
+                                  return String(value);
+                                })()}
+                              
                         </td>
                       ))}
                       <td className="p-4 border-b border-zinc-800/50 sticky right-0 bg-zinc-900/80 group-hover:bg-zinc-800 transition-colors">

@@ -98,13 +98,98 @@ const ImportacaoPage = () => {
 
   const handleFileSelect = (payload) => { setImportData(payload); };
 
-  const handleAddMapping = (erpName, categoryName) => {
-    setMappings(prev => prev.map(group => {
-      if (group.group === categoryName) {
-        return { ...group, items: [...group.items, { id: Date.now(), erp: erpName, categoria: erpName, dre: true, fluxo: true, data: new Date().toLocaleDateString('pt-BR') }]};
+  const handleAddMapping = (erpName, categoryName) => {const handleAddMapping = async (erpName, categoryName) => {
+    try {
+      // 1. Salvar mapeamento no Supabase
+      const { data: newMapping, error: mappingError } = await supabase
+        .from('categoria_mappings')
+        .insert([{
+          empresa_id: empresaId,
+          nome_erp: erpName,
+          categoria_sistema: categoryName,
+          criado_em: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (mappingError) {
+        console.error('Erro ao salvar mapeamento:', mappingError);
+        // Continua mesmo com erro - atualiza apenas localmente
       }
-      return group;
-    }));
+
+      // 2. Verificar se existe no plano de contas, se não adicionar
+      const contaExistente = planoContas.find(c => 
+        c.nome.toLowerCase() === erpName.toLowerCase()
+      );
+
+      if (!contaExistente) {
+        // Gerar código automático baseado na categoria
+        const tipo = categoryName.includes('RECEITA') ? 'receita' : 'despesa';
+        const prefixo = tipo === 'receita' ? '3' : '4';
+        const proximoCodigo = `${prefixo}.${planoContas.filter(c => c.codigo.startsWith(prefixo)).length + 1}`;
+
+        const { data: novaConta, error: contaError } = await supabase
+          .from('plano_contas')
+          .insert([{
+            codigo: proximoCodigo,
+            nome: erpName,
+            tipo: tipo,
+            ativo: true,
+            criado_em: new Date().toISOString()
+          }])
+          .select()
+          .single();
+
+        if (!contaError && novaConta) {
+          setPlanoContas(prev => [...prev, novaConta]);
+        }
+      }
+
+      // 3. Atualizar estado local de mappings
+      setMappings(prev => prev.map(group => {
+        if (group.group === categoryName) {
+          return { 
+            ...group, 
+            items: [...group.items, { 
+              id: Date.now(), 
+              erp: erpName, 
+              categoria: erpName, 
+              dre: true, 
+              fluxo: true, 
+              data: new Date().toLocaleDateString('pt-BR') 
+            }]
+          };
+        }
+        return group;
+      }));
+
+      // 4. Forçar revalidação dos dados importados
+      if (importData && Array.isArray(importData)) {
+        const revalidated = importData.map(row => {
+          const accountField = Object.keys(row).find(k => 
+            k.toLowerCase().includes('nome') || 
+            k.toLowerCase().includes('conta') || 
+            k.toLowerCase().includes('categoria') || 
+            k.toLowerCase().includes('histórico')
+          );
+          const accountValue = accountField ? String(row[accountField] || '').trim() : '';
+          
+          // Revalidar usando a função validateRow do UploadExcel
+          return {
+            ...row,
+            __validation: {
+              isValid: accountValue !== '',
+              errors: accountValue === '' ? ['Nome/Conta ausente'] : [],
+              accountValue
+            }
+          };
+        });
+        setImportData(revalidated);
+      }
+
+    } catch (error) {
+      console.error('Erro em handleAddMapping:', error);
+    }
   };
 
   const handleSaveNewMapping = () => {

@@ -334,11 +334,11 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
               </div>
             </div>
 
-            <div className="overflow-x-auto overflow-y-auto max-h-[500px]">
+            <div className="overflow-x-auto overflow-y-auto max-h-[500px] rounded-xl border border-zinc-800">
               <table className="w-full text-left border-collapse min-w-max">
                 <thead>
                   <tr className="bg-zinc-900/30">
-                    <th className="p-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-800 w-16">Status</th>
+                    <th className="p-4 text-[10px] font-bold text-420-500 uppercase tracking-widest border-b border-zinc-800 w-16">Status</th>
                     <th className="p-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-800 w-16 text-center">#</th>
                     {headers.map(h => (
                       <th key={h} className="p-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-800">{h}</th>
@@ -348,11 +348,11 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
                 </thead>
                 <tbody>
                   {paginatedData.map((row) => (
-                    <tr key={row.__id} className="border-b border-zinc-800/50 hover:bg-white/5 transition-colors group">
+                    <tr key={row.__id} onClick={() => setEditingRow(row)} className="border-b border-zinc-800/50 hover:bg-white/5 transition-colors group">
                       <td className="p-4">
                         {row.__validation.isValid ? (
                           <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />cursor-pointer 
                           </div>
                         ) : (
                           <div className="w-6 h-6 rounded-full bg-red-500/10 flex items-center justify-center">

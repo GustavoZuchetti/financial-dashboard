@@ -5,6 +5,10 @@ import UploadExcel from '@/components/UploadExcel';
 import { supabase } from '@/lib/supabase';
 
 const ImportacaoPage = () => {
+    // TEMPORARY: Limpar mappings corrompidos do localStorage
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('financial_mappings');
+  }
   const [activeTab, setActiveTab] = useState('grupo');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newMapping, setNewMapping] = useState({ erp: '', category: '' });

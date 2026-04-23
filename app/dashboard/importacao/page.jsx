@@ -65,14 +65,14 @@ const ImportacaoPage = () => {
       if (plano) setPlanoContas(plano);
 
           // Carregar mapeamentos salvos de categoria_mappings
-    const { data: savedMappings } = await supabase
+    const { data: categoriaMappings } = await supabase
       .from('categoria_mappings')
-      .select('*')
-      .eq('empresa_id', empresaId);
-    if (savedMappings && savedMappings.length > 0) {
-      setClienteMappings(savedMappings);
+      .select('*');
+    if (categoriaMappings && categoriaMappings.length > 0) {
+      setClienteMappings(categoriaMappings);
     }
 
+          
       setIsLoaded(true);
     };
     loadSavedState();

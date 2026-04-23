@@ -154,23 +154,27 @@ const ImportacaoPage = () => {
         }
       }
 
-      // 3. Atualizar estado local de mappings
-      setMappings(prev => prev.map(group => {
-        if (group.group === categoryName) {
-          return { 
-            ...group, 
-            items: [...group.items, { 
-              id: Date.now(), 
-              erp: erpName, 
-              categoria: erpName, 
-              dre: true, 
-              fluxo: true, 
-              data: new Date().toLocaleDateString('pt-BR') 
-            }]
-          };
-        }
-        return group;
-      }));
+
+    // 3. Atualizar status visual do item importado
+    setImportData(prev => prev.map(row => {
+      const accountField = Object.keys(row).find(k => 
+        k.toLowerCase().includes('nome') || 
+        k.toLowerCase().includes('conta') || 
+        k.toLowerCase().includes('categoria') || 
+        k.toLowerCase().includes('histórico')
+      );
+      
+      const accountValue = accountField ? String(row[accountField] || '').trim() : '';
+      
+      if (accountValue.toLowerCase() === erpName.toLowerCase()) {
+        return {
+          ...row,
+          __configured: true,
+          __mappedCategory: categoryName
+        };
+      }
+      return row;
+    }));
 
       // 4. Forçar revalidação dos dados importados
       if (importData && Array.isArray(importData)) {

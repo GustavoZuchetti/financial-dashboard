@@ -187,8 +187,7 @@ const ImportacaoPage = () => {
           return {
             ...row,
             __validation: {
-              isValid: accountValue !== '',
-              errors: accountValue === '' ? ['Nome/Conta ausente'] : [],
+          isValid: accountValue !== '' && (clienteMappings.some(m => m.nome_erp === accountValue) || planoContas.some(c => c.nome === accountValue)),              errors: accountValue === '' ? ['Nome/Conta ausente'] : [],
               accountValue
             }
           };

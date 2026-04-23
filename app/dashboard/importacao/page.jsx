@@ -98,7 +98,7 @@ const ImportacaoPage = () => {
 
   const handleFileSelect = (payload) => { setImportData(payload); };
 
-  const handleAddMapping = (erpName, categoryName) => {const handleAddMapping = async (erpName, categoryName) => {
+    const handleAddMapping = async (erpName, categoryName) => {
     try {
       // 1. Salvar mapeamento no Supabase
       const { data: newMapping, error: mappingError } = await supabase

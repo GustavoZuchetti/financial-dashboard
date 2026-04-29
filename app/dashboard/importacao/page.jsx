@@ -150,7 +150,8 @@ const ImportacaoPage = () => {
       const { data: newMapping, error: mappingError } = await supabase
         .from('categoria_mappings')
         .insert([{
-          empresa_id: empresaId,
+                      // TEMPORARY: empresa_id fixo (1 = Facesign) - será substituído por sistema multi-empresas
+          empresa_id: 1,
           nome_erp: erpName,
           categoria_sistema: categoryName,
           criado_em: new Date().toISOString()

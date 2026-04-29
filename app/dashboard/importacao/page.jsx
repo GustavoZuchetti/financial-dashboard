@@ -82,6 +82,39 @@ const ImportacaoPage = () => {
     loadSavedState();
   }, []);
 
+      // Aplicar mappings salvos ao importData quando ambos estiverem carregados
+  useEffect(() => {
+    if (!importData || !clienteMappings || clienteMappings.length === 0) return;
+
+    const updatedData = importData.map(row => {
+      const accountField = Object.keys(row).find(k => 
+        k.toLowerCase().includes('nome') || 
+        k.toLowerCase().includes('conta') || 
+        k.toLowerCase().includes('categoria') || 
+        k.toLowerCase().includes('histórico')
+      );
+      
+      const accountValue = accountField ? String(row[accountField] || '').trim() : '';
+      
+      // Verificar se existe mapping salvo para esta conta
+      const mapping = clienteMappings.find(m => 
+        m.nome_erp && m.nome_erp.toLowerCase() === accountValue.toLowerCase()
+      );
+      
+      if (mapping) {
+        return {
+          ...row,
+          __configured: true,
+          __mappedCategory: mapping.categoria_sistema
+        };
+      }
+      
+      return row;
+    });
+    
+    setImportData(updatedData);
+  }, [clienteMappings, importData?.length]); // Somente quando mappings ou quantidade de linhas mudar
+
   useEffect(() => { if (isLoaded && empresaId) localStorage.setItem('empresa_id', empresaId); }, [empresaId, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('financial_mappings', JSON.stringify(mappings)); }, [mappings, isLoaded]);
   useEffect(() => {

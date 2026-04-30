@@ -240,6 +240,15 @@ const ImportacaoPage = () => {
     } catch (error) {
       console.error('Erro em handleAddMapping:', error);
     }
+
+            // 5. Recarregar mapeamentos do Supabase para atualizar a lista
+            const { data: updatedMappings } = await supabase
+              .from('categoria_mappings')
+              .select('*');
+
+            if (updatedMappings && updatedMappings.length > 0) {
+                      setClienteMappings(updatedMappings);
+                    }
   };
 
   const handleSaveNewMapping = () => {

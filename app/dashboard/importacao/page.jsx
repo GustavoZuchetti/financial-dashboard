@@ -46,8 +46,8 @@ const ImportacaoPage = () => {
         if (list?.length > 0) setEmpresaId(list[0].id);
                 // TEMPORARY FIX: Se não conseguiu carregar empresaId, usa 1 (Facesign)
                 if (!savedEmpresaId && (!list || list.length === 0)) {
-                            setEmpresaId'00.000.000/0000-00'1);
-                          }
+setEmpresaId('00.000.000/0000-00');
+                        }}
       }
 
       const savedMappings = localStorage.getItem('financial_mappings');

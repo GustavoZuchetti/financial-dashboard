@@ -252,6 +252,8 @@ const ImportacaoPage = () => {
   };
 
   const handleSaveNewMapping = () => {
+            // Forçar re-aplicação dos mapeamentos aos dados importados
+            window.location.reload();
     if (!newMapping.erp || !newMapping.category) return;
     handleAddMapping(newMapping.erp, newMapping.category);
     setIsModalOpen(false);

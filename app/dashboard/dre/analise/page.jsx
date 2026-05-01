@@ -4,12 +4,45 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { supabase } from '@/lib/supabase'
 
 const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(v)
+const fmtFull = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
 const S = {
   card: { backgroundColor: '#1f2937', borderRadius: '8px', padding: '20px', border: '1px solid #374151' },
   sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', color: '#f3f4f6' },
   input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' }
 }
+
+// Componente CustomTooltip para Top Receitas com Pareto
+const CustomTooltipClientes = ({ active, payload, data }) => {
+  if (!active || !payload || !payload[0]) return null;
+
+  const entry = payload[0].payload;
+  const clienteData = data.filter(d => d.descricao === entry.name).sort((a, b) => Number(b.valor) - Number(a.valor));
+  const total = clienteData.reduce((acc, curr) => acc + Number(curr.valor), 0);
+  const threshold = total * 0.8;
+  let accumulated = 0;
+  const topItems = clienteData.filter(item => {
+    accumulated += Number(item.valor);
+    return accumulated <= threshold;
+  }).slice(0, 3);
+
+  return (
+    <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: '#e5e7eb', fontSize: '12px' }}>
+      <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', color: '#3b82f6' }}>{entry.name}</p>
+      <p style={{ margin: '4px 0', color: '#9ca3af' }}>Total: <span style={{ color: '#fff', fontWeight: 'bold' }}>{fmtFull(entry.valor)}</span></p>
+      {topItems.length > 0 && (
+        <>
+          <p style={{ margin: '8px 0 4px 0', color: '#9ca3af', fontSize: '11px' }}>Top 80% (Pareto):</p>
+          {topItems.map((item, i) => (
+            <p key={i} style={{ margin: '2px 0 2px 8px', color: '#cbd5e1', fontSize: '11px' }}>
+              • {item.categoria?.substring(0, 20) || 'Item'}: {fmtFull(Number(item.valor))}
+            </p>
+          ))}
+        </>
+      )}
+    </div>
+  );
+};
 
 export default function DREAnalise() {
   const [startDate, setStartDate] = useState(() => {
@@ -19,6 +52,7 @@ export default function DREAnalise() {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [historico, setHistorico] = useState([]);
   const [clientes, setClientes] = useState([]);
+  const [allData, setAllData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [empresaId, setEmpresaId] = useState(null);
 
@@ -40,6 +74,8 @@ export default function DREAnalise() {
         .lte('data', endDate);
 
       if (lancamentos) {
+        setAllData(lancamentos);
+
         // Agrupar por mês
         const meses = {};
         lancamentos.forEach(item => {
@@ -107,7 +143,7 @@ export default function DREAnalise() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={fmt} />
-                <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} formatter={(v) => fmt(v)} />
+                <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} formatter={(v) => fmt(v)} cursor={{ stroke: 'transparent' }} />
                 <Legend iconType="circle" />
                 <Line type="monotone" dataKey="receita" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} name="Receita" />
                 <Line type="monotone" dataKey="ebitda" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 4 }} name="EBITDA" />
@@ -125,7 +161,7 @@ export default function DREAnalise() {
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#374151" />
                 <XAxis type="number" hide />
                 <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} width={100} />
-                <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} formatter={(v) => fmt(v)} />
+                <Tooltip content={<CustomTooltipClientes data={allData} />} cursor={{ fill: 'transparent' }} />
                 <Bar dataKey="valor" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
@@ -141,7 +177,7 @@ export default function DREAnalise() {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} />
-              <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} formatter={(v) => fmt(v)} />
+              <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} formatter={(v) => fmt(v)} cursor={{ stroke: 'transparent' }} />
               <Legend />
               <Line type="monotone" dataKey="ebitda" stroke="#8b5cf6" strokeWidth={2} name="EBITDA" />
               <Line type="monotone" dataKey="receita" stroke="#3b82f6" strokeWidth={2} name="Receita" />

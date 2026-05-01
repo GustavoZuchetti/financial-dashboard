@@ -26,6 +26,61 @@ const KPICard = ({ title, value, color = '#3b82f6' }) => (
   </div>
 )
 
+// Componente CustomTooltip com Pareto 80/20
+const CustomTooltip = ({ active, payload, data }) => {
+  if (!active || !payload || !payload[0]) return null;
+
+  const entry = payload[0].payload;
+  let details = [];
+
+  // Extrair detalhes baseado no tipo de barra
+  if (entry.name === 'Receita Bruta' && data) {
+    const receitas = data.filter(d => d.tipo === 'receita').sort((a, b) => Number(b.valor) - Number(a.valor));
+    const total = receitas.reduce((acc, curr) => acc + Number(curr.valor), 0);
+    const threshold = total * 0.8;
+    let accumulated = 0;
+    details = receitas.filter(r => {
+      accumulated += Number(r.valor);
+      return accumulated <= threshold;
+    }).slice(0, 3);
+  } else if (entry.name === 'Custos' && data) {
+    const custos = data.filter(d => d.tipo === 'custo').sort((a, b) => Number(b.valor) - Number(a.valor));
+    const total = custos.reduce((acc, curr) => acc + Number(curr.valor), 0);
+    const threshold = total * 0.8;
+    let accumulated = 0;
+    details = custos.filter(c => {
+      accumulated += Number(c.valor);
+      return accumulated <= threshold;
+    }).slice(0, 3);
+  } else if (entry.name === 'Despesas' && data) {
+    const despesas = data.filter(d => d.tipo === 'despesa').sort((a, b) => Number(b.valor) - Number(a.valor));
+    const total = despesas.reduce((acc, curr) => acc + Number(curr.valor), 0);
+    const threshold = total * 0.8;
+    let accumulated = 0;
+    details = despesas.filter(d => {
+      accumulated += Number(d.valor);
+      return accumulated <= threshold;
+    }).slice(0, 3);
+  }
+
+  return (
+    <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: '#e5e7eb', fontSize: '12px' }}>
+      <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', color: '#3b82f6' }}>{entry.name}</p>
+      <p style={{ margin: '4px 0', color: '#9ca3af' }}>Total: <span style={{ color: '#fff', fontWeight: 'bold' }}>{fmtFull(Math.abs(entry.value))}</span></p>
+      {details.length > 0 && (
+        <>
+          <p style={{ margin: '8px 0 4px 0', color: '#9ca3af', fontSize: '11px' }}>Top 80% (Pareto):</p>
+          {details.map((d, i) => (
+            <p key={i} style={{ margin: '2px 0 2px 8px', color: '#cbd5e1', fontSize: '11px' }}>
+              • {d.descricao?.substring(0, 20) || d.categoria?.substring(0, 20) || 'Item'}: {fmtFull(Number(d.valor))}
+            </p>
+          ))}
+        </>
+      )}
+    </div>
+  );
+};
+
 export default function DREGeral() {
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -105,7 +160,7 @@ export default function DREGeral() {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} interval={0} angle={-25} textAnchor="end" />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={fmt} />
-              <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} formatter={(v) => fmtFull(v)} />
+              <Tooltip content={<CustomTooltip data={data} />} cursor={{ fill: 'transparent' }} />
               <Bar dataKey="range" radius={[2, 2, 0, 0]}>
                 {waterfallData.map((entry, i) => (
                   <Cell key={i} fill={entry.type === 'total' ? '#3b82f6' : entry.type === 'positive' ? '#3b82f6' : '#ef4444'} fillOpacity={entry.type === 'total' ? 0.8 : 1} />

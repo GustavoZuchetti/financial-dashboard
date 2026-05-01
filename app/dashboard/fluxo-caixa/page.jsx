@@ -21,6 +21,58 @@ const KPICard = ({ title, value, color = '#3b82f6' }) => (
   </div>
 )
 
+// Componente CustomTooltip com Pareto 80/20
+const CustomTooltipFluxo = ({ active, payload, data }) => {
+  if (!active || !payload) return null;
+
+  const entry = payload[0]?.payload;
+  if (!entry) return null;
+
+  let details = [];
+  let label = '';
+
+  // Extrair detalhes baseado no tipo de barra
+  if (payload[0]?.dataKey === 'entradas' && data) {
+    const entradas = data.filter(d => d.tipo === 'entrada' && d.data.substring(0, 7) === entry.name.split('/')[1] + '-' + entry.name.split('/')[0]).sort((a, b) => Number(b.valor) - Number(a.valor));
+    const total = entradas.reduce((acc, curr) => acc + Number(curr.valor), 0);
+    const threshold = total * 0.8;
+    let accumulated = 0;
+    details = entradas.filter(e => {
+      accumulated += Number(e.valor);
+      return accumulated <= threshold;
+    }).slice(0, 3);
+    label = 'Entradas';
+  } else if (payload[0]?.dataKey === 'saidas' && data) {
+    const saidas = data.filter(d => d.tipo === 'saida' && d.data.substring(0, 7) === entry.name.split('/')[1] + '-' + entry.name.split('/')[0]).sort((a, b) => Number(b.valor) - Number(a.valor));
+    const total = saidas.reduce((acc, curr) => acc + Number(curr.valor), 0);
+    const threshold = total * 0.8;
+    let accumulated = 0;
+    details = saidas.filter(s => {
+      accumulated += Number(s.valor);
+      return accumulated <= threshold;
+    }).slice(0, 3);
+    label = 'Saídas';
+  }
+
+  return (
+    <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: '#e5e7eb', fontSize: '12px' }}>
+      <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', color: '#3b82f6' }}>{label}</p>
+      <p style={{ margin: '4px 0', color: '#9ca3af' }}>Período: <span style={{ color: '#fff', fontWeight: 'bold' }}>{entry.name}</span></p>
+      <p style={{ margin: '4px 0', color: '#9ca3af' }}>Total: <span style={{ color: '#fff', fontWeight: 'bold' }}>{fmtFull(payload[0]?.value || 0)}</span></p>
+      {details.length > 0 && (
+        <>
+          <p style={{ margin: '8px 0 4px 0', color: '#9ca3af', fontSize: '11px' }}>Top 80% (Pareto):</p>
+          {details.map((d, i) => (
+            <p key={i} style={{ margin: '2px 0 2px 8px', color: '#cbd5e1', fontSize: '11px' }}>
+              • {d.descricao?.substring(0, 20) || d.categoria?.substring(0, 20) || 'Item'}: {fmtFull(Number(d.valor))}
+            </p>
+          ))}
+        </>
+      )}
+    </div>
+  );
+};
+
 export default function FluxoCaixaGeral() {
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -108,7 +160,7 @@ export default function FluxoCaixaGeral() {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} tickFormatter={fmt} />
-              <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} formatter={(v) => fmtFull(v)} />
+              <Tooltip content={<CustomTooltipFluxo data={data} />} cursor={{ fill: 'transparent' }} />
               <Legend verticalAlign="bottom" height={36}/>
               <Bar dataKey="entradas" fill="#3b82f6" barSize={40} radius={[4, 4, 0, 0]} name="Entradas" />
               <Bar dataKey="saidas" fill="#ef4444" barSize={40} radius={[4, 4, 0, 0]} name="Saídas" />

@@ -1,5 +1,6 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 
 const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(v)
 const fmtFull = (v) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0 }).format(v)
@@ -12,52 +13,102 @@ const S = {
   th: { textAlign: 'left', color: '#9ca3af', fontSize: '11px', fontWeight: '600', padding: '12px', borderBottom: '1px solid #374151', textTransform: 'uppercase' },
   td: { padding: '12px', borderBottom: '1px solid #1f2937', fontSize: '13px' },
   rowTotal: { fontWeight: 'bold', backgroundColor: '#111827' },
-  expandBtn: { cursor: 'pointer', marginRight: '8px', color: '#10b981' }
+  expandBtn: { cursor: 'pointer', marginRight: '8px', color: '#3b82f6' },
+  input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' }
 }
 
-const KPICard = ({ title, value, color = '#10b981' }) => (
+const KPICard = ({ title, value, color = '#3b82f6' }) => (
   <div style={S.card}>
     <div style={S.kpiTitle}>{title}</div>
     <div style={{ ...S.kpiValue, color }}>{value}</div>
   </div>
 )
 
-const ROWS = [
-  { id: 1, name: 'RECEITA BRUTA', values: [191055, 233081, 226852, 262973], total: 913960, level: 0, type: 'pos' },
-  { id: 2, name: 'RECEITA BRUTA', values: [191055, 233081, 226852, 262973], total: 913960, level: 1, type: 'pos', parentId: 1 },
-  { id: 3, name: 'OUTROS RECEBIMENTOS', values: [0, 0, 0, 0], total: 0, level: 1, type: 'pos', parentId: 1 },
-  { id: 4, name: 'IMPOSTOS SOBRE RECEITA', values: [-12706, -15515, -15086, -19201], total: -62508, level: 1, type: 'neg', parentId: 1 },
-  { id: 5, name: 'RECEITA LÍQUIDA', values: [178349, 217566, 211766, 243772], total: 851452, level: 0, type: 'total' },
-  { id: 6, name: 'CUSTOS VARIÁVEIS', values: [-42665, -40351, -47000, -42667], total: -172684, level: 0, type: 'neg' },
-  { id: 7, name: 'CAC', values: [-551, -637, -630, -683], total: -2501, level: 1, type: 'neg', parentId: 6 },
-  { id: 8, name: 'CSP', values: [-42115, -39714, -46371, -41985], total: -170183, level: 1, type: 'neg', parentId: 6 },
-  { id: 9, name: 'LUCRO BRUTO', values: [135683, 177215, 164766, 201104], total: 678768, level: 0, type: 'total' },
-  { id: 10, name: 'DESPESAS FIXAS', values: [-205377, -205408, -219991, -230494], total: -861271, level: 0, type: 'neg' }
-]
-
 export default function DREDetalhado() {
-  const [expanded, setExpanded] = useState({ 1: true, 6: true })
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [expanded, setExpanded] = useState({});
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [empresaId, setEmpresaId] = useState(null);
 
-  const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }))
+  useEffect(() => {
+    const savedId = localStorage.getItem('empresa_id');
+    if (savedId) setEmpresaId(savedId);
+  }, []);
 
-  const visibleRows = ROWS.filter(row => !row.parentId || expanded[row.parentId])
+  useEffect(() => {
+    if (!empresaId) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      const { data: lancamentos, error } = await supabase
+        .from('lancamentos')
+        .select('*')
+        .eq('empresa_id', empresaId)
+        .gte('data', startDate)
+        .lte('data', endDate);
+
+      if (!error && lancamentos) {
+        setData(lancamentos);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [empresaId, startDate, endDate]);
+
+  const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+
+  // Agrupar dados por categoria
+  const categoriaMap = {};
+  data.forEach(item => {
+    if (!categoriaMap[item.categoria]) {
+      categoriaMap[item.categoria] = { receita: 0, despesa: 0 };
+    }
+    if (item.tipo === 'receita') {
+      categoriaMap[item.categoria].receita += Number(item.valor);
+    } else {
+      categoriaMap[item.categoria].despesa += Number(item.valor);
+    }
+  });
+
+  const totalReceita = Object.values(categoriaMap).reduce((acc, curr) => acc + curr.receita, 0);
+  const totalDespesa = Object.values(categoriaMap).reduce((acc, curr) => acc + curr.despesa, 0);
+  const resultado = totalReceita - totalDespesa;
+
+  // Estrutura de linhas por categoria
+  const rows = Object.entries(categoriaMap).map(([cat, values], idx) => ({
+    id: idx,
+    name: cat || 'Não Classificado',
+    receita: values.receita,
+    despesa: values.despesa,
+    resultado: values.receita - values.despesa,
+    level: 0,
+    type: values.receita > 0 ? 'pos' : 'neg'
+  }));
 
   return (
     <div style={{ padding: '24px', color: '#e5e7eb' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>DRE Detalhado</h1>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div style={{ ...S.card, padding: '8px 16px' }}>3 empresas selecionadas</div>
-          <div style={{ ...S.card, padding: '8px 16px' }}>📅 01/01/2026 → 30/04/2026</div>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#1f2937', padding: '8px 16px', borderRadius: '8px', border: '1px solid #374151' }}>
+            <span style={{ fontSize: '13px', color: '#9ca3af' }}>Período:</span>
+            <input type="date" style={S.input} value={startDate} onChange={e => setStartDate(e.target.value)} />
+            <span style={{ color: '#9ca3af' }}>→</span>
+            <input type="date" style={S.input} value={endDate} onChange={e => setEndDate(e.target.value)} />
+          </div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <KPICard title="Receita Bruta" value="R$ 913.960" />
-        <KPICard title="Margem de Contribuição" value="74,3%" />
-        <KPICard title="EBITDA" value="-20,0%" color="#ef4444" />
-        <KPICard title="Resultado Líquido" value="-36,8%" color="#ef4444" />
-        <KPICard title="Resultado Final" value="-65,4%" color="#ef4444" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        <KPICard title="Receita Total" value={fmt(totalReceita)} color="#3b82f6" />
+        <KPICard title="Despesa Total" value={fmt(totalDespesa)} color="#ef4444" />
+        <KPICard title="Resultado" value={fmt(resultado)} color={resultado >= 0 ? '#3b82f6' : '#ef4444'} />
       </div>
 
       <div style={S.card}>
@@ -65,35 +116,51 @@ export default function DREDetalhado() {
           <table style={S.table}>
             <thead>
               <tr>
-                <th style={S.th}>Plano de Contas</th>
-                <th style={{ ...S.th, textAlign: 'right' }}>Jan/26</th>
-                <th style={{ ...S.th, textAlign: 'right' }}>Fev/26</th>
-                <th style={{ ...S.th, textAlign: 'right' }}>Mar/26</th>
-                <th style={{ ...S.th, textAlign: 'right' }}>Abr/26</th>
-                <th style={{ ...S.th, textAlign: 'right' }}>TOTAL</th>
+                <th style={S.th}>Categoria</th>
+                <th style={{ ...S.th, textAlign: 'right' }}>Receita</th>
+                <th style={{ ...S.th, textAlign: 'right' }}>Despesa</th>
+                <th style={{ ...S.th, textAlign: 'right' }}>Resultado</th>
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map(row => (
-                <tr key={row.id} style={row.level === 0 ? S.rowTotal : {}}>
-                  <td style={{ ...S.td, paddingLeft: row.level * 24 + 12 }}>
-                    {ROWS.some(r => r.parentId === row.id) && (
-                      <span onClick={() => toggle(row.id)} style={S.expandBtn}>
-                        {expanded[row.id] ? '▼' : '▶'}
-                      </span>
-                    )}
-                    {row.name}
-                  </td>
-                  {row.values.map((v, i) => (
-                    <td key={i} style={{ ...S.td, textAlign: 'right', color: v < 0 ? '#ef4444' : '#e5e7eb' }}>
-                      {fmtFull(Math.abs(v))}
-                    </td>
-                  ))}
-                  <td style={{ ...S.td, textAlign: 'right', fontWeight: 'bold', color: row.total < 0 ? '#ef4444' : '#e5e7eb' }}>
-                    {fmtFull(Math.abs(row.total))}
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan="4" style={{ ...S.td, textAlign: 'center', color: '#3b82f6' }}>Carregando dados...</td>
                 </tr>
-              ))}
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan="4" style={{ ...S.td, textAlign: 'center', color: '#9ca3af' }}>Nenhum dado para este período.</td>
+                </tr>
+              ) : (
+                <>
+                  {rows.map(row => (
+                    <tr key={row.id} style={S.rowTotal}>
+                      <td style={{ ...S.td, paddingLeft: 12 }}>{row.name}</td>
+                      <td style={{ ...S.td, textAlign: 'right', color: row.receita > 0 ? '#3b82f6' : '#9ca3af' }}>
+                        {fmtFull(row.receita)}
+                      </td>
+                      <td style={{ ...S.td, textAlign: 'right', color: row.despesa > 0 ? '#ef4444' : '#9ca3af' }}>
+                        {fmtFull(row.despesa)}
+                      </td>
+                      <td style={{ ...S.td, textAlign: 'right', fontWeight: 'bold', color: row.resultado >= 0 ? '#3b82f6' : '#ef4444' }}>
+                        {fmtFull(row.resultado)}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr style={{ ...S.rowTotal, backgroundColor: '#0f172a' }}>
+                    <td style={{ ...S.td, paddingLeft: 12, fontWeight: 'bold' }}>TOTAL</td>
+                    <td style={{ ...S.td, textAlign: 'right', fontWeight: 'bold', color: '#3b82f6' }}>
+                      {fmtFull(totalReceita)}
+                    </td>
+                    <td style={{ ...S.td, textAlign: 'right', fontWeight: 'bold', color: '#ef4444' }}>
+                      {fmtFull(totalDespesa)}
+                    </td>
+                    <td style={{ ...S.td, textAlign: 'right', fontWeight: 'bold', color: resultado >= 0 ? '#3b82f6' : '#ef4444' }}>
+                      {fmtFull(resultado)}
+                    </td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
         </div>

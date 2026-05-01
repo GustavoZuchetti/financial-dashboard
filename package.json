@@ -9,23 +9,23 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
     "@supabase/auth-helpers-nextjs": "^0.9.0",
+    "@supabase/supabase-js": "^2.105.1",
+    "clsx": "^2.1.0",
+    "date-fns": "^3.6.0",
+    "lucide-react": "^0.365.0",
     "next": "14.2.0",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^2.12.0",
-    "xlsx": "^0.18.5",
-    "date-fns": "^3.6.0",
-    "lucide-react": "^0.365.0",
-    "clsx": "^2.1.0",
-    "tailwind-merge": "^2.2.0"
+    "tailwind-merge": "^2.2.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "autoprefixer": "^10.0.1",
-    "postcss": "^8",
-    "tailwindcss": "^3.3.0",
     "eslint": "^8",
-    "eslint-config-next": "14.2.0"
+    "eslint-config-next": "14.2.0",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0"
   }
 }

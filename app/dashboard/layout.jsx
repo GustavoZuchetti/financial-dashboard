@@ -23,6 +23,9 @@ export default function DashboardLayout({ children }) {
           setEmpresas(data)
           const saved = localStorage.getItem('empresa_id')
           setEmpresa(saved && data.find(e => e.id === saved) ? saved : data[0].id)
+          if (!saved || !data.find(e => e.id === saved)) {
+            localStorage.setItem('empresa_id', data[0].id)
+          }
         }
       } catch (e) {
         // usa empresa demo se nao houver dados
@@ -35,6 +38,8 @@ export default function DashboardLayout({ children }) {
   const handleEmpresaChange = (id) => {
     setEmpresa(id)
     localStorage.setItem('empresa_id', id)
+    // Forçar recarregamento para que todas as páginas atualizem seus dados baseados na nova empresa
+    window.location.reload()
   }
 
   if (loading) {

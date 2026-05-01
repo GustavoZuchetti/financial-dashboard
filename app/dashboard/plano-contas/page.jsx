@@ -2,41 +2,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
-const PLANO_MOCK = [
-  { codigo: '1', nome: 'ATIVO', tipo: 'sintetica', nivel: 1, filhos: [
-    { codigo: '1.1', nome: 'ATIVO CIRCULANTE', tipo: 'sintetica', nivel: 2, filhos: [
-      { codigo: '1.1.1', nome: 'Caixa e Equivalentes', tipo: 'analitica', nivel: 3, saldo: 125000 },
-      { codigo: '1.1.2', nome: 'Contas a Receber', tipo: 'analitica', nivel: 3, saldo: 380000 },
-      { codigo: '1.1.3', nome: 'Estoques', tipo: 'analitica', nivel: 3, saldo: 95000 },
-    ]},
-    { codigo: '1.2', nome: 'ATIVO NAO CIRCULANTE', tipo: 'sintetica', nivel: 2, filhos: [
-      { codigo: '1.2.1', nome: 'Imobilizado', tipo: 'analitica', nivel: 3, saldo: 450000 },
-      { codigo: '1.2.2', nome: 'Depreciacao Acumulada', tipo: 'analitica', nivel: 3, saldo: -120000 },
-    ]},
-  ]},
-  { codigo: '2', nome: 'PASSIVO', tipo: 'sintetica', nivel: 1, filhos: [
-    { codigo: '2.1', nome: 'PASSIVO CIRCULANTE', tipo: 'sintetica', nivel: 2, filhos: [
-      { codigo: '2.1.1', nome: 'Fornecedores', tipo: 'analitica', nivel: 3, saldo: 180000 },
-      { codigo: '2.1.2', nome: 'Obrigacoes Trabalhistas', tipo: 'analitica', nivel: 3, saldo: 65000 },
-      { codigo: '2.1.3', nome: 'Impostos a Pagar', tipo: 'analitica', nivel: 3, saldo: 48000 },
-    ]},
-    { codigo: '2.2', nome: 'PATRIMONIO LIQUIDO', tipo: 'sintetica', nivel: 2, filhos: [
-      { codigo: '2.2.1', nome: 'Capital Social', tipo: 'analitica', nivel: 3, saldo: 500000 },
-      { codigo: '2.2.2', nome: 'Lucros Acumulados', tipo: 'analitica', nivel: 3, saldo: 137000 },
-    ]},
-  ]},
-  { codigo: '3', nome: 'RECEITAS', tipo: 'sintetica', nivel: 1, filhos: [
-    { codigo: '3.1', nome: 'Receita Bruta de Vendas', tipo: 'analitica', nivel: 2, saldo: 850000 },
-    { codigo: '3.2', nome: 'Deducoes de Receita', tipo: 'analitica', nivel: 2, saldo: -85000 },
-  ]},
-  { codigo: '4', nome: 'CUSTOS E DESPESAS', tipo: 'sintetica', nivel: 1, filhos: [
-    { codigo: '4.1', nome: 'Custo das Mercadorias Vendidas', tipo: 'analitica', nivel: 2, saldo: -306000 },
-    { codigo: '4.2', nome: 'Despesas Comerciais', tipo: 'analitica', nivel: 2, saldo: -95000 },
-    { codigo: '4.3', nome: 'Despesas Administrativas', tipo: 'analitica', nivel: 2, saldo: -88000 },
-    { codigo: '4.4', nome: 'Despesas Financeiras', tipo: 'analitica', nivel: 2, saldo: -25000 },
-  ]},
-]
-
 const fmtFull = (v) => v !== undefined ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v) : ''
 
 const S = {
@@ -73,9 +38,8 @@ function ModalConta({ conta, onClose, onSave }) {
   const [form, setForm] = useState({
     codigo: conta?.codigo || '',
     nome: conta?.nome || '',
-    tipo: conta?.tipo || 'analitica',
-    nivel: conta?.nivel || 3,
-    saldo: conta?.saldo || 0,
+    tipo: conta?.tipo || 'receita',
+    pai_id: conta?.pai_id || null,
   })
 
   const handleSave = () => {
@@ -104,7 +68,7 @@ function ModalConta({ conta, onClose, onSave }) {
             style={S.input} 
             value={form.nome} 
             onChange={(e) => setForm({...form, nome: e.target.value})}
-            placeholder="Ex: Caixa e Equivalentes"
+            placeholder="Ex: Receita de Serviços"
           />
         </div>
 
@@ -115,33 +79,12 @@ function ModalConta({ conta, onClose, onSave }) {
             value={form.tipo} 
             onChange={(e) => setForm({...form, tipo: e.target.value})}
           >
-            <option value="analitica">Analítica</option>
-            <option value="sintetica">Sintética</option>
+            <option value="receita">Receita</option>
+            <option value="custo">Custo</option>
+            <option value="despesa">Despesa</option>
+            <option value="ativo">Ativo</option>
+            <option value="passivo">Passivo</option>
           </select>
-        </div>
-
-        <div style={S.formGroup}>
-          <label style={S.label}>Nível</label>
-          <select 
-            style={S.select} 
-            value={form.nivel} 
-            onChange={(e) => setForm({...form, nivel: Number(e.target.value)})}
-          >
-            <option value={1}>1 - Grupo Principal</option>
-            <option value={2}>2 - Subgrupo</option>
-            <option value={3}>3 - Conta Detalhada</option>
-          </select>
-        </div>
-
-        <div style={S.formGroup}>
-          <label style={S.label}>Saldo Inicial (R$)</label>
-          <input 
-            style={S.input} 
-            type="number"
-            value={form.saldo} 
-            onChange={(e) => setForm({...form, saldo: Number(e.target.value)})}
-            placeholder="0.00"
-          />
         </div>
 
         <div style={S.modalActions}>
@@ -153,145 +96,78 @@ function ModalConta({ conta, onClose, onSave }) {
   )
 }
 
-function ContaRow({ conta, busca, expanded, onToggle, onEdit }) {
-  const temFilhos = conta.filhos && conta.filhos.length > 0
-  const aberto = expanded[conta.codigo]
-  
-  const matches = busca === '' || 
-    conta.nome.toLowerCase().includes(busca.toLowerCase()) || 
-    conta.codigo.includes(busca)
-
-  const nameStyle = {
-    fontWeight: conta.nivel === 1 ? 800 : conta.nivel === 2 ? 600 : 400,
-    fontSize: conta.nivel === 1 ? 15 : 13,
-    color: conta.nivel === 1 ? '#fff' : '#e5e7eb'
-  }
-
-  if (!matches && !temFilhos) return null
-
-  return (
-    <>
-      <div style={conta.nivel === 1 ? S.row1 : conta.nivel === 2 ? S.row2 : S.row3}>
-        <div style={{ color: '#9ca3af', fontFamily: 'monospace' }}>
-          {conta.codigo}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          {temFilhos && (
-            <button style={S.toggleBtn} onClick={() => onToggle(conta.codigo)}>
-              {aberto ? '▾' : '▸'}
-            </button>
-          )}
-          <span style={nameStyle}>{conta.nome}</span>
-        </div>
-        <div>
-          <span style={S.badge(conta.tipo)}>{conta.tipo}</span>
-        </div>
-        <div style={{ color: conta.saldo > 0 ? '#e5e7eb' : '#6b7280', fontSize: 13, fontFamily: 'monospace' }}>
-          {conta.saldo !== undefined ? fmtFull(conta.saldo) : ''}
-        </div>
-        <div>
-          <button style={S.editBtn} onClick={() => onEdit(conta)}>Editar</button>
-        </div>
-      </div>
-      {temFilhos && aberto && conta.filhos.map(filho => (
-        <ContaRow 
-          key={filho.codigo} 
-          conta={filho} 
-          busca={busca}
-          expanded={expanded}
-          onToggle={onToggle}
-          onEdit={onEdit}
-        />
-      ))}
-    </>
-  )
-}
-
 export default function PlanoContasPage() {
-  const [contas, setContas] = useState(PLANO_MOCK)
+  const [contas, setContas] = useState([])
   const [busca, setBusca] = useState('')
-  const [expanded, setExpanded] = useState({ '1': true, '2': true, '3': true, '4': true, '1.1': true, '1.2': true, '2.1': true, '2.2': true })
   const [modalAberto, setModalAberto] = useState(false)
   const [contaEditando, setContaEditando] = useState(null)
+  const [empresaId, setEmpresaId] = useState(null)
 
   useEffect(() => {
-    const saved = localStorage.getItem('plano_contas')
-    if (saved) {
-      try {
-        setContas(JSON.parse(saved))
-      } catch (e) {
-        console.error('Erro ao carregar plano de contas:', e)
+    const loadData = async () => {
+      const savedEmpresaId = localStorage.getItem('empresa_id')
+      if (savedEmpresaId) {
+        setEmpresaId(savedEmpresaId)
+        const { data } = await supabase
+          .from('plano_contas')
+          .select('*')
+          .eq('empresa_id', savedEmpresaId)
+          .order('codigo')
+        if (data) setContas(data)
       }
     }
+    loadData()
   }, [])
 
-  const onToggle = (codigo) => setExpanded(prev => ({ ...prev, [codigo]: !prev[codigo] }))
+  const handleSalvarConta = async (formData) => {
+    if (!empresaId) return
 
-  const handleNovaConta = () => {
-    setContaEditando(null)
-    setModalAberto(true)
-  }
-
-  const handleEditarConta = (conta) => {
-    setContaEditando(conta)
-    setModalAberto(true)
-  }
-
-  const handleSalvarConta = (formData) => {
-    let novasContas
     if (contaEditando) {
-      const updateRecursive = (list) => list.map(c => {
-        if (c.codigo === contaEditando.codigo) return { ...c, ...formData }
-        if (c.filhos) return { ...c, filhos: updateRecursive(c.filhos) }
-        return c
-      })
-      novasContas = updateRecursive(contas)
+      const { data, error } = await supabase
+        .from('plano_contas')
+        .update(formData)
+        .eq('id', contaEditando.id)
+        .select()
+        .single()
+      
+      if (!error && data) {
+        setContas(prev => prev.map(c => c.id === data.id ? data : c))
+      }
     } else {
-      novasContas = [...contas, formData]
+      const { data, error } = await supabase
+        .from('plano_contas')
+        .insert([{ ...formData, empresa_id: empresaId }])
+        .select()
+        .single()
+      
+      if (!error && data) {
+        setContas(prev => [...prev, data].sort((a, b) => a.codigo.localeCompare(b.codigo)))
+      }
     }
-    
-    setContas(novasContas)
-    localStorage.setItem('plano_contas', JSON.stringify(novasContas))
   }
 
-  const totalContas = contas.reduce((a, g) => a + 1 + (g.filhos?.length || 0) + g.filhos?.reduce((b, f) => b + (f.filhos?.length || 0), 0), 0)
+  const filteredContas = contas.filter(c => 
+    c.nome.toLowerCase().includes(busca.toLowerCase()) || 
+    c.codigo.includes(busca)
+  )
 
   return (
     <div style={S.page}>
       <div style={S.header}>
         <h1 style={S.title}>Plano de Contas</h1>
-        <p style={S.subtitle}>Estrutura contábil hierárquica da empresa</p>
-      </div>
-
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-        {[
-          { label: 'Total de Contas', valor: totalContas, cor: '#00e676' },
-          { label: 'Contas Analíticas', valor: 12, cor: '#3b82f6' },
-          { label: 'Grupos Sintéticos', valor: 8, cor: '#8b5cf6' },
-          { label: 'Níveis', valor: 3, cor: '#f59e0b' },
-        ].map((k, i) => (
-          <div key={i} style={{ flex: 1, background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 12, padding: 16 }}>
-            <div style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', marginBottom: 8 }}>{k.label}</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: k.cor }}>{k.valor}</div>
-          </div>
-        ))}
+        <p style={S.subtitle}>Estrutura de contas para classificação financeira</p>
       </div>
 
       <div style={S.toolbar}>
         <input 
           style={S.searchInput} 
-          placeholder="Buscar por código ou nome..." 
+          placeholder="Buscar conta..." 
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button style={S.btnImport} onClick={() => window.location.href='/dashboard/importacao'}>
-            📥 Importar XLSx
-          </button>
-          <button style={S.btn} onClick={handleNovaConta}>
-            + Nova Conta
-          </button>
-        </div>
+        <button style={S.btn} onClick={() => { setContaEditando(null); setModalAberto(true); }}>
+          + Nova Conta
+        </button>
       </div>
 
       <div style={S.card}>
@@ -299,26 +175,30 @@ export default function PlanoContasPage() {
           <div style={S.th}>Código</div>
           <div style={S.th}>Nome</div>
           <div style={S.th}>Tipo</div>
-          <div style={S.th}>Saldo</div>
           <div style={S.th}>Ações</div>
         </div>
-        {contas.map(conta => (
-          <ContaRow 
-            key={conta.codigo} 
-            conta={conta} 
-            busca={busca}
-            expanded={expanded}
-            onToggle={onToggle}
-            onEdit={handleEditarConta}
-          />
-        ))}
+        
+        {filteredContas.length === 0 ? (
+          <div style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>Nenhuma conta encontrada.</div>
+        ) : (
+          filteredContas.map(conta => (
+            <div key={conta.id} style={S.row2}>
+              <div style={{ color: '#9ca3af', fontFamily: 'monospace' }}>{conta.codigo}</div>
+              <div style={{ color: '#fff', fontWeight: 600 }}>{conta.nome}</div>
+              <div><span style={S.badge(conta.tipo)}>{conta.tipo}</span></div>
+              <div>
+                <button style={S.editBtn} onClick={() => { setContaEditando(conta); setModalAberto(true); }}>Editar</button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {modalAberto && (
         <ModalConta 
-          conta={contaEditando}
-          onClose={() => setModalAberto(false)}
-          onSave={handleSalvarConta}
+          conta={contaEditando} 
+          onClose={() => setModalAberto(false)} 
+          onSave={handleSalvarConta} 
         />
       )}
     </div>

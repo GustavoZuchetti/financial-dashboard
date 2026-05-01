@@ -8,7 +8,7 @@ const S = {
   container: { width: '100%', maxWidth: 400 },
   header: { textAlign: 'center', marginBottom: 32 },
   logoWrap: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 },
-  logoIcon: { width: 44, height: 44, background: '#00e676', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#000', fontSize: 20 },
+  logoIcon: { width: 44, height: 44, background: '#3b82f6', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#000', fontSize: 20 },
   title: { fontSize: 28, fontWeight: 800, color: '#fff', margin: 0 },
   subtitle: { color: '#6b7280', fontSize: 14, margin: '4px 0 0' },
   card: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 16, padding: 32 },
@@ -16,9 +16,9 @@ const S = {
   error: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', color: '#f87171', fontSize: 14, marginBottom: 16 },
   label: { display: 'block', color: '#9ca3af', fontSize: 13, fontWeight: 500, marginBottom: 6 },
   input: { width: '100%', background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' },
-  inputFocus: { borderColor: '#00e676' },
+  inputFocus: { borderColor: '#3b82f6' },
   fieldWrap: { marginBottom: 16 },
-  btn: (loading) => ({ width: '100%', background: loading ? '#065f46' : '#00e676', color: loading ? '#a7f3d0' : '#000', border: 'none', borderRadius: 10, padding: '13px', fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: 8, transition: 'all 0.2s' }),
+  btn: (loading) => ({ width: '100%', background: loading ? '#065f46' : '#3b82f6', color: loading ? '#a7f3d0' : '#000', border: 'none', borderRadius: 10, padding: '13px', fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: 8, transition: 'all 0.2s' }),
 }
 
 export default function LoginPage() {

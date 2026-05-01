@@ -42,7 +42,7 @@ export default function FluxoCaixaAnalise() {
       <div style={S.grid4}>
         <div style={S.card}>
           <div style={S.kpiLabel}>Total Entradas</div>
-          <div style={{...S.kpiValue, color: '#00e676'}}>R$ 895 mil</div>
+          <div style={{...S.kpiValue, color: '#3b82f6'}}>R$ 895 mil</div>
           <div style={S.kpiSub}>+12.5% vs mes anterior</div>
         </div>
         <div style={S.card}>
@@ -69,10 +69,10 @@ export default function FluxoCaixaAnalise() {
             <div key={i} style={{marginBottom: 16}}>
               <div style={{display:'flex', justifyContent:'space-between', marginBottom: 4}}>
                 <span style={{fontSize: 13, color: '#e5e7eb'}}>{c.nome}</span>
-                <span style={{fontSize: 13, fontWeight: 700, color: '#00e676'}}>R$ {c.valor.toLocaleString('pt-BR')}</span>
+                <span style={{fontSize: 13, fontWeight: 700, color: '#3b82f6'}}>R$ {c.valor.toLocaleString('pt-BR')}</span>
               </div>
               <div style={S.barBg}>
-                <div style={S.bar(c.pct, '#00e676')} />
+                <div style={S.bar(c.pct, '#3b82f6')} />
               </div>
               <div style={{fontSize: 11, color: '#6b7280', marginTop: 4}}>{c.pct}% do total</div>
             </div>
@@ -108,7 +108,7 @@ export default function FluxoCaixaAnalise() {
           ].map((item, i) => (
             <div key={i} style={{padding: '16px', background: '#0a0a0f', borderRadius: 8}}>
               <div style={{fontSize: 11, color: '#6b7280', marginBottom: 6, textTransform:'uppercase'}}>{item.label}</div>
-              <div style={{fontSize: 20, fontWeight: 800, color: '#00e676', marginBottom: 4}}>{item.valor}</div>
+              <div style={{fontSize: 20, fontWeight: 800, color: '#3b82f6', marginBottom: 4}}>{item.valor}</div>
               <div style={{fontSize: 11, color: '#6b7280'}}>{item.desc}</div>
             </div>
           ))}

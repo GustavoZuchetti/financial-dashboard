@@ -15,7 +15,7 @@ const S = {
   grid3: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 },
   kpiLabel: { fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', marginBottom: 8 },
   kpiValue: { fontSize: 24, fontWeight: 800 },
-  badge: (t) => ({ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700, background: t==='projetado'?'rgba(59,130,246,0.1)':'rgba(0,230,118,0.1)', color: t==='projetado'?'#3b82f6':'#00e676' }),
+  badge: (t) => ({ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700, background: t==='projetado'?'rgba(59,130,246,0.1)':'rgba(59,130,246,0.1)', color: t==='projetado'?'#3b82f6':'#3b82f6' }),
 }
 
 const meses = ['Mai 2026','Jun 2026','Jul 2026','Ago 2026','Set 2026','Dez 2026']
@@ -42,7 +42,7 @@ export default function FluxoCaixaProjecao() {
 
       <div style={{display:'flex', gap:8, marginBottom:24}}>
         {['base','otimista','pessimista'].map(c => (
-          <button key={c} onClick={() => setCenario(c)} style={{padding:'8px 20px', borderRadius:8, border:'1px solid #1e1e2e', background: cenario===c?'#00e676':'transparent', color: cenario===c?'#000':'#9ca3af', fontWeight:600, cursor:'pointer', fontSize:13, textTransform:'capitalize'}}>
+          <button key={c} onClick={() => setCenario(c)} style={{padding:'8px 20px', borderRadius:8, border:'1px solid #1e1e2e', background: cenario===c?'#3b82f6':'transparent', color: cenario===c?'#000':'#9ca3af', fontWeight:600, cursor:'pointer', fontSize:13, textTransform:'capitalize'}}>
             {c}
           </button>
         ))}
@@ -51,7 +51,7 @@ export default function FluxoCaixaProjecao() {
       <div style={S.grid3}>
         <div style={S.card}>
           <div style={S.kpiLabel}>Projecao Proximos 6 Meses</div>
-          <div style={{...S.kpiValue, color:'#00e676'}}>R$ {(projecoes.reduce((s,p) => s + p.entradas, 0) * multiplicador).toFixed(0)} mil</div>
+          <div style={{...S.kpiValue, color:'#3b82f6'}}>R$ {(projecoes.reduce((s,p) => s + p.entradas, 0) * multiplicador).toFixed(0)} mil</div>
           <div style={{fontSize:12,color:'#6b7280',marginTop:4}}>Total entradas projetadas</div>
         </div>
         <div style={S.card}>
@@ -88,9 +88,9 @@ export default function FluxoCaixaProjecao() {
               return (
                 <tr key={i}>
                   <td style={S.td}>{p.mes}</td>
-                  <td style={{...S.tdRight, color:'#00e676'}}>R$ {ent} mil</td>
+                  <td style={{...S.tdRight, color:'#3b82f6'}}>R$ {ent} mil</td>
                   <td style={{...S.tdRight, color:'#ef4444'}}>R$ {sai} mil</td>
-                  <td style={{...S.tdRight, color: sal >= 0 ? '#00e676' : '#ef4444', fontWeight:700}}>R$ {sal} mil</td>
+                  <td style={{...S.tdRight, color: sal >= 0 ? '#3b82f6' : '#ef4444', fontWeight:700}}>R$ {sal} mil</td>
                   <td style={{...S.tdRight, color:'#3b82f6'}}>R$ {acum} mil</td>
                   <td style={{...S.tdRight}}><span style={S.badge(p.tipo)}>{p.tipo}</span></td>
                 </tr>

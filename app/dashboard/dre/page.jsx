@@ -31,10 +31,9 @@ const S = {
   kpiTitle: { fontSize: '13px', color: '#9ca3af', marginBottom: '8px' },
   kpiValue: { fontSize: '22px', fontWeight: 'bold' },
   sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f3f4f6' },
-  btnImport: { background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }
 }
 
-const KPICard = ({ title, value, color = '#10b981' }) => (
+const KPICard = ({ title, value, color = '#3b82f6' }) => (
   <div style={S.card}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <div>
@@ -52,17 +51,14 @@ export default function DREGeral() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>DRE</h1>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button style={S.btnImport} onClick={() => window.location.href='/dashboard/importacao'}>
-            📥 Importar XLSx
-          </button>
           <div style={{ ...S.card, padding: '8px 16px' }}>3 empresas selecionadas</div>
           <div style={{ ...S.card, padding: '8px 16px' }}>📅 01/01/2026 → 30/04/2026</div>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <KPICard title="Receita Bruta" value="R$ 913.960" color="#10b981" />
-        <KPICard title="Margem de Contribuição" value="74,3%" color="#10b981" />
+        <KPICard title="Receita Bruta" value="R$ 913.960" color="#3b82f6" />
+        <KPICard title="Margem de Contribuição" value="74,3%" color="#3b82f6" />
         <KPICard title="EBITDA" value="-20,0%" color="#ef4444" />
         <KPICard title="Resultado Líquido" value="-36,8%" color="#ef4444" />
         <KPICard title="Resultado Final" value="-65,4%" color="#ef4444" />
@@ -79,7 +75,7 @@ export default function DREGeral() {
               <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} formatter={(v) => fmtFull(v)} />
               <Bar dataKey="range" radius={[2, 2, 0, 0]}>
                 {MOCK_WATERFALL.map((entry, i) => (
-                  <Cell key={i} fill={entry.type === 'total' ? '#10b981' : entry.type === 'positive' ? '#10b981' : '#ef4444'} fillOpacity={entry.type === 'total' ? 0.8 : 1} />
+                  <Cell key={i} fill={entry.type === 'total' ? '#3b82f6' : entry.type === 'positive' ? '#3b82f6' : '#ef4444'} fillOpacity={entry.type === 'total' ? 0.8 : 1} />
                 ))}
               </Bar>
             </BarChart>
@@ -98,7 +94,7 @@ export default function DREGeral() {
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={fmt} />
                 <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
                 <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} />
-                <Bar dataKey="receita" fill="#10b981" barSize={30} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="receita" fill="#3b82f6" barSize={30} radius={[4, 4, 0, 0]} />
                 <Bar dataKey="custos" fill="#ef4444" barSize={30} radius={[4, 4, 0, 0]} />
                 <Bar dataKey="margem" fill="#0ea5e9" barSize={30} radius={[4, 4, 0, 0]} />
                 <Line yAxisId="right" type="monotone" dataKey="margemPerc" stroke="#fff" strokeWidth={2} dot={{ r: 4, fill: '#fff' }} />

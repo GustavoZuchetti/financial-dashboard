@@ -274,8 +274,8 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-between bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-green-500" />
+              <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-blue-500" />
               </div>
               <div>
                 <p className="text-white font-medium">Arquivo lido com sucesso!</p>
@@ -351,8 +351,8 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
                     <tr key={row.__id} onClick={() => setEditingRow(row)} className="border-b border-zinc-800/50 hover:bg-white/5 transition-colors group">
                       <td className="p-4">
                         {row.__validation.isValid ? (
-                          <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />cursor-pointer 
+                          <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />cursor-pointer 
                           </div>
                         ) : (
                           <div className="w-6 h-6 rounded-full bg-red-500/10 flex items-center justify-center">
@@ -379,7 +379,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
                         {!row.__validation.isValid && (
                           <button
                             onClick={() => setEditingRow(row)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/10 text-green-500 border border-green-600/20 rounded-lg hover:bg-green-600/20 transition-all text-[10px] font-bold uppercase tracking-wider"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/10 text-blue-500 border border-blue-600/20 rounded-lg hover:bg-blue-600/20 transition-all text-[10px] font-bold uppercase tracking-wider"
                           >
                             <Settings2 className="w-3 h-3" /> Mapear
                           </button>
@@ -399,7 +399,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-zinc-800 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Settings2 className="w-5 h-5 text-green-500" /> Configurar De-Para
+                <Settings2 className="w-5 h-5 text-blue-500" /> Configurar De-Para
               </h3>
               <button
                 onClick={() => { setEditingRow(null); setSelectedCategory(''); }}
@@ -429,7 +429,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-xl p-3 text-sm text-white outline-none focus:border-green-600 transition-all shadow-inner"
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-xl p-3 text-sm text-white outline-none focus:border-blue-600 transition-all shadow-inner"
                 >
                   <option value="">Selecione uma categoria...</option>
                   
@@ -470,7 +470,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
               <button
                 onClick={handleConfirmMapping}
                 disabled={!selectedCategory}
-                className="flex-[2] bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:hover:bg-green-600 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-green-900/20"
+                className="flex-[2] bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-900/20"
               >
                 Salvar e Validar
               </button>

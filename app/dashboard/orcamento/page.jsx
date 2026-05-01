@@ -37,7 +37,7 @@ const S = {
   kpiCard: (c) => ({ background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '16px 20px', borderLeft: `3px solid ${c}` }),
   kpiLabel: { color: '#9ca3af', fontSize: 12, fontWeight: 500, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
   kpiValue: { fontSize: 22, fontWeight: 800, color: '#fff' },
-  kpiSub: (pos) => ({ fontSize: 12, color: pos ? '#00e676' : '#f87171', marginTop: 4 }),
+  kpiSub: (pos) => ({ fontSize: 12, color: pos ? '#3b82f6' : '#f87171', marginTop: 4 }),
   card: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '20px 24px', marginBottom: 16 },
   cardTitle: { fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 16 },
   table: { width: '100%', borderCollapse: 'collapse' },
@@ -78,7 +78,7 @@ export default function OrcamentoPage() {
           <div style={S.kpiValue}>{fmt(recOrc)}</div>
           <div style={S.kpiSub(true)}>Meta do periodo</div>
         </div>
-        <div style={S.kpiCard('#00e676')}>
+        <div style={S.kpiCard('#3b82f6')}>
           <div style={S.kpiLabel}>Receita Realizada</div>
           <div style={S.kpiValue}>{fmt(recReal)}</div>
           <div style={S.kpiSub(recReal >= recOrc)}>{achiev}% da meta atingida</div>
@@ -88,7 +88,7 @@ export default function OrcamentoPage() {
           <div style={S.kpiValue}>{fmt(llOrc)}</div>
           <div style={S.kpiSub(true)}>Meta lucro</div>
         </div>
-        <div style={S.kpiCard(llReal >= llOrc ? '#00e676' : '#ef4444')}>
+        <div style={S.kpiCard(llReal >= llOrc ? '#3b82f6' : '#ef4444')}>
           <div style={S.kpiLabel}>Lucro Liq. Realizado</div>
           <div style={S.kpiValue}>{fmt(llReal)}</div>
           <div style={S.kpiSub(llReal >= llOrc)}>{llAchiev}% da meta atingida</div>
@@ -105,7 +105,7 @@ export default function OrcamentoPage() {
             <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 8 }} labelStyle={{ color: '#fff' }} formatter={v => fmtFull(v)} />
             <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 12 }} />
             <Bar dataKey="orcado" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Orcado" />
-            <Bar dataKey="realizado" fill="#00e676" radius={[4, 4, 0, 0]} name="Realizado" />
+            <Bar dataKey="realizado" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Realizado" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -129,7 +129,7 @@ export default function OrcamentoPage() {
                   <td style={S.td}>{row.conta}</td>
                   <td style={{ ...S.td, textAlign: 'right' }}>{fmtFull(row.orcado)}</td>
                   <td style={{ ...S.td, textAlign: 'right' }}>{fmtFull(row.realizado)}</td>
-                  <td style={{ ...S.td, textAlign: 'right', color: v >= 0 ? '#00e676' : '#f87171', fontWeight: 600 }}>{var_(row.realizado, row.orcado)}</td>
+                  <td style={{ ...S.td, textAlign: 'right', color: v >= 0 ? '#3b82f6' : '#f87171', fontWeight: 600 }}>{var_(row.realizado, row.orcado)}</td>
                 </tr>
               )
             })}

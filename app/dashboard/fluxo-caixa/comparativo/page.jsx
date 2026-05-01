@@ -77,7 +77,7 @@ export default function FluxoComparativo() {
           <tbody>
             {itens.map((item, i) => {
               const d = diff(item.a, item.b)
-              const cor = item.bom ? (d.isPos ? '#00e676' : '#ef4444') : (d.isPos ? '#ef4444' : '#00e676')
+              const cor = item.bom ? (d.isPos ? '#3b82f6' : '#ef4444') : (d.isPos ? '#ef4444' : '#3b82f6')
               return (
                 <tr key={i}>
                   <td style={{...S.td, fontWeight:600}}>{item.label}</td>
@@ -100,8 +100,8 @@ export default function FluxoComparativo() {
             const h = Math.round((d.saldo / maxVal) * 120)
             return (
               <div key={i} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:8}}>
-                <span style={{fontSize:12, color:'#00e676', fontWeight:700}}>R$ {d.saldo}</span>
-                <div style={{width:'100%', height:h, background:'#00e676', borderRadius:'4px 4px 0 0', opacity:0.8}} />
+                <span style={{fontSize:12, color:'#3b82f6', fontWeight:700}}>R$ {d.saldo}</span>
+                <div style={{width:'100%', height:h, background:'#3b82f6', borderRadius:'4px 4px 0 0', opacity:0.8}} />
                 <span style={{fontSize:11, color:'#6b7280'}}>{d.mes}</span>
               </div>
             )

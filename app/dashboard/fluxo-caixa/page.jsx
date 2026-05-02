@@ -11,7 +11,8 @@ const S = {
   kpiTitle: { fontSize: '14px', color: '#9ca3af', marginBottom: '8px' },
   kpiValue: { fontSize: '24px', fontWeight: 'bold' },
   sectionTitle: { fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', color: '#f3f4f6' },
-  input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' }
+  input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' },
+  badge: { display: 'inline-block', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', marginLeft: '8px' }
 }
 
 const KPICard = ({ title, value, color = '#3b82f6' }) => (
@@ -21,7 +22,6 @@ const KPICard = ({ title, value, color = '#3b82f6' }) => (
   </div>
 )
 
-// Componente CustomTooltip com Pareto 80/20
 const CustomTooltipFluxo = ({ active, payload, data }) => {
   if (!active || !payload) return null;
 
@@ -31,7 +31,6 @@ const CustomTooltipFluxo = ({ active, payload, data }) => {
   let details = [];
   let label = '';
 
-  // Extrair detalhes baseado no tipo de barra
   if (payload[0]?.dataKey === 'entradas' && data) {
     const entradas = data.filter(d => d.tipo === 'entrada' && d.data.substring(0, 7) === entry.name.split('/')[1] + '-' + entry.name.split('/')[0]).sort((a, b) => Number(b.valor) - Number(a.valor));
     const total = entradas.reduce((acc, curr) => acc + Number(curr.valor), 0);
@@ -82,10 +81,14 @@ export default function FluxoCaixaGeral() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [empresaId, setEmpresaId] = useState(null);
+  const [isConsolidado, setIsConsolidado] = useState(false);
 
   useEffect(() => {
     const savedId = localStorage.getItem('empresa_id');
-    if (savedId) setEmpresaId(savedId);
+    if (savedId) {
+      setEmpresaId(savedId);
+      setIsConsolidado(savedId === 'todas');
+    }
   }, []);
 
   useEffect(() => {
@@ -93,21 +96,38 @@ export default function FluxoCaixaGeral() {
 
     const fetchData = async () => {
       setLoading(true);
-      const { data: fluxo, error } = await supabase
-        .from('fluxo_caixa')
-        .select('*')
-        .eq('empresa_id', empresaId)
-        .gte('data', startDate)
-        .lte('data', endDate);
+      try {
+        let query = supabase
+          .from('fluxo_caixa')
+          .select('*')
+          .gte('data', startDate)
+          .lte('data', endDate);
 
-      if (!error && fluxo) {
-        setData(fluxo);
+        if (isConsolidado) {
+          const { data: userEmpresas } = await supabase
+            .from('empresas')
+            .select('id')
+            .eq('user_id', (await supabase.auth.getSession()).data.session.user.id);
+          
+          if (userEmpresas) {
+            const ids = userEmpresas.map(e => e.id);
+            query = query.in('empresa_id', ids);
+          }
+        } else {
+          query = query.eq('empresa_id', empresaId);
+        }
+
+        const { data: fluxo } = await query;
+        setData(fluxo || []);
+      } catch (e) {
+        console.error('Erro ao carregar Fluxo de Caixa:', e);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchData();
-  }, [empresaId, startDate, endDate]);
+  }, [empresaId, startDate, endDate, isConsolidado]);
 
   const totalEntradas = data.filter(d => d.tipo === 'entrada').reduce((acc, curr) => acc + Number(curr.valor), 0);
   const totalSaidas = data.filter(d => d.tipo === 'saida').reduce((acc, curr) => acc + Number(curr.valor), 0);
@@ -135,7 +155,10 @@ export default function FluxoCaixaGeral() {
   return (
     <div style={{ padding: '24px', color: '#e5e7eb' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>Fluxo de Caixa</h1>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>
+          Fluxo de Caixa
+          {isConsolidado && <span style={S.badge}>📊 Consolidado</span>}
+        </h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#1f2937', padding: '8px 16px', borderRadius: '8px', border: '1px solid #374151' }}>
             <span style={{ fontSize: '13px', color: '#9ca3af' }}>Período:</span>

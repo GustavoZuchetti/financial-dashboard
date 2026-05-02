@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -25,9 +25,9 @@ const S = {
 }
 
 const navItems = [
-  { label: 'DRE', href: '/dashboard/dre', icon: '📊', children: [
-    { label: 'DRE Geral', href: '/dashboard/dre' },
-    { label: 'DRE Detalhado', href: '/dashboard/dre/detalhado' },
+  { label: 'Demonstrativos', href: '/dashboard/dre', icon: '📊', children: [
+    { label: 'Geral', href: '/dashboard/dre' },
+    { label: 'Detalhado', href: '/dashboard/dre/detalhado' },
     { label: 'Análise', href: '/dashboard/dre/analise' },
     { label: 'Comparativo', href: '/dashboard/dre/comparativo' },
   ]},
@@ -67,6 +67,11 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
     }
   }
 
+  const getEmpresaLabel = () => {
+    if (empresa === 'todas') return 'Todas as Empresas (Consolidado)'
+    return empresas.find(e => e.id === empresa)?.nome || 'Selecione'
+  }
+
   return (
     <div style={S.sidebar}>
       <div style={S.logo}>
@@ -75,11 +80,17 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
       </div>
 
       <div style={S.selectContainer}>
-        <label style={S.selectLabel}>Empresa Ativa</label>
+        <label style={S.selectLabel}>Empresa / Grupo</label>
         <select style={S.select} value={empresa || ''} onChange={e => onEmpresaChange(e.target.value)}>
           {empresas.length === 0 && <option value="">Nenhuma empresa</option>}
           {empresas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+          {empresas.length > 1 && <option value="todas">📊 Todas as Empresas (Consolidado)</option>}
         </select>
+        {empresa === 'todas' && (
+          <div style={{ fontSize: '11px', color: '#3b82f6', marginTop: '6px', padding: '4px 6px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '4px', textAlign: 'center' }}>
+            Visão Consolidada
+          </div>
+        )}
       </div>
 
       <nav style={S.nav}>

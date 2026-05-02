@@ -13,7 +13,8 @@ const S = {
   sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f3f4f6' },
   input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' },
   skeleton: { background: 'linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' },
-  error: { background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', padding: '16px', color: '#f87171', textAlign: 'center', marginBottom: '24px' }
+  error: { background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', padding: '16px', color: '#f87171', textAlign: 'center', marginBottom: '24px' },
+  badge: { display: 'inline-block', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', marginLeft: '8px' }
 }
 
 const KPICard = ({ title, value, color = '#3b82f6', loading }) => (
@@ -93,15 +94,23 @@ export default function DREGeral() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [empresaId, setEmpresaId] = useState(null);
+  const [empresas, setEmpresas] = useState([]);
+  const [isConsolidado, setIsConsolidado] = useState(false);
 
   useEffect(() => {
     const savedId = localStorage.getItem('empresa_id');
-    if (savedId) setEmpresaId(savedId);
+    if (savedId) {
+      setEmpresaId(savedId);
+      setIsConsolidado(savedId === 'todas');
+    }
     
     // Listener para mudanças no localStorage (troca de empresa no layout)
     const handleStorage = () => {
       const newId = localStorage.getItem('empresa_id');
-      if (newId !== empresaId) setEmpresaId(newId);
+      if (newId !== empresaId) {
+        setEmpresaId(newId);
+        setIsConsolidado(newId === 'todas');
+      }
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
@@ -114,17 +123,34 @@ export default function DREGeral() {
       setLoading(true);
       setError(null);
       try {
-        const { data: lancamentos, error: supabaseError } = await supabase
+        let query = supabase
           .from('lancamentos')
-          .select('*')
-          .eq('empresa_id', empresaId)
+          .select('*, empresas(nome)')
           .gte('data', startDate)
           .lte('data', endDate);
+
+        // Se for consolidado, busca todas as empresas do usuário
+        if (isConsolidado) {
+          const { data: userEmpresas } = await supabase
+            .from('empresas')
+            .select('id')
+            .eq('user_id', (await supabase.auth.getSession()).data.session.user.id);
+          
+          if (userEmpresas) {
+            const ids = userEmpresas.map(e => e.id);
+            query = query.in('empresa_id', ids);
+            setEmpresas(userEmpresas);
+          }
+        } else {
+          query = query.eq('empresa_id', empresaId);
+        }
+
+        const { data: lancamentos, error: supabaseError } = await query;
 
         if (supabaseError) throw supabaseError;
         setData(lancamentos || []);
       } catch (err) {
-        console.error('Erro ao carregar DRE:', err);
+        console.error('Erro ao carregar Demonstrativos:', err);
         setError('Não foi possível carregar os dados financeiros. Verifique sua conexão.');
       } finally {
         setLoading(false);
@@ -132,7 +158,7 @@ export default function DREGeral() {
     };
 
     fetchData();
-  }, [empresaId, startDate, endDate]);
+  }, [empresaId, startDate, endDate, isConsolidado]);
 
   const totalReceita = data.filter(d => d.tipo === 'receita').reduce((acc, curr) => acc + Number(curr.valor), 0);
   const totalDespesa = data.filter(d => d.tipo === 'despesa').reduce((acc, curr) => acc + Number(curr.valor), 0);
@@ -154,7 +180,10 @@ export default function DREGeral() {
       `}</style>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>DRE Executivo</h1>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>
+          Demonstrativos Executivos
+          {isConsolidado && <span style={S.badge}>📊 Consolidado</span>}
+        </h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#1f2937', padding: '8px 16px', borderRadius: '8px', border: '1px solid #374151' }}>
             <span style={{ fontSize: '13px', color: '#9ca3af' }}>Período:</span>

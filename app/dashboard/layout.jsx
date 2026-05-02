@@ -40,7 +40,13 @@ export default function DashboardLayout({ children }) {
         if (data && data.length > 0) {
           setEmpresas(data)
           const saved = localStorage.getItem('empresa_id')
-          const initialEmpresa = saved && data.find(e => e.id === saved) ? saved : data[0].id
+          
+          // Validar se o valor salvo é válido (pode ser um ID de empresa ou "todas")
+          let initialEmpresa = data[0].id
+          if (saved === 'todas' || (saved && data.find(e => e.id === saved))) {
+            initialEmpresa = saved
+          }
+          
           setEmpresa(initialEmpresa)
           
           if (saved !== initialEmpresa) {
@@ -48,7 +54,6 @@ export default function DashboardLayout({ children }) {
           }
         } else {
           // Se o usuário não tem empresas, redireciona para criar a primeira
-          // ou mantém um estado vazio controlado
           setEmpresas([])
         }
       } catch (e) {
@@ -101,7 +106,7 @@ export default function DashboardLayout({ children }) {
               <h2 style={{ fontSize: '24px', marginBottom: '12px' }}>Bem-vindo ao Financial Dashboard</h2>
               <p style={{ color: '#9ca3af', marginBottom: '24px' }}>Você ainda não tem nenhuma empresa cadastrada.</p>
               <button 
-                onClick={() => router.push('/dashboard/configuracoes/empresas')}
+                onClick={() => router.push('/dashboard/configuracoes')}
                 style={{ background: '#3b82f6', color: '#000', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
               >
                 Cadastrar Minha Primeira Empresa

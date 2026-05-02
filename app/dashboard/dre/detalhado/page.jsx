@@ -14,7 +14,8 @@ const S = {
   td: { padding: '12px', borderBottom: '1px solid #1f2937', fontSize: '13px' },
   rowTotal: { fontWeight: 'bold', backgroundColor: '#111827' },
   expandBtn: { cursor: 'pointer', marginRight: '8px', color: '#3b82f6' },
-  input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' }
+  input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' },
+  badge: { display: 'inline-block', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', marginLeft: '8px' }
 }
 
 const KPICard = ({ title, value, color = '#3b82f6' }) => (
@@ -34,10 +35,14 @@ export default function DREDetalhado() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [empresaId, setEmpresaId] = useState(null);
+  const [isConsolidado, setIsConsolidado] = useState(false);
 
   useEffect(() => {
     const savedId = localStorage.getItem('empresa_id');
-    if (savedId) setEmpresaId(savedId);
+    if (savedId) {
+      setEmpresaId(savedId);
+      setIsConsolidado(savedId === 'todas');
+    }
   }, []);
 
   useEffect(() => {
@@ -45,21 +50,38 @@ export default function DREDetalhado() {
 
     const fetchData = async () => {
       setLoading(true);
-      const { data: lancamentos, error } = await supabase
-        .from('lancamentos')
-        .select('*')
-        .eq('empresa_id', empresaId)
-        .gte('data', startDate)
-        .lte('data', endDate);
+      try {
+        let query = supabase
+          .from('lancamentos')
+          .select('*')
+          .gte('data', startDate)
+          .lte('data', endDate);
 
-      if (!error && lancamentos) {
-        setData(lancamentos);
+        if (isConsolidado) {
+          const { data: userEmpresas } = await supabase
+            .from('empresas')
+            .select('id')
+            .eq('user_id', (await supabase.auth.getSession()).data.session.user.id);
+          
+          if (userEmpresas) {
+            const ids = userEmpresas.map(e => e.id);
+            query = query.in('empresa_id', ids);
+          }
+        } else {
+          query = query.eq('empresa_id', empresaId);
+        }
+
+        const { data: lancamentos } = await query;
+        setData(lancamentos || []);
+      } catch (e) {
+        console.error('Erro ao carregar DRE Detalhado:', e);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchData();
-  }, [empresaId, startDate, endDate]);
+  }, [empresaId, startDate, endDate, isConsolidado]);
 
   const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
 
@@ -94,7 +116,10 @@ export default function DREDetalhado() {
   return (
     <div style={{ padding: '24px', color: '#e5e7eb' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>DRE Detalhado</h1>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>
+          DRE Detalhado
+          {isConsolidado && <span style={S.badge}>📊 Consolidado</span>}
+        </h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#1f2937', padding: '8px 16px', borderRadius: '8px', border: '1px solid #374151' }}>
             <span style={{ fontSize: '13px', color: '#9ca3af' }}>Período:</span>

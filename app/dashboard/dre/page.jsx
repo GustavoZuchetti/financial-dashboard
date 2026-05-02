@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Line, ComposedChart } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { supabase } from '@/lib/supabase'
 
 const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact', maximumFractionDigits: 1 }).format(v)
@@ -11,29 +11,31 @@ const S = {
   kpiTitle: { fontSize: '13px', color: '#9ca3af', marginBottom: '8px' },
   kpiValue: { fontSize: '22px', fontWeight: 'bold' },
   sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f3f4f6' },
-  input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' }
+  input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' },
+  skeleton: { background: 'linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' },
+  error: { background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', padding: '16px', color: '#f87171', textAlign: 'center', marginBottom: '24px' }
 }
 
-const KPICard = ({ title, value, color = '#3b82f6' }) => (
+const KPICard = ({ title, value, color = '#3b82f6', loading }) => (
   <div style={S.card}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <div>
+      <div style={{ width: '100%' }}>
         <div style={S.kpiTitle}>{title}</div>
-        <div style={{ ...S.kpiValue, color }}>{value}</div>
+        {loading ? (
+          <div style={{ ...S.skeleton, height: '28px', width: '80%', borderRadius: '4px' }} />
+        ) : (
+          <div style={{ ...S.kpiValue, color }}>{value}</div>
+        )}
       </div>
-      <div style={{ color: '#6b7280', fontSize: '12px' }}>ⓘ</div>
     </div>
   </div>
 )
 
-// Componente CustomTooltip com Pareto 80/20
 const CustomTooltip = ({ active, payload, data }) => {
   if (!active || !payload || !payload[0]) return null;
-
   const entry = payload[0].payload;
   let details = [];
 
-  // Extrair detalhes baseado no tipo de barra
   if (entry.name === 'Receita Bruta' && data) {
     const receitas = data.filter(d => d.tipo === 'receita').sort((a, b) => Number(b.valor) - Number(a.valor));
     const total = receitas.reduce((acc, curr) => acc + Number(curr.valor), 0);
@@ -64,12 +66,12 @@ const CustomTooltip = ({ active, payload, data }) => {
   }
 
   return (
-    <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: '#e5e7eb', fontSize: '12px' }}>
+    <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: '#e5e7eb', fontSize: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}>
       <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', color: '#3b82f6' }}>{entry.name}</p>
       <p style={{ margin: '4px 0', color: '#9ca3af' }}>Total: <span style={{ color: '#fff', fontWeight: 'bold' }}>{fmtFull(Math.abs(entry.value))}</span></p>
       {details.length > 0 && (
         <>
-          <p style={{ margin: '8px 0 4px 0', color: '#9ca3af', fontSize: '11px' }}>Top 80% (Pareto):</p>
+          <p style={{ margin: '8px 0 4px 0', color: '#9ca3af', fontSize: '11px', borderTop: '1px solid #1e293b', paddingTop: '4px' }}>Top 80% (Pareto):</p>
           {details.map((d, i) => (
             <p key={i} style={{ margin: '2px 0 2px 8px', color: '#cbd5e1', fontSize: '11px' }}>
               • {d.descricao?.substring(0, 20) || d.categoria?.substring(0, 20) || 'Item'}: {fmtFull(Number(d.valor))}
@@ -89,35 +91,49 @@ export default function DREGeral() {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [empresaId, setEmpresaId] = useState(null);
 
   useEffect(() => {
     const savedId = localStorage.getItem('empresa_id');
     if (savedId) setEmpresaId(savedId);
-  }, []);
+    
+    // Listener para mudanças no localStorage (troca de empresa no layout)
+    const handleStorage = () => {
+      const newId = localStorage.getItem('empresa_id');
+      if (newId !== empresaId) setEmpresaId(newId);
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [empresaId]);
 
   useEffect(() => {
     if (!empresaId) return;
 
     const fetchData = async () => {
       setLoading(true);
-      const { data: lancamentos, error } = await supabase
-        .from('lancamentos')
-        .select('*')
-        .eq('empresa_id', empresaId)
-        .gte('data', startDate)
-        .lte('data', endDate);
+      setError(null);
+      try {
+        const { data: lancamentos, error: supabaseError } = await supabase
+          .from('lancamentos')
+          .select('*')
+          .eq('empresa_id', empresaId)
+          .gte('data', startDate)
+          .lte('data', endDate);
 
-      if (!error && lancamentos) {
-        setData(lancamentos);
+        if (supabaseError) throw supabaseError;
+        setData(lancamentos || []);
+      } catch (err) {
+        console.error('Erro ao carregar DRE:', err);
+        setError('Não foi possível carregar os dados financeiros. Verifique sua conexão.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchData();
   }, [empresaId, startDate, endDate]);
 
-  // Lógica simplificada para os gráficos baseada nos dados reais
   const totalReceita = data.filter(d => d.tipo === 'receita').reduce((acc, curr) => acc + Number(curr.valor), 0);
   const totalDespesa = data.filter(d => d.tipo === 'despesa').reduce((acc, curr) => acc + Number(curr.valor), 0);
   const totalCusto = data.filter(d => d.tipo === 'custo').reduce((acc, curr) => acc + Number(curr.valor), 0);
@@ -133,8 +149,12 @@ export default function DREGeral() {
 
   return (
     <div style={{ color: '#e5e7eb', padding: '24px' }}>
+      <style>{`
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+      `}</style>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>DRE</h1>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>DRE Executivo</h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#1f2937', padding: '8px 16px', borderRadius: '8px', border: '1px solid #374151' }}>
             <span style={{ fontSize: '13px', color: '#9ca3af' }}>Período:</span>
@@ -145,33 +165,43 @@ export default function DREGeral() {
         </div>
       </div>
 
+      {error && <div style={S.error}>⚠️ {error}</div>}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <KPICard title="Receita Bruta" value={fmtFull(totalReceita)} color="#3b82f6" />
-        <KPICard title="Custos Totais" value={fmtFull(totalCusto)} color="#ef4444" />
-        <KPICard title="Despesas Totais" value={fmtFull(totalDespesa)} color="#ef4444" />
-        <KPICard title="EBITDA" value={fmtFull(ebitda)} color={ebitda >= 0 ? '#3b82f6' : '#ef4444'} />
+        <KPICard title="Receita Bruta" value={fmtFull(totalReceita)} color="#3b82f6" loading={loading} />
+        <KPICard title="Custos Totais" value={fmtFull(totalCusto)} color="#ef4444" loading={loading} />
+        <KPICard title="Despesas Totais" value={fmtFull(totalDespesa)} color="#ef4444" loading={loading} />
+        <KPICard title="EBITDA" value={fmtFull(ebitda)} color={ebitda >= 0 ? '#3b82f6' : '#ef4444'} loading={loading} />
       </div>
 
-      <div style={{ ...S.card, marginBottom: '24px' }}>
-        <h2 style={S.sectionTitle}>Fluxo do Resultado</h2>
-        <div style={{ height: '350px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={waterfallData} margin={{ top: 10, right: 30, left: 0, bottom: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} interval={0} angle={-25} textAnchor="end" />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={fmt} />
-              <Tooltip content={<CustomTooltip data={data} />} cursor={{ fill: 'transparent' }} />
-              <Bar dataKey="range" radius={[2, 2, 0, 0]}>
-                {waterfallData.map((entry, i) => (
-                  <Cell key={i} fill={entry.type === 'total' ? '#3b82f6' : entry.type === 'positive' ? '#3b82f6' : '#ef4444'} fillOpacity={entry.type === 'total' ? 0.8 : 1} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      <div style={{ ...S.card, marginBottom: '24px', minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
+        <h2 style={S.sectionTitle}>Fluxo do Resultado (Waterfall)</h2>
+        {loading ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '100%', height: '300px', ...S.skeleton, borderRadius: '8px' }} />
+          </div>
+        ) : data.length === 0 ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
+            Nenhum lançamento encontrado para o período selecionado.
+          </div>
+        ) : (
+          <div style={{ height: '350px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={waterfallData} margin={{ top: 10, right: 30, left: 0, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} interval={0} angle={-25} textAnchor="end" />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={fmt} />
+                <Tooltip content={<CustomTooltip data={data} />} cursor={{ fill: 'transparent' }} />
+                <Bar dataKey="range" radius={[2, 2, 0, 0]}>
+                  {waterfallData.map((entry, i) => (
+                    <Cell key={i} fill={entry.type === 'total' ? '#3b82f6' : entry.type === 'positive' ? '#3b82f6' : '#ef4444'} fillOpacity={entry.type === 'total' ? 0.8 : 1} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
-      
-      {loading && <div style={{ textAlign: 'center', color: '#3b82f6' }}>Carregando dados...</div>}
     </div>
   )
 }

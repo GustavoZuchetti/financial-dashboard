@@ -9,38 +9,38 @@ const S = {
   logo: { padding: '20px 16px', borderBottom: '1px solid #1e1e2e', display: 'flex', alignItems: 'center', gap: 10 },
   logoIcon: { width: 32, height: 32, background: '#3b82f6', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#000', fontSize: 14 },
   logoText: { fontWeight: 700, color: '#fff', fontSize: 15 },
-  select: { margin: '12px', padding: '8px 10px', background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 8, color: '#ccc', fontSize: 13, width: 'calc(100% - 24px)' },
+  selectContainer: { padding: '12px', borderBottom: '1px solid #1e1e2e' },
+  selectLabel: { fontSize: '10px', color: '#6b7280', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '4px', display: 'block', paddingLeft: '4px' },
+  select: { padding: '8px 10px', background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 8, color: '#fff', fontSize: 13, width: '100%', outline: 'none', cursor: 'pointer' },
   nav: { flex: 1, padding: '8px 0', overflowY: 'auto' },
   navItem: (active) => ({ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', color: active ? '#3b82f6' : '#9ca3af', background: active ? 'rgba(59,130,246,0.08)' : 'transparent', borderLeft: active ? '2px solid #3b82f6' : '2px solid transparent', fontSize: 14, fontWeight: active ? 600 : 400, textDecoration: 'none', transition: 'all 0.15s' }),
   subItem: (active) => ({ display: 'flex', alignItems: 'center', padding: '7px 16px 7px 42px', cursor: 'pointer', color: active ? '#3b82f6' : '#6b7280', fontSize: 13, textDecoration: 'none', background: active ? 'rgba(59,130,246,0.05)' : 'transparent' }),
   chevron: (open) => ({ marginLeft: 'auto', transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', fontSize: 12 }),
-  footer: { padding: '12px 16px', borderTop: '1px solid #1e1e2e' },
-  logoutBtn: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: '1px solid #2a2a3e', borderRadius: 8, color: '#9ca3af', fontSize: 13, cursor: 'pointer', width: '100%' },
+  footer: { padding: '16px', borderTop: '1px solid #1e1e2e', background: '#0a0a0f' },
+  userSection: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' },
+  userAvatar: { width: '32px', height: '32px', borderRadius: '50%', background: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#fff', fontWeight: 'bold' },
+  userInfo: { display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  userName: { fontSize: '12px', color: '#fff', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  logoutBtn: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8, color: '#f87171', fontSize: 12, cursor: 'pointer', width: '100%', fontWeight: '600', transition: 'all 0.2s' },
 }
 
 const navItems = [
   { label: 'DRE', href: '/dashboard/dre', icon: '📊', children: [
     { label: 'DRE Geral', href: '/dashboard/dre' },
     { label: 'DRE Detalhado', href: '/dashboard/dre/detalhado' },
-    { label: 'Analise', href: '/dashboard/dre/analise' },
+    { label: 'Análise', href: '/dashboard/dre/analise' },
     { label: 'Comparativo', href: '/dashboard/dre/comparativo' },
   ]},
-  { label: 'Orcamento', href: '/dashboard/orcamento', icon: '📈' },
+  { label: 'Orçamento', href: '/dashboard/orcamento', icon: '📈' },
   { label: 'Fluxo de Caixa', href: '/dashboard/fluxo-caixa', icon: '💰', children: [
     { label: 'Fluxo Geral', href: '/dashboard/fluxo-caixa' },
-    { label: 'Analise', href: '/dashboard/fluxo-caixa/analise' },
-    { label: 'Projecao', href: '/dashboard/fluxo-caixa/projecao' },
-    { label: 'Comparativo', href: '/dashboard/fluxo-caixa/comparativo' },
+    { label: 'Análise', href: '/dashboard/fluxo-caixa/analise' },
   ]},
   { label: 'Ciclo Financeiro', href: '/dashboard/ciclo-financeiro', icon: '🔄' },
-  { label: 'Plano de Contas', href: '/dashboard/plano-contas', icon: '📋', children: [
-    { label: 'Plano', href: '/dashboard/plano-contas' },
-    { label: 'Auditoria', href: '/dashboard/plano-contas/auditoria' },
-  ]},
-    { label: 'Importação / De-Para', href: '/dashboard/importacao', icon: '📥' },
-  { label: 'Configuracoes', href: '/dashboard/configuracoes', icon: '⚙️', children: [
-    { label: 'Perfil', href: '/dashboard/configuracoes/perfil' },
-    { label: 'Empresas', href: '/dashboard/configuracoes/empresas' },
+  { label: 'Plano de Contas', href: '/dashboard/plano-contas', icon: '📋' },
+  { label: 'Importação / De-Para', href: '/dashboard/importacao', icon: '📥' },
+  { label: 'Configurações', href: '/dashboard/configuracoes', icon: '⚙️', children: [
+    { label: 'Empresas', href: '/dashboard/configuracoes' },
   ]},
 ]
 
@@ -48,12 +48,23 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
   const pathname = usePathname()
   const router = useRouter()
   const [openMenus, setOpenMenus] = useState({ '/dashboard/dre': true })
+  const [userEmail, setUserEmail] = useState('')
+
+  useState(() => {
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user?.email) setUserEmail(session.user.email)
+    }
+    getUser()
+  }, [])
 
   const toggleMenu = (href) => setOpenMenus(prev => ({ ...prev, [href]: !prev[href] }))
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
+    if (confirm('Deseja realmente sair do sistema?')) {
+      await supabase.auth.signOut()
+      router.push('/')
+    }
   }
 
   return (
@@ -63,11 +74,13 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
         <span style={S.logoText}>Financial Dashboard</span>
       </div>
 
-      {empresas && empresas.length > 1 && (
-        <select style={S.select} value={empresa} onChange={e => onEmpresaChange(e.target.value)}>
+      <div style={S.selectContainer}>
+        <label style={S.selectLabel}>Empresa Ativa</label>
+        <select style={S.select} value={empresa || ''} onChange={e => onEmpresaChange(e.target.value)}>
+          {empresas.length === 0 && <option value="">Nenhuma empresa</option>}
           {empresas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
         </select>
-      )}
+      </div>
 
       <nav style={S.nav}>
         {navItems.map(item => {
@@ -102,8 +115,14 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
       </nav>
 
       <div style={S.footer}>
+        <div style={S.userSection}>
+          <div style={S.userAvatar}>{userEmail.substring(0, 1).toUpperCase()}</div>
+          <div style={S.userInfo}>
+            <span style={S.userName}>{userEmail.split('@')[0]}</span>
+          </div>
+        </div>
         <button style={S.logoutBtn} onClick={handleLogout}>
-          <span>🚪</span> Sair
+          <span>🚪</span> Sair do Sistema
         </button>
       </div>
     </div>

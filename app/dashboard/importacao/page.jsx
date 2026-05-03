@@ -1,406 +1,401 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import { Download, Plus, Pencil, Trash2, ChevronDown, X, CheckCircle2, AlertCircle, ArrowRight, Loader2, Settings2, Database, Wallet } from 'lucide-react';
-import UploadExcel from '@/components/UploadExcel';
-import { supabase } from '@/lib/supabase';
+'use client'
+import React, { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 
-const ImportacaoPage = () => {
-  const [activeTab, setActiveTab] = useState('grupo');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newMapping, setNewMapping] = useState({ erp: '', category: '' });
-  const [importStep, setImportStep] = useState('upload'); // 'upload' | 'conclusao'
-  const [importData, setImportData] = useState(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importStatus, setImportStatus] = useState(null);
-  const [empresaId, setEmpresaId] = useState(null);
-  const [isEmpresaModalOpen, setIsEmpresaModalOpen] = useState(false);
-  const [empresas, setEmpresas] = useState([]);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [clienteMappings, setClienteMappings] = useState([]);
-  const [planoContas, setPlanoContas] = useState([]);
-  const [importTarget, setImportTarget] = useState('dre'); // 'dre' | 'fluxo'
+const S = {
+  container: { padding: '24px', color: '#e5e7eb' },
+  card: { backgroundColor: '#1f2937', borderRadius: '8px', padding: '20px', border: '1px solid #374151', marginBottom: '24px' },
+  title: { fontSize: '24px', fontWeight: 'bold', marginBottom: '24px' },
+  sectionTitle: { fontSize: '18px', fontWeight: 'bold', marginBottom: '16px', color: '#f3f4f6' },
+  tabContainer: { display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid #374151', paddingBottom: '16px' },
+  tab: (active) => ({ padding: '8px 16px', background: active ? 'rgba(59, 130, 246, 0.1)' : 'transparent', border: active ? '2px solid #3b82f6' : '1px solid #374151', borderRadius: '6px', cursor: 'pointer', color: active ? '#3b82f6' : '#9ca3af', fontWeight: active ? '600' : '400', transition: 'all 0.2s' }),
+  input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '10px 12px', fontSize: '14px', outline: 'none', width: '100%', marginBottom: '12px' },
+  select: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '10px 12px', fontSize: '14px', outline: 'none', width: '100%', marginBottom: '12px' },
+  btn: { background: '#3b82f6', color: '#000', border: 'none', padding: '10px 16px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' },
+  btnDanger: { background: '#ef4444', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '12px' },
+  table: { width: '100%', borderCollapse: 'collapse', marginTop: '16px' },
+  th: { textAlign: 'left', color: '#9ca3af', fontSize: '12px', fontWeight: '600', padding: '12px', borderBottom: '1px solid #374151', textTransform: 'uppercase' },
+  td: { padding: '12px', borderBottom: '1px solid #1f2937', fontSize: '13px' },
+  badge: { display: 'inline-block', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: '600' },
+  error: { background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', padding: '12px', color: '#f87171', marginBottom: '16px', fontSize: '13px' },
+  success: { background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '8px', padding: '12px', color: '#3b82f6', marginBottom: '16px', fontSize: '13px' }
+}
+
+export default function ImportacaoPage() {
+  const [activeTab, setActiveTab] = useState('mappings')
+  const [empresaId, setEmpresaId] = useState(null)
+  const [empresas, setEmpresas] = useState([])
+  const [planoContas, setPlanoContas] = useState([])
+  const [mappings, setMappings] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
   
-  const [mappings, setMappings] = useState([
-    { group: 'RECEITA BRUTA', type: 'receita', items: [] },
-    { group: 'OUTROS RECEBIMENTOS', type: 'receita', items: [] },
-    { group: 'IMPOSTOS SOBRE RECEITA', type: 'despesa', items: [] },
-    { group: 'CUSTOS OPERACIONAIS', type: 'despesa', items: [] },
-    { group: 'DESPESAS ADMINISTRATIVAS', type: 'despesa', items: [] },
-    { group: 'DESPESAS COM PESSOAL', type: 'despesa', items: [] }
-  ]);
+  // Modal para novo mapeamento
+  const [showModal, setShowModal] = useState(false)
+  const [newMapping, setNewMapping] = useState({ categoria_origem: '', conta_id: '', tipo_destino: 'receita' })
+  const [editingId, setEditingId] = useState(null)
 
   useEffect(() => {
-    const loadSavedState = async () => {
-      const { data: allEmpresas } = await supabase.from('empresas').select('*').order('nome');
-      if (allEmpresas) {
-        setEmpresas(allEmpresas);
-        const savedEmpresaId = localStorage.getItem('empresa_id');
-        if (savedEmpresaId && allEmpresas.some(e => e.id === savedEmpresaId)) {
-          setEmpresaId(savedEmpresaId);
-        } else if (allEmpresas.length > 0) {
-          setEmpresaId(allEmpresas[0].id);
+    const loadData = async () => {
+      setLoading(true)
+      try {
+        // Carregar empresas
+        const { data: allEmpresas } = await supabase.from('empresas').select('*').order('nome')
+        setEmpresas(allEmpresas || [])
+        
+        const savedId = localStorage.getItem('empresa_id')
+        const initialId = savedId && allEmpresas?.find(e => e.id === savedId) ? savedId : allEmpresas?.[0]?.id
+        setEmpresaId(initialId)
+
+        // Carregar plano de contas
+        const { data: plano } = await supabase.from('plano_contas').select('*').order('codigo')
+        setPlanoContas(plano || [])
+
+        if (initialId) {
+          // Carregar mapeamentos da empresa
+          const { data: maps } = await supabase
+            .from('categoria_mappings')
+            .select('*, plano_contas(codigo, nome)')
+            .eq('empresa_id', initialId)
+            .order('categoria_origem')
+          setMappings(maps || [])
         }
+      } catch (err) {
+        console.error('Erro ao carregar dados:', err)
+        setError('Erro ao carregar dados. Tente novamente.')
+      } finally {
+        setLoading(false)
       }
-
-      const { data: categoriaMappings } = await supabase.from('categoria_mappings').select('*');
-      if (categoriaMappings) {
-        setClienteMappings(categoriaMappings);
-      }
-
-      const { data: plano } = await supabase.from('plano_contas').select('*').order('codigo');
-      if (plano) {
-        setPlanoContas(plano);
-      }
-
-      const savedImportData = localStorage.getItem('financial_import_data');
-      if (savedImportData) { try { setImportData(JSON.parse(savedImportData)); } catch (e) {} }
-
-      const savedStep = localStorage.getItem('financial_import_step');
-      if (savedStep) setImportStep(savedStep);
-
-      const savedTarget = localStorage.getItem('financial_import_target');
-      if (savedTarget) setImportTarget(savedTarget);
-
-      setIsLoaded(true);
-    };
-    loadSavedState();
-  }, []);
-
-  useEffect(() => {
-    if (!importData || !clienteMappings || clienteMappings.length === 0) return;
-
-    const updatedData = importData.map(row => {
-      const accountField = Object.keys(row).find(k => 
-        k.toLowerCase().includes('nome') || 
-        k.toLowerCase().includes('conta') || 
-        k.toLowerCase().includes('categoria') || 
-        k.toLowerCase().includes('histórico')
-      );
-      
-      const accountValue = accountField ? String(row[accountField] || '').trim() : '';
-      
-      const mapping = clienteMappings.find(m => 
-        m.nome_erp && m.nome_erp.toLowerCase() === accountValue.toLowerCase()
-      );
-      
-      if (mapping) {
-        return {
-          ...row,
-          __configured: true,
-          __mappedCategory: mapping.categoria_sistema
-        };
-      }
-      
-      return row;
-    });
-    
-    setImportData(updatedData);
-  }, [clienteMappings, importData?.length]);
-
-  useEffect(() => { if (isLoaded && empresaId) localStorage.setItem('empresa_id', empresaId); }, [empresaId, isLoaded]);
-  useEffect(() => {
-    if (isLoaded) {
-      if (importData) localStorage.setItem('financial_import_data', JSON.stringify(importData));
-      else localStorage.removeItem('financial_import_data');
     }
-  }, [importData, isLoaded]);
-  useEffect(() => { if (isLoaded) localStorage.setItem('financial_import_step', importStep); }, [importStep, isLoaded]);
-  useEffect(() => { if (isLoaded) localStorage.setItem('financial_import_target', importTarget); }, [importTarget, isLoaded]);
 
-  const handleFileSelect = (payload) => { setImportData(payload); };
+    loadData()
+  }, [])
 
-  const handleAddMapping = async (erpName, categoryName) => {
-    if (!empresaId) {
-      alert('Selecione uma empresa primeiro.');
-      return;
+  useEffect(() => {
+    if (!empresaId) return
+
+    const loadMappings = async () => {
+      try {
+        const { data: maps } = await supabase
+          .from('categoria_mappings')
+          .select('*, plano_contas(codigo, nome)')
+          .eq('empresa_id', empresaId)
+          .order('categoria_origem')
+        setMappings(maps || [])
+      } catch (err) {
+        console.error('Erro ao carregar mapeamentos:', err)
+      }
+    }
+
+    loadMappings()
+  }, [empresaId])
+
+  const handleSaveMapping = async () => {
+    if (!newMapping.categoria_origem || !newMapping.conta_id) {
+      setError('Preencha todos os campos obrigatórios.')
+      return
     }
 
     try {
-      const { data: newMap, error: mappingError } = await supabase
-        .from('categoria_mappings')
-        .insert([{
-          empresa_id: empresaId,
-          nome_erp: erpName,
-          categoria_sistema: categoryName
-        }])
-        .select()
-        .single();
+      setError(null)
+      setSuccess(null)
 
-      if (mappingError) {
-        console.error('Erro ao salvar mapeamento:', mappingError);
-      } else if (newMap) {
-        setClienteMappings(prev => [...prev, newMap]);
-      }
+      if (editingId) {
+        // Atualizar mapeamento existente
+        const { error: err } = await supabase
+          .from('categoria_mappings')
+          .update({
+            categoria_origem: newMapping.categoria_origem,
+            conta_id: newMapping.conta_id,
+            tipo_destino: newMapping.tipo_destino,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingId)
 
-      const contaExistente = planoContas.find(c => 
-        c.nome.toLowerCase() === erpName.toLowerCase()
-      );
-
-      if (!contaExistente) {
-        const tipo = categoryName.includes('RECEITA') ? 'receita' : 'despesa';
-        const prefixo = tipo === 'receita' ? '3' : '4';
-        const proximoCodigo = `${prefixo}.${planoContas.filter(c => c.codigo.startsWith(prefixo)).length + 1}`;
-
-        const { data: novaConta, error: contaError } = await supabase
-          .from('plano_contas')
-          .insert([{
+        if (err) throw err
+        setSuccess('Mapeamento atualizado com sucesso!')
+      } else {
+        // Criar novo mapeamento
+        const { error: err } = await supabase
+          .from('categoria_mappings')
+          .insert({
             empresa_id: empresaId,
-            codigo: proximoCodigo,
-            nome: erpName,
-            tipo: tipo
-          }])
-          .select()
-          .single();
+            categoria_origem: newMapping.categoria_origem,
+            conta_id: newMapping.conta_id,
+            tipo_destino: newMapping.tipo_destino,
+            ativo: true
+          })
 
-        if (!contaError && novaConta) {
-          setPlanoContas(prev => [...prev, novaConta]);
-        }
+        if (err) throw err
+        setSuccess('Mapeamento criado com sucesso!')
       }
 
-      setImportData(prev => prev.map(row => {
-        const accountField = Object.keys(row).find(k => 
-          k.toLowerCase().includes('nome') || 
-          k.toLowerCase().includes('conta') || 
-          k.toLowerCase().includes('categoria') || 
-          k.toLowerCase().includes('histórico')
-        );
-        
-        const accountValue = accountField ? String(row[accountField] || '').trim() : '';
-        
-        if (accountValue.toLowerCase() === erpName.toLowerCase()) {
-          return {
-            ...row,
-            __configured: true,
-            __mappedCategory: categoryName
-          };
-        }
-        return row;
-      }));
+      setNewMapping({ categoria_origem: '', conta_id: '', tipo_destino: 'receita' })
+      setEditingId(null)
+      setShowModal(false)
 
-    } catch (error) {
-      console.error('Erro em handleAddMapping:', error);
+      // Recarregar mapeamentos
+      const { data: maps } = await supabase
+        .from('categoria_mappings')
+        .select('*, plano_contas(codigo, nome)')
+        .eq('empresa_id', empresaId)
+        .order('categoria_origem')
+      setMappings(maps || [])
+    } catch (err) {
+      console.error('Erro ao salvar mapeamento:', err)
+      setError('Erro ao salvar mapeamento. Tente novamente.')
     }
-  };
+  }
 
-  const handleSaveNewMapping = () => {
-    if (!newMapping.erp || !newMapping.category) return;
-    handleAddMapping(newMapping.erp, newMapping.category);
-    setIsModalOpen(false);
-    setNewMapping({ erp: '', category: '' });
-  };
+  const handleEditMapping = (mapping) => {
+    setNewMapping({
+      categoria_origem: mapping.categoria_origem,
+      conta_id: mapping.conta_id,
+      tipo_destino: mapping.tipo_destino
+    })
+    setEditingId(mapping.id)
+    setShowModal(true)
+  }
 
-  const handleFinalImport = async () => {
-    if (!importData || importData.length === 0) return;
-    if (!empresaId) return;
-
-    setIsImporting(true);
-    setImportStatus(null);
+  const handleDeleteMapping = async (id) => {
+    if (!confirm('Tem certeza que deseja deletar este mapeamento?')) return
 
     try {
-      const table = importTarget === 'dre' ? 'lancamentos' : 'fluxo_caixa';
-      
-      const records = importData.map(row => {
-        const accountField = Object.keys(row).find(k => 
-          k.toLowerCase().includes('nome') || 
-          k.toLowerCase().includes('conta') || 
-          k.toLowerCase().includes('categoria') || 
-          k.toLowerCase().includes('histórico')
-        );
-        const descField = Object.keys(row).find(k => k.toLowerCase().includes('descrição') || k.toLowerCase().includes('histórico')) || accountField;
-        const dateField = Object.keys(row).find(k => k.toLowerCase().includes('data') || k.toLowerCase().includes('competência'));
-        const valueField = Object.keys(row).find(k => k.toLowerCase().includes('valor') || k.toLowerCase().includes('total'));
+      const { error: err } = await supabase
+        .from('categoria_mappings')
+        .delete()
+        .eq('id', id)
 
-        const valorRaw = String(row[valueField] || '0').replace(/\./g, '').replace(',', '.');
-        const valor = Math.abs(parseFloat(valorRaw));
-        
-        // Determinar tipo baseado na categoria mapeada ou valor
-        let tipo = 'despesa';
-        if (row.__mappedCategory?.includes('RECEITA')) {
-          tipo = importTarget === 'dre' ? 'receita' : 'entrada';
-        } else {
-          tipo = importTarget === 'dre' ? 'despesa' : 'saida';
-        }
+      if (err) throw err
+      setSuccess('Mapeamento deletado com sucesso!')
 
-        // Formatar data para YYYY-MM-DD
-        let dataStr = row[dateField] || new Date().toISOString().split('T')[0];
-        if (dataStr.includes('/')) {
-          const [d, m, y] = dataStr.split('/');
-          dataStr = `${y}-${m}-${d}`;
-        }
-
-        return {
-          empresa_id: empresaId,
-          data: dataStr,
-          descricao: row[descField] || 'Importação Excel',
-          valor: valor,
-          tipo: tipo,
-          categoria: row.__mappedCategory || 'Não Classificado'
-        };
-      });
-
-      // Inserir em lotes de 100
-      for (let i = 0; i < records.length; i += 100) {
-        const batch = records.slice(i, i + 100);
-        const { error } = await supabase.from(table).insert(batch);
-        if (error) throw error;
-      }
-
-      setIsImporting(false);
-      setImportStatus({ type: 'success', message: `Importação para ${importTarget.toUpperCase()} concluída com sucesso!` });
-      setImportStep('conclusao');
-      localStorage.removeItem('financial_import_data');
-    } catch (error) {
-      console.error('Erro na importação:', error);
-      setIsImporting(false);
-      setImportStatus({ type: 'error', message: 'Erro na importação: ' + error.message });
+      // Recarregar mapeamentos
+      const { data: maps } = await supabase
+        .from('categoria_mappings')
+        .select('*, plano_contas(codigo, nome)')
+        .eq('empresa_id', empresaId)
+        .order('categoria_origem')
+      setMappings(maps || [])
+    } catch (err) {
+      console.error('Erro ao deletar mapeamento:', err)
+      setError('Erro ao deletar mapeamento. Tente novamente.')
     }
-  };
+  }
 
-  const renderConclusao = () => (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-12 text-center space-y-6">
-      <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto">
-        <CheckCircle2 className="w-10 h-10 text-blue-500" />
+  const closeModal = () => {
+    setShowModal(false)
+    setNewMapping({ categoria_origem: '', conta_id: '', tipo_destino: 'receita' })
+    setEditingId(null)
+  }
+
+  const getContaNome = (contaId) => {
+    const conta = planoContas.find(c => c.id === contaId)
+    return conta ? `${conta.codigo} - ${conta.nome}` : 'N/A'
+  }
+
+  const getTipoLabel = (tipo) => {
+    const labels = {
+      'receita': '💰 Receita',
+      'custo': '📊 Custo',
+      'despesa': '💸 Despesa',
+      'fluxo_entrada': '⬆️ Entrada (Fluxo)',
+      'fluxo_saida': '⬇️ Saída (Fluxo)'
+    }
+    return labels[tipo] || tipo
+  }
+
+  if (loading) {
+    return (
+      <div style={S.container}>
+        <div style={{ textAlign: 'center', color: '#3b82f6' }}>Carregando...</div>
       </div>
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold text-white">Importação Concluída!</h2>
-        <p className="text-zinc-400">Os dados foram processados e salvos na tabela de <strong>{importTarget === 'dre' ? 'DRE (Lançamentos)' : 'Fluxo de Caixa'}</strong>.</p>
-      </div>
-      <button onClick={() => { setImportData(null); setImportStep('upload'); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-colors">
-        Fazer Nova Importação
-      </button>
-    </div>
-  );
+    )
+  }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Importação / De-Para</h1>
-          <p className="text-zinc-500 mt-1">Configure e importe seus dados financeiros</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <button onClick={() => setIsEmpresaModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-300 hover:text-white hover:border-zinc-500 transition-all">
-            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-            <span className="text-sm font-medium">{empresas.find(e => e.id === empresaId)?.nome || 'Selecionar Empresa'}</span>
-            <ChevronDown size={16} />
-          </button>
-        </div>
+    <div style={S.container}>
+      <h1 style={S.title}>Importação / De-Para</h1>
+
+      {/* Seletor de Empresa */}
+      <div style={S.card}>
+        <label style={{ display: 'block', marginBottom: '8px', color: '#9ca3af', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>
+          Empresa
+        </label>
+        <select
+          style={S.select}
+          value={empresaId || ''}
+          onChange={(e) => setEmpresaId(e.target.value)}
+        >
+          {empresas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+        </select>
       </div>
 
-      {importStep === 'upload' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div 
-              onClick={() => setImportTarget('dre')}
-              className={`p-6 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-4 ${importTarget === 'dre' ? 'bg-blue-600/10 border-blue-600' : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700'}`}
-            >
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${importTarget === 'dre' ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
-                <Database size={24} />
-              </div>
-              <div>
-                <h3 className={`font-bold ${importTarget === 'dre' ? 'text-white' : 'text-zinc-400'}`}>Importar para DRE</h3>
-                <p className="text-xs text-zinc-500">Os dados alimentarão a tabela de Lançamentos</p>
-              </div>
-            </div>
+      {/* Abas */}
+      <div style={S.tabContainer}>
+        <button style={S.tab(activeTab === 'mappings')} onClick={() => setActiveTab('mappings')}>
+          📋 Mapeamentos de Categorias
+        </button>
+        <button style={S.tab(activeTab === 'info')} onClick={() => setActiveTab('info')}>
+          ℹ️ Informações
+        </button>
+      </div>
 
-            <div 
-              onClick={() => setImportTarget('fluxo')}
-              className={`p-6 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-4 ${importTarget === 'fluxo' ? 'bg-blue-600/10 border-blue-600' : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700'}`}
-            >
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${importTarget === 'fluxo' ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
-                <Wallet size={24} />
-              </div>
-              <div>
-                <h3 className={`font-bold ${importTarget === 'fluxo' ? 'text-white' : 'text-zinc-400'}`}>Importar para Fluxo de Caixa</h3>
-                <p className="text-xs text-zinc-500">Os dados alimentarão a tabela de Fluxo de Caixa</p>
-              </div>
+      {/* Mensagens */}
+      {error && <div style={S.error}>❌ {error}</div>}
+      {success && <div style={S.success}>✅ {success}</div>}
+
+      {/* Aba: Mapeamentos */}
+      {activeTab === 'mappings' && (
+        <div>
+          <div style={{ ...S.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h2 style={S.sectionTitle}>Configurar Mapeamentos</h2>
+              <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>
+                Mapeie as categorias do seu arquivo ERP para as contas do Plano de Contas. Esses mapeamentos serão aplicados automaticamente nas importações.
+              </p>
             </div>
+            <button style={S.btn} onClick={() => setShowModal(true)}>
+              ➕ Novo Mapeamento
+            </button>
           </div>
 
-          <UploadExcel 
-            onFileSelect={handleFileSelect} 
-            mappings={mappings} 
-            planoContas={planoContas}
-            onAddMapping={handleAddMapping}
-            initialData={importData}
-          />
-          
-          {importStatus && importStatus.type === 'error' && (
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm flex items-center gap-2">
-              <AlertCircle size={16} /> {importStatus.message}
-            </div>
-          )}
+          {/* Tabela de Mapeamentos */}
+          <div style={S.card}>
+            {mappings.length === 0 ? (
+              <p style={{ color: '#9ca3af', textAlign: 'center', padding: '32px' }}>
+                Nenhum mapeamento configurado ainda. Clique em "Novo Mapeamento" para começar.
+              </p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={S.table}>
+                  <thead>
+                    <tr>
+                      <th style={S.th}>Categoria (ERP)</th>
+                      <th style={S.th}>Conta (Plano de Contas)</th>
+                      <th style={S.th}>Tipo</th>
+                      <th style={S.th}>Status</th>
+                      <th style={S.th}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mappings.map(m => (
+                      <tr key={m.id}>
+                        <td style={S.td}><strong>{m.categoria_origem}</strong></td>
+                        <td style={S.td}>{m.plano_contas?.codigo} - {m.plano_contas?.nome}</td>
+                        <td style={S.td}>{getTipoLabel(m.tipo_destino)}</td>
+                        <td style={S.td}>
+                          <span style={S.badge}>{m.ativo ? '✅ Ativo' : '⏸️ Inativo'}</span>
+                        </td>
+                        <td style={S.td}>
+                          <button
+                            style={{ ...S.btnDanger, background: '#3b82f6', color: '#fff', marginRight: '8px' }}
+                            onClick={() => handleEditMapping(m)}
+                          >
+                            ✏️ Editar
+                          </button>
+                          <button
+                            style={S.btnDanger}
+                            onClick={() => handleDeleteMapping(m.id)}
+                          >
+                            🗑️ Deletar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
-          {importData && importData.length > 0 && (
-            <div className="flex justify-end">
-              <button 
-                onClick={handleFinalImport}
-                disabled={isImporting}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 text-white rounded-lg font-bold transition-all shadow-lg shadow-blue-600/20"
-              >
-                {isImporting ? <Loader2 className="animate-spin" /> : <ArrowRight size={20} />}
-                {isImporting ? 'Processando...' : `Finalizar Importação para ${importTarget === 'dre' ? 'DRE' : 'Fluxo'}`}
+      {/* Aba: Informações */}
+      {activeTab === 'info' && (
+        <div style={S.card}>
+          <h2 style={S.sectionTitle}>Como Funciona</h2>
+          <div style={{ color: '#9ca3af', lineHeight: '1.8' }}>
+            <p><strong style={{ color: '#f3f4f6' }}>1. Configurar Mapeamentos:</strong> Defina como as categorias do seu arquivo ERP devem ser mapeadas para as contas do Plano de Contas.</p>
+            <p><strong style={{ color: '#f3f4f6' }}>2. Importar Arquivo:</strong> Quando você importar um arquivo XLS, o sistema automaticamente aplicará esses mapeamentos.</p>
+            <p><strong style={{ color: '#f3f4f6' }}>3. Visualizar no DRE:</strong> Os dados importados aparecerão automaticamente nos Demonstrativos, agrupados por conta.</p>
+            <p style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #374151' }}>
+              <strong style={{ color: '#f3f4f6' }}>Dica:</strong> Use categorias consistentes no seu arquivo ERP para facilitar o mapeamento. Por exemplo: "Vendas", "Custos Diretos", "Despesas Operacionais".
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Novo/Editar Mapeamento */}
+      {showModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ ...S.card, width: '90%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={S.sectionTitle}>{editingId ? 'Editar' : 'Novo'} Mapeamento</h2>
+
+            <label style={{ display: 'block', marginBottom: '8px', color: '#9ca3af', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>
+              Categoria do Arquivo ERP *
+            </label>
+            <input
+              type="text"
+              style={S.input}
+              placeholder="Ex: Vendas, Custos Diretos, Despesas Operacionais"
+              value={newMapping.categoria_origem}
+              onChange={(e) => setNewMapping({ ...newMapping, categoria_origem: e.target.value })}
+            />
+
+            <label style={{ display: 'block', marginBottom: '8px', color: '#9ca3af', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>
+              Tipo de Lançamento *
+            </label>
+            <select
+              style={S.select}
+              value={newMapping.tipo_destino}
+              onChange={(e) => setNewMapping({ ...newMapping, tipo_destino: e.target.value })}
+            >
+              <option value="receita">💰 Receita</option>
+              <option value="custo">📊 Custo</option>
+              <option value="despesa">💸 Despesa</option>
+              <option value="fluxo_entrada">⬆️ Entrada (Fluxo de Caixa)</option>
+              <option value="fluxo_saida">⬇️ Saída (Fluxo de Caixa)</option>
+            </select>
+
+            <label style={{ display: 'block', marginBottom: '8px', color: '#9ca3af', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>
+              Conta do Plano de Contas *
+            </label>
+            <select
+              style={S.select}
+              value={newMapping.conta_id}
+              onChange={(e) => setNewMapping({ ...newMapping, conta_id: e.target.value })}
+            >
+              <option value="">Selecione uma conta...</option>
+              {planoContas
+                .filter(c => {
+                  // Filtrar contas por tipo
+                  if (newMapping.tipo_destino === 'receita') return c.tipo === 'receita'
+                  if (newMapping.tipo_destino === 'custo') return c.tipo === 'custo'
+                  if (newMapping.tipo_destino === 'despesa') return c.tipo === 'despesa'
+                  return true
+                })
+                .map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.codigo} - {c.nome}
+                  </option>
+                ))}
+            </select>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <button style={{ ...S.btn, flex: 1 }} onClick={handleSaveMapping}>
+                💾 Salvar
               </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {importStep === 'conclusao' && renderConclusao()}
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-white font-bold text-lg">Novo Mapeamento</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-zinc-500 hover:text-white"><X size={20} /></button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-zinc-400 text-xs font-semibold block mb-1">Categoria do ERP</label>
-                <input type="text" value={newMapping.erp} onChange={e => setNewMapping(prev => ({ ...prev, erp: e.target.value }))}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 outline-none text-white focus:border-blue-500"
-                  placeholder="Ex: Venda de Mercadorias" />
-              </div>
-              <div>
-                <label className="text-zinc-400 text-xs font-semibold block mb-1">Categoria do Sistema</label>
-                <select value={newMapping.category} onChange={e => setNewMapping(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 outline-none text-white focus:border-blue-500">
-                  <option value="">Selecione...</option>
-                  {mappings.map(g => <option key={g.group} value={g.group}>{g.group}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-zinc-800 rounded-md border border-zinc-700 hover:bg-zinc-700 transition-colors text-zinc-300">Cancelar</button>
-              <button onClick={handleSaveNewMapping} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-bold transition-colors">Salvar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isEmpresaModalOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-white font-bold text-lg">Selecionar Empresa</h2>
-              <button onClick={() => setIsEmpresaModalOpen(false)} className="text-zinc-500 hover:text-white"><X size={20} /></button>
-            </div>
-            <div className="space-y-2">
-              {empresas.map(emp => (
-                <button key={emp.id} onClick={() => { setEmpresaId(emp.id); setIsEmpresaModalOpen(false); }}
-                  className={`w-full text-left p-4 rounded-lg border transition-all ${empresaId === emp.id ? 'bg-blue-600/10 border-blue-600 text-blue-500' : 'bg-zinc-800/50 border-zinc-700 text-zinc-300 hover:border-zinc-500'}`}>
-                  <p className="font-semibold">{emp.nome}</p>
-                  <p className="text-sm opacity-70">{emp.cnpj}</p>
-                </button>
-              ))}
+              <button
+                style={{ ...S.btn, background: '#6b7280', flex: 1 }}
+                onClick={closeModal}
+              >
+                ❌ Cancelar
+              </button>
             </div>
           </div>
         </div>
       )}
     </div>
-  );
-};
-
-export default ImportacaoPage;
+  )
+}

@@ -143,5 +143,26 @@ create trigger empresa_user_id_trigger
   before insert on public.empresas
   for each row execute function public.set_empresa_user_id();
 
+-- Tabela de Mapeamento de Categorias (ERP para Plano de Contas)
+create table if not exists public.categoria_mappings (
+  id uuid default uuid_generate_v4() primary key,
+  empresa_id uuid references public.empresas(id) on delete cascade,
+  categoria_origem text not null,  -- Categoria do arquivo ERP/XLS
+  conta_id uuid references public.plano_contas(id) on delete set null,  -- Conta do Plano de Contas
+  tipo_destino text not null check (tipo_destino in ('receita','custo','despesa','fluxo_entrada','fluxo_saida')),  -- Tipo de lançamento
+  ativo boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique (empresa_id, categoria_origem, tipo_destino)
+);
+
+alter table public.categoria_mappings enable row level security;
+create policy "Users can manage categoria_mappings of own empresas" on public.categoria_mappings
+  for all using (
+    empresa_id in (select id from public.empresas where user_id = auth.uid())
+  );
+
+create index idx_categoria_mappings_empresa on public.categoria_mappings(empresa_id, categoria_origem);
+
 -- Dados de exemplo (opcional)
 -- insert into public.empresas (nome, cnpj) values ('Empresa Exemplo', '00.000.000/0001-00');

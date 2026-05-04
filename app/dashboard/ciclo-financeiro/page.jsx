@@ -37,14 +37,14 @@ const S = {
   title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
   subtitle: { color: '#6b7280', fontSize: 14, margin: '4px 0 0' },
   kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 },
-  kpiCard: (c) => ({ background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '20px', borderTop: `3px solid ${c}` }),
+  kpiCard: (c) => ({ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '20px', borderTop: `3px solid ${c}` }),
   kpiIcon: { fontSize: 24, marginBottom: 8 },
   kpiLabel: { color: '#9ca3af', fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
   kpiValue: { fontSize: 28, fontWeight: 900, color: '#fff', marginBottom: 4 },
   kpiIdeal: { fontSize: 12, color: '#6b7280' },
-  progressWrap: { marginTop: 10, background: '#1e1e2e', borderRadius: 99, height: 6 },
+  progressWrap: { marginTop: 10, background: '#334155', borderRadius: 99, height: 6 },
   grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 },
-  card: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '20px 24px', marginBottom: 16 },
+  card: { background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '20px 24px', marginBottom: 16 },
   cardTitle: { fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 16 },
   badge: (ok) => ({ display: 'inline-block', padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: ok ? 'rgba(59,130,246,0.1)' : 'rgba(245,158,11,0.1)', color: ok ? '#3b82f6' : '#f59e0b' }),
 }
@@ -87,10 +87,10 @@ export default function CicloFinanceiroPage() {
           <div style={S.cardTitle}>Historico dos Prazos (ultimos 7 meses)</div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={MOCK_HIST} barGap={2}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e1e2e" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis dataKey="mes" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} />
               <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickFormatter={v => v + 'd'} width={40} />
-              <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 8 }} labelStyle={{ color: '#fff' }} formatter={(v, n) => [v + ' dias', n.toUpperCase()]} />
+              <Tooltip contentStyle={{ background: '#263548', border: '1px solid #475569', borderRadius: 8 }} labelStyle={{ color: '#fff' }} formatter={(v, n) => [v + ' dias', n.toUpperCase()]} />
               <Bar dataKey="pmr" fill="#3b82f6" radius={[4,4,0,0]} name="PMR" />
               <Bar dataKey="pmp" fill="#3b82f6" radius={[4,4,0,0]} name="PMP" />
               <Bar dataKey="pme" fill="#8b5cf6" radius={[4,4,0,0]} name="PME" />
@@ -101,11 +101,11 @@ export default function CicloFinanceiroPage() {
           <div style={S.cardTitle}>Radar - Desempenho dos Indicadores</div>
           <ResponsiveContainer width="100%" height={220}>
             <RadarChart data={RADAR_DATA}>
-              <PolarGrid stroke="#1e1e2e" />
+              <PolarGrid stroke="#334155" />
               <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 11 }} />
               <Radar name="Atual" dataKey="A" stroke="#3b82f6" fill="rgba(59,130,246,0.15)" strokeWidth={2} />
               <Radar name="Ideal" dataKey="ideal" stroke="#3b82f6" fill="rgba(59,130,246,0.1)" strokeWidth={2} strokeDasharray="4 4" />
-              <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 8 }} formatter={(v) => [v + ' dias']} />
+              <Tooltip contentStyle={{ background: '#263548', border: '1px solid #475569', borderRadius: 8 }} formatter={(v) => [v + ' dias']} />
             </RadarChart>
           </ResponsiveContainer>
         </div>
@@ -115,17 +115,17 @@ export default function CicloFinanceiroPage() {
       <div style={S.card}>
         <div style={S.cardTitle}>Resumo do Ciclo de Caixa</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-          <div style={{ background: '#0a0a0f', borderRadius: 10, padding: '16px', textAlign: 'center' }}>
+          <div style={{ background: '#0f172a', borderRadius: 10, padding: '16px', textAlign: 'center' }}>
             <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 4 }}>CICLO OPERACIONAL</div>
             <div style={{ fontSize: 32, fontWeight: 900, color: '#f59e0b' }}>50 dias</div>
             <div style={{ color: '#6b7280', fontSize: 12 }}>PMR (28) + PME (22)</div>
           </div>
-          <div style={{ background: '#0a0a0f', borderRadius: 10, padding: '16px', textAlign: 'center' }}>
+          <div style={{ background: '#0f172a', borderRadius: 10, padding: '16px', textAlign: 'center' }}>
             <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 4 }}>PRAZO DE PAGAMENTO</div>
             <div style={{ fontSize: 32, fontWeight: 900, color: '#3b82f6' }}>35 dias</div>
             <div style={{ color: '#6b7280', fontSize: 12 }}>5 dias acima do ideal</div>
           </div>
-          <div style={{ background: '#0a0a0f', borderRadius: 10, padding: '16px', textAlign: 'center' }}>
+          <div style={{ background: '#0f172a', borderRadius: 10, padding: '16px', textAlign: 'center' }}>
             <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 4 }}>CICLO FINANCEIRO</div>
             <div style={{ fontSize: 32, fontWeight: 900, color: '#3b82f6' }}>15 dias</div>
             <div style={{ color: '#6b7280', fontSize: 12 }}>Ciclo Oper. (50) - PMP (35)</div>

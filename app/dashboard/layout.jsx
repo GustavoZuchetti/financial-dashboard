@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }) {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
           <div style={{ width: 40, height: 40, border: '3px solid #1a1a2e', borderTop: '3px solid #3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
           <span style={{ color: '#9ca3af', fontSize: '14px', fontWeight: '500' }}>Carregando ambiente seguro...</span>
@@ -94,7 +94,7 @@ export default function DashboardLayout({ children }) {
 
   return (
     <DashboardContext.Provider value={{ empresa, empresas, user, setEmpresa: handleEmpresaChange }}>
-      <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0a0f' }}>
+      <div style={{ display: 'flex', minHeight: '100vh', background: '#0f172a' }}>
         <Sidebar
           empresa={empresa}
           empresas={empresas}

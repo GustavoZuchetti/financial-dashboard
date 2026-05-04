@@ -83,8 +83,8 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
     <div style={{
       width: 240,
       minHeight: '100vh',
-      background: '#080810',
-      borderRight: '1px solid #1e1e2e',
+      background: '#131f35',
+      borderRight: '1px solid #334155',
       display: 'flex',
       flexDirection: 'column',
       flexShrink: 0,
@@ -102,7 +102,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
       `}</style>
 
       {/* ── Logo Facesign ───────────────────────────────────────── */}
-      <div style={{ padding: '18px 16px 16px', borderBottom: '1px solid #1e1e2e' }}>
+      <div style={{ padding: '18px 16px 16px', borderBottom: '1px solid #334155' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 34, height: 34,
@@ -115,19 +115,19 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
           }}>FS</div>
           <div>
             <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: 15, letterSpacing: '-0.3px', lineHeight: 1.2 }}>Facesign</div>
-            <div style={{ fontSize: 10, color: '#334155', fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Financeiro</div>
+            <div style={{ fontSize: 10, color: '#64748b', fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Financeiro</div>
           </div>
         </div>
       </div>
 
       {/* ── Seletor de Empresa ──────────────────────────────────── */}
-      <div style={{ padding: '10px 12px', borderBottom: '1px solid #1e1e2e' }}>
-        <label style={{ fontSize: 9, color: '#334155', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.8px', marginBottom: 4, display: 'block', paddingLeft: 2 }}>
+      <div style={{ padding: '10px 12px', borderBottom: '1px solid #334155' }}>
+        <label style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.8px', marginBottom: 4, display: 'block', paddingLeft: 2 }}>
           Entidade
         </label>
         <select
           className="select-empresa"
-          style={{ padding: '7px 10px', background: '#0f0f18', border: '1px solid #1e1e2e', borderRadius: 8, color: '#e2e8f0', fontSize: 12, width: '100%', outline: 'none', cursor: 'pointer' }}
+          style={{ padding: '7px 10px', background: '#1a2540', border: '1px solid #334155', borderRadius: 8, color: '#e2e8f0', fontSize: 12, width: '100%', outline: 'none', cursor: 'pointer' }}
           value={empresa || ''}
           onChange={e => onEmpresaChange(e.target.value)}
         >
@@ -169,7 +169,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
                   </span>
                   <span style={{ flex: 1 }}>{item.label}</span>
                   <span style={{
-                    color: '#334155', fontSize: 11,
+                    color: '#64748b', fontSize: 11,
                     transform: open ? 'rotate(180deg)' : 'none',
                     transition: 'transform 0.2s',
                   }}>
@@ -214,7 +214,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
                         borderLeft: pathname === child.href ? '2px solid rgba(59,130,246,0.4)' : '2px solid transparent',
                       }}
                     >
-                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: pathname === child.href ? '#3b82f6' : '#334155', flexShrink: 0 }} />
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: pathname === child.href ? '#3b82f6' : '#475569', flexShrink: 0 }} />
                       {child.label}
                     </Link>
                   ))}
@@ -226,8 +226,8 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
       </nav>
 
       {/* ── Footer com usuário ──────────────────────────────────── */}
-      <div style={{ padding: 12, borderTop: '1px solid #1e1e2e', background: '#080810' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '6px 8px', background: '#0f0f18', borderRadius: 8 }}>
+      <div style={{ padding: 12, borderTop: '1px solid #334155', background: '#131f35' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '6px 8px', background: '#1a2540', borderRadius: 8 }}>
           <div style={{
             width: 30, height: 30, borderRadius: '50%',
             background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
@@ -238,7 +238,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
           </div>
           <div style={{ overflow: 'hidden', flex: 1 }}>
             <div style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{username}</div>
-            <div style={{ fontSize: 10, color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
+            <div style={{ fontSize: 10, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
           </div>
         </div>
         <button

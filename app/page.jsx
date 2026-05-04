@@ -3,95 +3,138 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-const S = {
-  page: { minHeight: '100vh', background: 'linear-gradient(135deg, #0a0a0f 0%, #12121a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
-  container: { width: '100%', maxWidth: 400 },
-  header: { textAlign: 'center', marginBottom: 32 },
-  logoWrap: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 },
-  logoIcon: { width: 44, height: 44, background: '#3b82f6', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#000', fontSize: 20 },
-  title: { fontSize: 28, fontWeight: 800, color: '#fff', margin: 0 },
-  subtitle: { color: '#6b7280', fontSize: 14, margin: '4px 0 0' },
-  card: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 16, padding: 32 },
-  cardTitle: { fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 24 },
-  error: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', color: '#f87171', fontSize: 14, marginBottom: 16 },
-  label: { display: 'block', color: '#9ca3af', fontSize: 13, fontWeight: 500, marginBottom: 6 },
-  input: { width: '100%', background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.2s' },
-  inputFocus: { borderColor: '#3b82f6' },
-  fieldWrap: { marginBottom: 16 },
-  btn: (loading) => ({ width: '100%', background: loading ? '#065f46' : '#3b82f6', color: loading ? '#a7f3d0' : '#000', border: 'none', borderRadius: 10, padding: '13px', fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: 8, transition: 'all 0.2s' }),
-}
-
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [focusField, setFocusField] = useState(null)
+  const [focus, setFocus] = useState(null)
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    setLoading(true)
-    setError(null)
+    setLoading(true); setError(null)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-    } else {
-      router.push('/dashboard/dre')
-    }
+    if (error) { setError('E-mail ou senha incorretos.'); setLoading(false) }
+    else router.push('/dashboard/dre')
   }
 
   return (
-    <div style={S.page}>
-      <div style={S.container}>
-        <div style={S.header}>
-          <div style={S.logoWrap}>
-            <div style={S.logoIcon}>F</div>
-            <h1 style={S.title}>Financial Dashboard</h1>
-          </div>
-          <p style={S.subtitle}>Plataforma de gestao financeira estrategica</p>
-        </div>
+    <div style={{
+      minHeight: '100vh',
+      background: '#080810',
+      display: 'flex',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      <style>{`
+        @keyframes float1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(30px,-20px) scale(1.05)} }
+        @keyframes float2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-20px,30px) scale(1.03)} }
+        @keyframes float3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(20px,20px)  scale(1.04)} }
+        .inp { width:100%; background:#0f0f18; border:1px solid; border-radius:10px; padding:12px 14px; color:#f1f5f9; font-size:14px; outline:none; box-sizing:border-box; transition:border-color 0.2s, box-shadow 0.2s; }
+        .inp:focus { border-color:#3b82f6 !important; box-shadow:0 0 0 3px rgba(59,130,246,0.15); }
+        .btn-login { width:100%; background:linear-gradient(135deg,#1d4ed8,#3b82f6); color:#fff; border:none; border-radius:10px; padding:13px; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.2s; letter-spacing:0.3px; }
+        .btn-login:hover:not(:disabled) { background:linear-gradient(135deg,#1e40af,#2563eb); transform:translateY(-1px); box-shadow:0 8px 25px rgba(59,130,246,0.35); }
+        .btn-login:active { transform:translateY(0); }
+        .btn-login:disabled { opacity:0.65; cursor:not-allowed; transform:none; }
+      `}</style>
 
-        <div style={S.card}>
-          <h2 style={S.cardTitle}>Entrar na sua conta</h2>
-          {error && <div style={S.error}>{error}</div>}
+      {/* Orbs decorativos de fundo */}
+      <div style={{ position:'absolute', inset:0, pointerEvents:'none', overflow:'hidden' }}>
+        <div style={{ position:'absolute', top:'-15%', left:'-10%', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)', animation:'float1 12s ease-in-out infinite' }} />
+        <div style={{ position:'absolute', bottom:'-10%', right:'-5%', width:400, height:400, borderRadius:'50%', background:'radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%)', animation:'float2 15s ease-in-out infinite' }} />
+        <div style={{ position:'absolute', top:'40%', right:'20%', width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 70%)', animation:'float3 10s ease-in-out infinite' }} />
+        {/* Grid sutil */}
+        <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(59,130,246,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.03) 1px,transparent 1px)', backgroundSize:'60px 60px', opacity:0.6 }} />
+      </div>
+
+      {/* Painel esquerdo — branding */}
+      <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', padding:'60px 80px', position:'relative' }}>
+        <div style={{ maxWidth:480 }}>
+          {/* Logo */}
+          <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:48 }}>
+            <div style={{ width:48, height:48, background:'linear-gradient(135deg,#1d4ed8,#3b82f6)', borderRadius:14, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, color:'#fff', fontSize:22, boxShadow:'0 8px 24px rgba(59,130,246,0.4)' }}>FS</div>
+            <span style={{ fontSize:24, fontWeight:800, color:'#fff', letterSpacing:'-0.5px' }}>Facesign</span>
+          </div>
+
+          <h1 style={{ fontSize:42, fontWeight:900, color:'#fff', lineHeight:1.1, marginBottom:16, letterSpacing:'-1px' }}>
+            Gestão financeira<br />
+            <span style={{ background:'linear-gradient(135deg,#3b82f6,#8b5cf6)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>estratégica</span>
+          </h1>
+          <p style={{ fontSize:16, color:'#475569', lineHeight:1.7, marginBottom:48 }}>
+            Demonstrativos executivos, fluxo de caixa e orçamento em tempo real para as entidades FACE, JAM e JB.
+          </p>
+
+          {/* Métricas decorativas */}
+          <div style={{ display:'flex', gap:24 }}>
+            {[
+              { label:'Entidades', value:'3' },
+              { label:'Módulos', value:'7+' },
+              { label:'Atualização', value:'Real-time' },
+            ].map(m => (
+              <div key={m.label} style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:10, padding:'12px 16px', textAlign:'center' }}>
+                <div style={{ fontSize:20, fontWeight:800, color:'#3b82f6', marginBottom:2 }}>{m.value}</div>
+                <div style={{ fontSize:11, color:'#475569', textTransform:'uppercase', letterSpacing:'0.8px' }}>{m.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Divisória */}
+      <div style={{ width:1, background:'linear-gradient(to bottom, transparent, rgba(59,130,246,0.15) 30%, rgba(59,130,246,0.15) 70%, transparent)', margin:'40px 0' }} />
+
+      {/* Painel direito — formulário */}
+      <div style={{ width:460, display:'flex', alignItems:'center', justifyContent:'center', padding:48, position:'relative' }}>
+        <div style={{ width:'100%', maxWidth:360 }}>
+          <div style={{ marginBottom:32 }}>
+            <h2 style={{ fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Acessar plataforma</h2>
+            <p style={{ fontSize:14, color:'#475569' }}>Entre com suas credenciais para continuar</p>
+          </div>
+
+          {error && (
+            <div style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.25)', borderRadius:8, padding:'10px 14px', color:'#fca5a5', fontSize:13, marginBottom:20, display:'flex', alignItems:'center', gap:8 }}>
+              <span>✕</span> {error}
+            </div>
+          )}
+
           <form onSubmit={handleLogin}>
-            <div style={S.fieldWrap}>
-              <label style={S.label}>E-mail</label>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:'block', fontSize:13, fontWeight:600, color:'#94a3b8', marginBottom:6 }}>E-mail</label>
               <input
-                type="email"
-                value={email}
+                className="inp"
+                type="email" value={email}
                 onChange={e => setEmail(e.target.value)}
-                onFocus={() => setFocusField('email')}
-                onBlur={() => setFocusField(null)}
-                style={{ ...S.input, ...(focusField === 'email' ? S.inputFocus : {}) }}
-                placeholder="seu@email.com"
-                required
+                onFocus={() => setFocus('email')} onBlur={() => setFocus(null)}
+                style={{ borderColor: focus === 'email' ? '#3b82f6' : '#1e1e2e' }}
+                placeholder="seu@email.com" required
               />
             </div>
-            <div style={S.fieldWrap}>
-              <label style={S.label}>Senha</label>
+            <div style={{ marginBottom:24 }}>
+              <label style={{ display:'block', fontSize:13, fontWeight:600, color:'#94a3b8', marginBottom:6 }}>Senha</label>
               <input
-                type="password"
-                value={password}
+                className="inp"
+                type="password" value={password}
                 onChange={e => setPassword(e.target.value)}
-                onFocus={() => setFocusField('password')}
-                onBlur={() => setFocusField(null)}
-                style={{ ...S.input, ...(focusField === 'password' ? S.inputFocus : {}) }}
-                placeholder="••••••••"
-                required
+                onFocus={() => setFocus('password')} onBlur={() => setFocus(null)}
+                style={{ borderColor: focus === 'password' ? '#3b82f6' : '#1e1e2e' }}
+                placeholder="••••••••" required
               />
             </div>
-            <button type="submit" style={S.btn(loading)} disabled={loading}>
-              {loading ? 'Entrando...' : 'Entrar'}
+            <button type="submit" className="btn-login" disabled={loading}>
+              {loading ? (
+                <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+                  <span style={{ width:16, height:16, border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid #fff', borderRadius:'50%', animation:'spin 0.8s linear infinite', display:'inline-block' }} />
+                  Entrando...
+                </span>
+              ) : 'Entrar na plataforma →'}
             </button>
           </form>
-        </div>
 
-        <p style={{ textAlign: 'center', color: '#374151', fontSize: 12, marginTop: 16 }}>
-          Financial Dashboard &copy; 2026
-        </p>
+          <p style={{ textAlign:'center', color:'#1e293b', fontSize:12, marginTop:24 }}>
+            Facesign © {new Date().getFullYear()} — Uso Interno Confidencial
+          </p>
+        </div>
       </div>
     </div>
   )

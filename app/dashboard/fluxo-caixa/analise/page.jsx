@@ -1,118 +1,234 @@
 'use client'
+import { useState, useEffect } from 'react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
+import { supabase } from '@/lib/supabase'
+import { CHART_PALETTE, COLORS } from '@/lib/design-tokens'
+
+const fmtFull    = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
+const fmtCompact = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact', maximumFractionDigits: 1 }).format(v)
+const fmtPct     = (v) => v.toFixed(1) + '%'
 
 const S = {
-  page: { color: '#e5e7eb' },
-  header: { marginBottom: 24 },
-  title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
-  subtitle: { color: '#6b7280', fontSize: 14, margin: '4px 0 0' },
-  grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 },
-  grid4: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 },
-  card: { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '24px', marginBottom: 16 },
+  page:      { color: '#e5e7eb' },
+  card:      { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '20px 24px', marginBottom: 16 },
   cardTitle: { fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 16 },
-  kpiLabel: { fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', marginBottom: 8 },
-  kpiValue: { fontSize: 26, fontWeight: 800 },
-  kpiSub: { fontSize: 12, color: '#6b7280', marginTop: 4 },
-  row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #1e1e2e' },
-  bar: (pct, cor) => ({ height: 8, borderRadius: 4, background: cor, width: `${pct}%`, maxWidth: '100%' }),
-  barBg: { height: 8, borderRadius: 4, background: '#1e1e2e', marginTop: 6 },
+  kpiCard: (accent) => ({
+    background: '#12121a', border: '1px solid #1e1e2e',
+    borderTop: `3px solid ${accent}`, borderRadius: 12,
+    padding: '16px 20px',
+  }),
+  kpiLabel: { fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 },
+  kpiValue: { fontSize: 22, fontWeight: 800, marginBottom: 4 },
+  kpiSub:   { fontSize: 12, color: '#475569' },
+  select:    { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 8, color: '#e5e7eb', padding: '7px 12px', fontSize: 13, outline: 'none' },
+  input:     { background: '#12121a', border: '1px solid #1e1e2e', borderRadius: 8, color: '#e5e7eb', padding: '7px 12px', fontSize: 13, outline: 'none' },
+  skeleton:  { background: 'linear-gradient(90deg,#12121a 25%,#1a1a2e 50%,#12121a 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 6 },
 }
 
-const categorias = [
-  { nome: 'Recebimentos de Clientes', tipo: 'entrada', valor: 850000, pct: 90 },
-  { nome: 'Outras Entradas', tipo: 'entrada', valor: 45000, pct: 5 },
-  { nome: 'Fornecedores', tipo: 'saida', valor: 280000, pct: 62 },
-  { nome: 'Folha de Pagamento', tipo: 'saida', valor: 180000, pct: 40 },
-  { nome: 'Impostos e Tributos', tipo: 'saida', valor: 95000, pct: 21 },
-  { nome: 'Despesas Operacionais', tipo: 'saida', valor: 68000, pct: 15 },
-  { nome: 'Investimentos (CAPEX)', tipo: 'saida', valor: 42000, pct: 9 },
-]
+const PIE_COLORS = ['#3b82f6','#f59e0b','#10b981','#8b5cf6','#ef4444','#06b6d4','#f97316']
 
 export default function FluxoCaixaAnalise() {
-  const totalEntradas = 895000
-  const totalSaidas = 448500
-  const saldo = totalEntradas - totalSaidas
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date()
+    return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0]
+  })
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
+  const [data, setData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [empresaId, setEmpresaId] = useState(null)
+  const [isConsolidado, setIsConsolidado] = useState(false)
+
+  useEffect(() => {
+    const savedId = localStorage.getItem('empresa_id')
+    if (savedId) { setEmpresaId(savedId); setIsConsolidado(savedId === 'todas') }
+  }, [])
+
+  useEffect(() => {
+    if (!empresaId) return
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        let query = supabase.from('fluxo_caixa').select('*').gte('data', startDate).lte('data', endDate)
+        if (isConsolidado) {
+          const { data: userEmpresas } = await supabase.from('empresas').select('id').eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
+          if (userEmpresas) query = query.in('empresa_id', userEmpresas.map(e => e.id))
+        } else {
+          query = query.eq('empresa_id', empresaId)
+        }
+        const { data: fluxo } = await query
+        setData(fluxo || [])
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [empresaId, startDate, endDate, isConsolidado])
+
+  // ── Cálculos ─────────────────────────────────────────────────────────────────
+  const entradas = data.filter(d => d.tipo === 'entrada')
+  const saidas   = data.filter(d => d.tipo === 'saida')
+
+  const totalEntradas = entradas.reduce((acc, curr) => acc + Number(curr.valor), 0)
+  const totalSaidas   = saidas.reduce((acc, curr)   => acc + Number(curr.valor), 0)
+  const saldoLiquido  = totalEntradas - totalSaidas
+  const cobertura     = totalSaidas > 0 ? totalEntradas / totalSaidas : 0
+
+  // Composição por categoria
+  const groupBy = (items, field) => {
+    const map = {}
+    items.forEach(i => {
+      const key = i[field] || 'Sem categoria'
+      map[key] = (map[key] || 0) + Number(i.valor)
+    })
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+  }
+
+  const entCats  = groupBy(entradas, 'categoria')
+  const saiCats  = groupBy(saidas,   'categoria')
+
+  // Evolução mensal
+  const evolucao = data.reduce((acc, curr) => {
+    const d = new Date(curr.data + 'T00:00:00')
+    const key = `${String(d.getMonth() + 1).padStart(2,'0')}/${d.getFullYear()}`
+    if (!acc[key]) acc[key] = { name: key, entradas: 0, saidas: 0, saldo: 0 }
+    if (curr.tipo === 'entrada') acc[key].entradas += Number(curr.valor)
+    else                         acc[key].saidas   += Number(curr.valor)
+    acc[key].saldo = acc[key].entradas - acc[key].saidas
+    return acc
+  }, {})
+  const evolucaoData = Object.values(evolucao).sort((a, b) => a.name.localeCompare(b.name))
+
+  // Indicadores de saúde
+  const mediaDiariaSaidas = totalSaidas / Math.max(1, Math.ceil((new Date(endDate) - new Date(startDate)) / 86400000))
+  const diasDeCaixa = mediaDiariaSaidas > 0 ? Math.round(saldoLiquido / mediaDiariaSaidas) : 0
+
+  const SkeletonBox = ({ h = 22, w = '80%' }) => (
+    <div style={{ ...S.skeleton, height: h, width: w }} />
+  )
 
   return (
     <div style={S.page}>
-      <div style={S.header}>
-        <h1 style={S.title}>Analise do Fluxo de Caixa</h1>
-        <p style={S.subtitle}>Analise detalhada de entradas, saidas e tendencias</p>
-      </div>
+      <style>{`@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }`}</style>
 
-      <div style={S.grid4}>
-        <div style={S.card}>
-          <div style={S.kpiLabel}>Total Entradas</div>
-          <div style={{...S.kpiValue, color: '#3b82f6'}}>R$ 895 mil</div>
-          <div style={S.kpiSub}>+12.5% vs mes anterior</div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: '#fff', margin: 0 }}>Análise do Fluxo de Caixa</h1>
+          <p style={{ color: '#475569', fontSize: 14, margin: '4px 0 0' }}>Composição, evolução e indicadores de saúde financeira</p>
         </div>
-        <div style={S.card}>
-          <div style={S.kpiLabel}>Total Saidas</div>
-          <div style={{...S.kpiValue, color: '#ef4444'}}>R$ 448,5 mil</div>
-          <div style={S.kpiSub}>+5.2% vs mes anterior</div>
-        </div>
-        <div style={S.card}>
-          <div style={S.kpiLabel}>Saldo Liquido</div>
-          <div style={{...S.kpiValue, color: '#3b82f6'}}>R$ 446,5 mil</div>
-          <div style={S.kpiSub}>Positivo</div>
-        </div>
-        <div style={S.card}>
-          <div style={S.kpiLabel}>Indice de Cobertura</div>
-          <div style={{...S.kpiValue, color: '#8b5cf6'}}>2.0x</div>
-          <div style={S.kpiSub}>Entradas / Saidas</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#12121a', padding: '8px 14px', borderRadius: 8, border: '1px solid #1e1e2e' }}>
+          <span style={{ fontSize: 12, color: '#475569' }}>Período:</span>
+          <input type="date" style={S.input} value={startDate} onChange={e => setStartDate(e.target.value)} />
+          <span style={{ color: '#334155' }}>→</span>
+          <input type="date" style={S.input} value={endDate}   onChange={e => setEndDate(e.target.value)}   />
         </div>
       </div>
 
-      <div style={S.grid}>
-        <div style={S.card}>
-          <div style={S.cardTitle}>Composicao das Entradas</div>
-          {categorias.filter(c => c.tipo === 'entrada').map((c, i) => (
-            <div key={i} style={{marginBottom: 16}}>
-              <div style={{display:'flex', justifyContent:'space-between', marginBottom: 4}}>
-                <span style={{fontSize: 13, color: '#e5e7eb'}}>{c.nome}</span>
-                <span style={{fontSize: 13, fontWeight: 700, color: '#3b82f6'}}>R$ {c.valor.toLocaleString('pt-BR')}</span>
-              </div>
-              <div style={S.barBg}>
-                <div style={S.bar(c.pct, '#3b82f6')} />
-              </div>
-              <div style={{fontSize: 11, color: '#6b7280', marginTop: 4}}>{c.pct}% do total</div>
-            </div>
-          ))}
-        </div>
-        <div style={S.card}>
-          <div style={S.cardTitle}>Composicao das Saidas</div>
-          {categorias.filter(c => c.tipo === 'saida').map((c, i) => (
-            <div key={i} style={{marginBottom: 16}}>
-              <div style={{display:'flex', justifyContent:'space-between', marginBottom: 4}}>
-                <span style={{fontSize: 13, color: '#e5e7eb'}}>{c.nome}</span>
-                <span style={{fontSize: 13, fontWeight: 700, color: '#ef4444'}}>R$ {c.valor.toLocaleString('pt-BR')}</span>
-              </div>
-              <div style={S.barBg}>
-                <div style={S.bar(c.pct, '#ef4444')} />
-              </div>
-              <div style={{fontSize: 11, color: '#6b7280', marginTop: 4}}>{c.pct}% do total saidas</div>
-            </div>
-          ))}
-        </div>
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+        {[
+          { label: 'Total Recebido',        value: totalEntradas, color: CHART_PALETTE.entrada, accent: CHART_PALETTE.entrada },
+          { label: 'Total Pago',            value: totalSaidas,   color: CHART_PALETTE.saida,   accent: CHART_PALETTE.saida   },
+          { label: 'Saldo Líquido',         value: saldoLiquido,  color: saldoLiquido >= 0 ? CHART_PALETTE.ebitda : CHART_PALETTE.saida, accent: saldoLiquido >= 0 ? CHART_PALETTE.ebitda : CHART_PALETTE.saida },
+          { label: 'Índice de Cobertura',   value: null,          color: CHART_PALETTE.saldo,   accent: CHART_PALETTE.saldo, custom: cobertura.toFixed(2) + 'x' },
+        ].map((k, i) => (
+          <div key={i} style={S.kpiCard(k.accent)}>
+            <div style={S.kpiLabel}>{k.label}</div>
+            {loading
+              ? <SkeletonBox />
+              : <div style={{ ...S.kpiValue, color: k.color }}>{k.custom ?? fmtFull(k.value)}</div>
+            }
+            {!loading && k.value !== null && (
+              <div style={S.kpiSub}>{k.value >= 0 ? '▲ Positivo' : '▼ Atenção'}</div>
+            )}
+          </div>
+        ))}
       </div>
 
+      {/* Composição Entradas + Saídas */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        {[
+          { title: 'Composição das Entradas', cats: entCats, color: CHART_PALETTE.entrada, total: totalEntradas },
+          { title: 'Composição das Saídas',   cats: saiCats, color: CHART_PALETTE.saida,   total: totalSaidas   },
+        ].map((panel, pi) => (
+          <div key={pi} style={S.card}>
+            <div style={S.cardTitle}>{panel.title}</div>
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[80, 65, 50].map((w, i) => <SkeletonBox key={i} h={36} w={`${w}%`} />)}
+              </div>
+            ) : panel.cats.length === 0 ? (
+              <p style={{ color: '#334155', fontSize: 13, fontStyle: 'italic' }}>Nenhum dado disponível.</p>
+            ) : (
+              panel.cats.slice(0, 6).map((c, i) => {
+                const pct = panel.total > 0 ? (c.value / panel.total * 100) : 0
+                return (
+                  <div key={i} style={{ marginBottom: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span style={{ fontSize: 13, color: '#cbd5e1', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, color: '#64748b' }}>{fmtPct(pct)}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: panel.color }}>{fmtFull(c.value)}</span>
+                      </div>
+                    </div>
+                    <div style={{ height: 6, background: '#1e1e2e', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: PIE_COLORS[i % PIE_COLORS.length], borderRadius: 99, transition: 'width 0.6s ease' }} />
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Evolução Mensal */}
       <div style={S.card}>
-        <div style={S.cardTitle}>Indicadores de Saude Financeira</div>
-        <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap: 24}}>
-          {[
-            { label: 'Indice de Liquidez Corrente', valor: '2.8x', status: 'ok', desc: 'Ativo Circulante / Passivo Circulante' },
-            { label: 'Capital de Giro Liquido', valor: 'R$ 317 mil', status: 'ok', desc: 'AC - PC' },
-            { label: 'Dias de Caixa Disponivel', valor: '28 dias', status: 'ok', desc: 'Caixa atual / Media diaria de saidas' },
-            { label: 'Taxa de Queima (Burn Rate)', valor: 'R$ 14,9 mil/dia', status: 'ok', desc: 'Saidas medias por dia' },
-            { label: 'Ciclo de Caixa', valor: '15 dias', status: 'ok', desc: 'PMR + PME - PMP' },
-            { label: 'Free Cash Flow', valor: 'R$ 404,5 mil', status: 'ok', desc: 'Fluxo Operacional - CAPEX' },
-          ].map((item, i) => (
-            <div key={i} style={{padding: '16px', background: '#0a0a0f', borderRadius: 8}}>
-              <div style={{fontSize: 11, color: '#6b7280', marginBottom: 6, textTransform:'uppercase'}}>{item.label}</div>
-              <div style={{fontSize: 20, fontWeight: 800, color: '#3b82f6', marginBottom: 4}}>{item.valor}</div>
-              <div style={{fontSize: 11, color: '#6b7280'}}>{item.desc}</div>
-            </div>
-          ))}
-        </div>
+        <div style={S.cardTitle}>Evolução Mensal — Entradas vs Saídas</div>
+        {loading ? <SkeletonBox h={240} w="100%" /> : evolucaoData.length === 0 ? (
+          <p style={{ color: '#334155', fontSize: 13, fontStyle: 'italic' }}>Nenhum dado para o período.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={evolucaoData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e1e2e" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }} tickFormatter={fmtCompact} />
+              <Tooltip contentStyle={{ background: '#0f0f18', border: '1px solid #1e1e2e', borderRadius: 8, fontSize: 12 }} formatter={(v, n) => [fmtFull(v), n === 'entradas' ? 'Entradas' : n === 'saidas' ? 'Saídas' : 'Saldo']} />
+              <Legend formatter={v => v === 'entradas' ? 'Entradas' : v === 'saidas' ? 'Saídas' : 'Saldo'} />
+              <Bar dataKey="entradas" fill={CHART_PALETTE.entrada} radius={[3,3,0,0]} barSize={22} name="entradas" />
+              <Bar dataKey="saidas"   fill={CHART_PALETTE.saida}   radius={[3,3,0,0]} barSize={22} name="saidas"   />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* Indicadores de Saúde */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>Indicadores de Saúde Financeira</div>
+        {loading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+            {[1,2,3,4,5,6].map(i => <SkeletonBox key={i} h={64} w="100%" />)}
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+            {[
+              { label: 'Índice de Cobertura',      value: cobertura.toFixed(2) + 'x',    desc: 'Entradas / Saídas',               ok: cobertura >= 1 },
+              { label: 'Burn Rate Médio (diário)',  value: fmtCompact(mediaDiariaSaidas), desc: 'Média de saídas por dia',         ok: mediaDiariaSaidas > 0 },
+              { label: 'Saldo Líquido',             value: fmtCompact(saldoLiquido),      desc: 'Entradas − Saídas no período',    ok: saldoLiquido >= 0 },
+              { label: 'Total de Transações',       value: data.length,                   desc: 'Lançamentos no período',          ok: data.length > 0 },
+              { label: 'Ticket Médio Entradas',     value: entradas.length > 0 ? fmtCompact(totalEntradas / entradas.length) : '—', desc: 'Média por lançamento de entrada', ok: true },
+              { label: 'Ticket Médio Saídas',       value: saidas.length > 0   ? fmtCompact(totalSaidas   / saidas.length)   : '—', desc: 'Média por lançamento de saída',   ok: true },
+            ].map((ind, i) => (
+              <div key={i} style={{ background: '#0f0f18', borderRadius: 8, padding: '14px 16px', border: '1px solid #1e1e2e' }}>
+                <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 6 }}>{ind.label}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: ind.ok ? '#3b82f6' : '#f59e0b', marginBottom: 3 }}>{ind.value}</div>
+                <div style={{ fontSize: 11, color: '#334155' }}>{ind.desc}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

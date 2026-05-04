@@ -2,121 +2,281 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
-const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(v)
-const fmtFull = (v) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0 }).format(v)
+const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
 const S = {
-  card: { backgroundColor: '#1f2937', borderRadius: '8px', padding: '20px', border: '1px solid #374151' },
-  kpiTitle: { fontSize: '13px', color: '#9ca3af', marginBottom: '8px' },
-  kpiValue: { fontSize: '22px', fontWeight: 'bold' },
-  table: { width: '100%', borderCollapse: 'collapse', marginTop: '20px' },
-  th: { textAlign: 'left', color: '#9ca3af', fontSize: '11px', fontWeight: '600', padding: '12px', borderBottom: '1px solid #374151', textTransform: 'uppercase' },
-  td: { padding: '12px', borderBottom: '1px solid #1f2937', fontSize: '13px' },
-  rowTotal: { fontWeight: 'bold', backgroundColor: '#111827' },
-  expandBtn: { cursor: 'pointer', marginRight: '8px', color: '#3b82f6' },
+  container: { padding: '24px', color: '#e5e7eb' },
+  card: { backgroundColor: '#1f2937', borderRadius: '8px', padding: '20px', border: '1px solid #374151', marginBottom: '24px' },
+  title: { fontSize: '24px', fontWeight: 'bold', marginBottom: '24px' },
   input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' },
-  badge: { display: 'inline-block', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', marginLeft: '8px' }
+  badge: { display: 'inline-block', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', marginLeft: '8px' },
+  row: (level, isTotal, isExpanded) => ({
+    display: 'flex',
+    alignItems: 'center',
+    padding: `${12 + level * 8}px 16px`,
+    borderBottom: '1px solid #1f2937',
+    background: isTotal ? '#111827' : isExpanded ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
+    fontWeight: isTotal ? '700' : level === 0 ? '600' : '400',
+    color: isTotal ? '#3b82f6' : '#e5e7eb',
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  }),
+  expandIcon: (isOpen) => ({
+    marginRight: '12px',
+    transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+    transition: 'transform 0.2s',
+    color: '#3b82f6',
+    fontWeight: 'bold'
+  }),
+  label: { flex: 1, marginRight: '16px' },
+  value: (isPositive) => ({
+    textAlign: 'right',
+    minWidth: '120px',
+    color: isPositive ? '#3b82f6' : '#ef4444',
+    fontWeight: '600'
+  })
 }
-
-const KPICard = ({ title, value, color = '#3b82f6' }) => (
-  <div style={S.card}>
-    <div style={S.kpiTitle}>{title}</div>
-    <div style={{ ...S.kpiValue, color }}>{value}</div>
-  </div>
-)
 
 export default function DREDetalhado() {
   const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [expanded, setExpanded] = useState({});
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [empresaId, setEmpresaId] = useState(null);
-  const [isConsolidado, setIsConsolidado] = useState(false);
+    const d = new Date()
+    return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0]
+  })
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
+  const [empresaId, setEmpresaId] = useState(null)
+  const [isConsolidado, setIsConsolidado] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [expanded, setExpanded] = useState({})
+  const [dreData, setDreData] = useState(null)
 
   useEffect(() => {
-    const savedId = localStorage.getItem('empresa_id');
+    const savedId = localStorage.getItem('empresa_id')
     if (savedId) {
-      setEmpresaId(savedId);
-      setIsConsolidado(savedId === 'todas');
+      setEmpresaId(savedId)
+      setIsConsolidado(savedId === 'todas')
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    if (!empresaId) return;
+    if (!empresaId) return
 
     const fetchData = async () => {
-      setLoading(true);
+      setLoading(true)
       try {
         let query = supabase
           .from('lancamentos')
           .select('*')
           .gte('data', startDate)
-          .lte('data', endDate);
+          .lte('data', endDate)
 
         if (isConsolidado) {
           const { data: userEmpresas } = await supabase
             .from('empresas')
             .select('id')
-            .eq('user_id', (await supabase.auth.getSession()).data.session.user.id);
-          
+            .eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
+
           if (userEmpresas) {
-            const ids = userEmpresas.map(e => e.id);
-            query = query.in('empresa_id', ids);
+            const ids = userEmpresas.map(e => e.id)
+            query = query.in('empresa_id', ids)
           }
         } else {
-          query = query.eq('empresa_id', empresaId);
+          query = query.eq('empresa_id', empresaId)
         }
 
-        const { data: lancamentos } = await query;
-        setData(lancamentos || []);
+        const { data: lancamentos } = await query
+
+        // Agrupar por categoria
+        const grouped = {}
+        lancamentos?.forEach(l => {
+          if (!grouped[l.categoria]) {
+            grouped[l.categoria] = []
+          }
+          grouped[l.categoria].push(l)
+        })
+
+        setDreData(grouped)
       } catch (e) {
-        console.error('Erro ao carregar DRE Detalhado:', e);
+        console.error('Erro ao carregar DRE:', e)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-
-    fetchData();
-  }, [empresaId, startDate, endDate, isConsolidado]);
-
-  const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
-
-  // Agrupar dados por categoria
-  const categoriaMap = {};
-  data.forEach(item => {
-    if (!categoriaMap[item.categoria]) {
-      categoriaMap[item.categoria] = { receita: 0, despesa: 0 };
     }
-    if (item.tipo === 'receita') {
-      categoriaMap[item.categoria].receita += Number(item.valor);
-    } else {
-      categoriaMap[item.categoria].despesa += Number(item.valor);
+
+    fetchData()
+  }, [empresaId, startDate, endDate, isConsolidado])
+
+  const toggleExpand = (key) => {
+    setExpanded(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  // Estrutura do DRE Gerencial
+  const dreStructure = [
+    {
+      codigo: '1.1',
+      nome: 'RECEITA BRUTA',
+      level: 0,
+      children: [
+        { codigo: '1.1.1', nome: 'Receita de Serviços', categoria: 'Receita de Serviços', level: 1 },
+        { codigo: '1.1.2', nome: 'Receita de Produtos', categoria: 'Receita de Produtos', level: 1 },
+      ]
+    },
+    {
+      codigo: '1.2',
+      nome: 'IMPOSTOS SOBRE RECEITA',
+      level: 0,
+      children: [
+        { codigo: '1.2.1', nome: 'ICMS', categoria: 'ICMS', level: 1 },
+        { codigo: '1.2.2', nome: 'ISS', categoria: 'ISS', level: 1 },
+      ]
+    },
+    {
+      codigo: '1.3',
+      nome: 'RECEITA LÍQUIDA',
+      level: 0,
+      isCalculated: true
+    },
+    {
+      codigo: '2.1',
+      nome: 'CUSTOS VARIÁVEIS',
+      level: 0,
+      children: [
+        { codigo: '2.1.1', nome: 'CAC', categoria: 'CAC', level: 1 },
+        { codigo: '2.1.2', nome: 'CSP', categoria: 'CSP', level: 1 },
+      ]
+    },
+    {
+      codigo: '2.2',
+      nome: 'LUCRO BRUTO',
+      level: 0,
+      isCalculated: true
+    },
+    {
+      codigo: '3.1',
+      nome: 'DESPESAS FIXAS',
+      level: 0,
+      children: [
+        { codigo: '3.1.1', nome: 'DESPESAS DE DESENVOLVIMENTO', categoria: 'Despesas Desenvolvimento', level: 1 },
+        { codigo: '3.1.2', nome: 'DESPESAS GERAIS E ADM', categoria: 'Despesas Gerais', level: 1 },
+        { codigo: '3.1.3', nome: 'SALÁRIOS E ENCARGOS ADM', categoria: 'Salários ADM', level: 1 },
+        { codigo: '3.1.4', nome: 'DESPESAS OPERACIONAIS', categoria: 'Despesas Operacionais', level: 1 },
+        { codigo: '3.1.5', nome: 'DESPESAS DE MKT E COMERCIAIS', categoria: 'Despesas MKT', level: 1 },
+        { codigo: '3.1.6', nome: 'SALÁRIOS E ENCARGOS MOB', categoria: 'Salários MOB', level: 1 },
+      ]
+    },
+    {
+      codigo: '3.2',
+      nome: 'EBITDA',
+      level: 0,
+      isCalculated: true
     }
-  });
+  ]
 
-  const totalReceita = Object.values(categoriaMap).reduce((acc, curr) => acc + curr.receita, 0);
-  const totalDespesa = Object.values(categoriaMap).reduce((acc, curr) => acc + curr.despesa, 0);
-  const resultado = totalReceita - totalDespesa;
+  const getValueForCategory = (categoria) => {
+    if (!dreData || !dreData[categoria]) return 0
+    return dreData[categoria].reduce((acc, l) => acc + Number(l.valor), 0)
+  }
 
-  // Estrutura de linhas por categoria
-  const rows = Object.entries(categoriaMap).map(([cat, values], idx) => ({
-    id: idx,
-    name: cat || 'Não Classificado',
-    receita: values.receita,
-    despesa: values.despesa,
-    resultado: values.receita - values.despesa,
-    level: 0,
-    type: values.receita > 0 ? 'pos' : 'neg'
-  }));
+  const getValueForGroup = (group) => {
+    if (!group.children) return 0
+    return group.children.reduce((acc, child) => acc + getValueForCategory(child.categoria), 0)
+  }
+
+  const renderRow = (item, parentKey) => {
+    const key = `${parentKey}-${item.codigo}`
+    const isOpen = expanded[key]
+    const hasChildren = item.children && item.children.length > 0
+    const value = item.children ? getValueForGroup(item) : getValueForCategory(item.categoria)
+
+    return (
+      <div key={key}>
+        <div
+          style={S.row(item.level, item.isCalculated, isOpen)}
+          onClick={() => hasChildren && toggleExpand(key)}
+        >
+          <div style={S.label}>
+            {hasChildren && (
+              <span style={S.expandIcon(isOpen)}>{isOpen ? '▼' : '▶'}</span>
+            )}
+            <span style={{ marginLeft: hasChildren ? '0' : '24px' }}>{item.nome}</span>
+          </div>
+          <div style={S.value(value >= 0)}>
+            {fmt(Math.abs(value))}
+          </div>
+        </div>
+
+        {hasChildren && isOpen && (
+          <div>
+            {item.children.map(child => (
+              <div key={`${key}-${child.codigo}`}>
+                <div style={S.row(child.level, false, false)}>
+                  <div style={S.label}>
+                    <span style={{ marginLeft: '24px' }}>{child.nome}</span>
+                  </div>
+                  <div style={S.value(true)}>
+                    {fmt(getValueForCategory(child.categoria))}
+                  </div>
+                </div>
+
+                {expanded[`${key}-${child.codigo}`] && dreData?.[child.categoria] && (
+                  <div>
+                    {dreData[child.categoria].map((lancamento, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          ...S.row(3, false, false),
+                          background: 'rgba(59, 130, 246, 0.02)',
+                          fontSize: '12px'
+                        }}
+                      >
+                        <div style={S.label}>
+                          <span style={{ marginLeft: '48px', color: '#9ca3af' }}>
+                            {lancamento.descricao?.substring(0, 40) || 'Sem descrição'}
+                          </span>
+                        </div>
+                        <div style={S.value(true)}>
+                          {fmt(lancamento.valor)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {dreData?.[child.categoria] && (
+                  <div
+                    style={{
+                      ...S.row(child.level + 1, false, false),
+                      cursor: 'pointer',
+                      color: '#3b82f6'
+                    }}
+                    onClick={() => toggleExpand(`${key}-${child.codigo}`)}
+                  >
+                    <div style={S.label}>
+                      <span style={{ marginLeft: '40px', fontSize: '11px' }}>
+                        {expanded[`${key}-${child.codigo}`] ? '▼ Ocultar detalhes' : '▶ Ver detalhes'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div style={S.container}>
+        <div style={{ textAlign: 'center', color: '#3b82f6' }}>Carregando...</div>
+      </div>
+    )
+  }
 
   return (
-    <div style={{ padding: '24px', color: '#e5e7eb' }}>
+    <div style={S.container}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>
+        <h1 style={S.title}>
           DRE Detalhado
           {isConsolidado && <span style={S.badge}>📊 Consolidado</span>}
         </h1>
@@ -130,64 +290,9 @@ export default function DREDetalhado() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <KPICard title="Receita Total" value={fmt(totalReceita)} color="#3b82f6" />
-        <KPICard title="Despesa Total" value={fmt(totalDespesa)} color="#ef4444" />
-        <KPICard title="Resultado" value={fmt(resultado)} color={resultado >= 0 ? '#3b82f6' : '#ef4444'} />
-      </div>
-
       <div style={S.card}>
         <div style={{ overflowX: 'auto' }}>
-          <table style={S.table}>
-            <thead>
-              <tr>
-                <th style={S.th}>Categoria</th>
-                <th style={{ ...S.th, textAlign: 'right' }}>Receita</th>
-                <th style={{ ...S.th, textAlign: 'right' }}>Despesa</th>
-                <th style={{ ...S.th, textAlign: 'right' }}>Resultado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="4" style={{ ...S.td, textAlign: 'center', color: '#3b82f6' }}>Carregando dados...</td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan="4" style={{ ...S.td, textAlign: 'center', color: '#9ca3af' }}>Nenhum dado para este período.</td>
-                </tr>
-              ) : (
-                <>
-                  {rows.map(row => (
-                    <tr key={row.id} style={S.rowTotal}>
-                      <td style={{ ...S.td, paddingLeft: 12 }}>{row.name}</td>
-                      <td style={{ ...S.td, textAlign: 'right', color: row.receita > 0 ? '#3b82f6' : '#9ca3af' }}>
-                        {fmtFull(row.receita)}
-                      </td>
-                      <td style={{ ...S.td, textAlign: 'right', color: row.despesa > 0 ? '#ef4444' : '#9ca3af' }}>
-                        {fmtFull(row.despesa)}
-                      </td>
-                      <td style={{ ...S.td, textAlign: 'right', fontWeight: 'bold', color: row.resultado >= 0 ? '#3b82f6' : '#ef4444' }}>
-                        {fmtFull(row.resultado)}
-                      </td>
-                    </tr>
-                  ))}
-                  <tr style={{ ...S.rowTotal, backgroundColor: '#0f172a' }}>
-                    <td style={{ ...S.td, paddingLeft: 12, fontWeight: 'bold' }}>TOTAL</td>
-                    <td style={{ ...S.td, textAlign: 'right', fontWeight: 'bold', color: '#3b82f6' }}>
-                      {fmtFull(totalReceita)}
-                    </td>
-                    <td style={{ ...S.td, textAlign: 'right', fontWeight: 'bold', color: '#ef4444' }}>
-                      {fmtFull(totalDespesa)}
-                    </td>
-                    <td style={{ ...S.td, textAlign: 'right', fontWeight: 'bold', color: resultado >= 0 ? '#3b82f6' : '#ef4444' }}>
-                      {fmtFull(resultado)}
-                    </td>
-                  </tr>
-                </>
-              )}
-            </tbody>
-          </table>
+          {dreStructure.map(group => renderRow(group, 'root'))}
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import UploadExcel from '@/components/UploadExcel'
 
 const S = {
   container: { padding: '24px', color: '#e5e7eb' },
@@ -22,7 +23,7 @@ const S = {
 }
 
 export default function ImportacaoPage() {
-  const [activeTab, setActiveTab] = useState('mappings')
+  const [activeTab, setActiveTab] = useState('upload')
   const [empresaId, setEmpresaId] = useState(null)
   const [empresas, setEmpresas] = useState([])
   const [planoContas, setPlanoContas] = useState([])
@@ -30,6 +31,11 @@ export default function ImportacaoPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  const [importTarget, setImportTarget] = useState('dre')
+  
+  // Upload
+  const [uploadedData, setUploadedData] = useState(null)
+  const [isImporting, setIsImporting] = useState(false)
   
   // Modal para novo mapeamento
   const [showModal, setShowModal] = useState(false)
@@ -102,7 +108,6 @@ export default function ImportacaoPage() {
       setSuccess(null)
 
       if (editingId) {
-        // Atualizar mapeamento existente
         const { error: err } = await supabase
           .from('categoria_mappings')
           .update({
@@ -116,7 +121,6 @@ export default function ImportacaoPage() {
         if (err) throw err
         setSuccess('Mapeamento atualizado com sucesso!')
       } else {
-        // Criar novo mapeamento
         const { error: err } = await supabase
           .from('categoria_mappings')
           .insert({
@@ -135,7 +139,6 @@ export default function ImportacaoPage() {
       setEditingId(null)
       setShowModal(false)
 
-      // Recarregar mapeamentos
       const { data: maps } = await supabase
         .from('categoria_mappings')
         .select('*, plano_contas(codigo, nome)')
@@ -170,7 +173,6 @@ export default function ImportacaoPage() {
       if (err) throw err
       setSuccess('Mapeamento deletado com sucesso!')
 
-      // Recarregar mapeamentos
       const { data: maps } = await supabase
         .from('categoria_mappings')
         .select('*, plano_contas(codigo, nome)')
@@ -183,26 +185,93 @@ export default function ImportacaoPage() {
     }
   }
 
+  const handleImportData = async () => {
+    if (!uploadedData || uploadedData.length === 0) {
+      setError('Nenhum arquivo carregado.')
+      return
+    }
+
+    setIsImporting(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const lancamentosToInsert = []
+
+      uploadedData.forEach(row => {
+        // Extrair dados do arquivo
+        const descricao = row['Descrição'] || row['descrição'] || ''
+        const nome = row['Nome'] || row['nome'] || ''
+        const valor = parseFloat(String(row['Valor Pago/Recebido'] || row['Valor'] || 0).replace(/\./g, '').replace(',', '.'))
+        const dataStr = row['Data'] || row['data'] || new Date().toISOString().split('T')[0]
+        const competencia = row['Competência'] || row['competência'] || dataStr
+
+        // Encontrar o mapeamento baseado na descrição
+        const mapping = mappings.find(m => m.categoria_origem.toLowerCase() === descricao.toLowerCase())
+        
+        if (!mapping) {
+          console.warn(`Categoria não mapeada: ${descricao}`)
+          return
+        }
+
+        // Determinar tipo baseado no mapeamento
+        let tipo = 'receita'
+        if (mapping.tipo_destino === 'custo') tipo = 'custo'
+        if (mapping.tipo_destino === 'despesa') tipo = 'despesa'
+
+        // Para fluxo de caixa
+        if (importTarget === 'fluxo') {
+          lancamentosToInsert.push({
+            empresa_id: empresaId,
+            data: dataStr,
+            descricao: nome,
+            tipo: mapping.tipo_destino === 'fluxo_entrada' ? 'entrada' : 'saida',
+            valor: Math.abs(valor),
+            categoria: descricao
+          })
+        } else {
+          // Para DRE
+          lancamentosToInsert.push({
+            empresa_id: empresaId,
+            data: dataStr,
+            descricao: nome,
+            tipo: tipo,
+            valor: Math.abs(valor),
+            conta_id: mapping.conta_id,
+            categoria: descricao
+          })
+        }
+      })
+
+      if (lancamentosToInsert.length === 0) {
+        setError('Nenhum registro válido para importar.')
+        setIsImporting(false)
+        return
+      }
+
+      // Inserir no banco de dados
+      const table = importTarget === 'fluxo' ? 'fluxo_caixa' : 'lancamentos'
+      const { error: insertError } = await supabase
+        .from(table)
+        .insert(lancamentosToInsert)
+
+      if (insertError) throw insertError
+
+      setSuccess(`✅ ${lancamentosToInsert.length} registros importados com sucesso!`)
+      setUploadedData(null)
+      setActiveTab('mappings')
+    } catch (err) {
+      console.error('Erro ao importar:', err)
+      setError(`Erro ao importar: ${err.message}`)
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
   const closeModal = () => {
     setShowModal(false)
     setNewMapping({ categoria_origem: '', conta_id: '', tipo_destino: 'receita' })
     setEditingId(null)
-  }
-
-  const getContaNome = (contaId) => {
-    const conta = planoContas.find(c => c.id === contaId)
-    return conta ? `${conta.codigo} - ${conta.nome}` : 'N/A'
-  }
-
-  const getTipoLabel = (tipo) => {
-    const labels = {
-      'receita': '💰 Receita',
-      'custo': '📊 Custo',
-      'despesa': '💸 Despesa',
-      'fluxo_entrada': '⬆️ Entrada (Fluxo)',
-      'fluxo_saida': '⬇️ Saída (Fluxo)'
-    }
-    return labels[tipo] || tipo
   }
 
   if (loading) {
@@ -234,10 +303,10 @@ export default function ImportacaoPage() {
       {/* Abas */}
       <div style={S.tabContainer}>
         <button style={S.tab(activeTab === 'mappings')} onClick={() => setActiveTab('mappings')}>
-          📋 Mapeamentos de Categorias
+          📋 Configurar Categorias
         </button>
-        <button style={S.tab(activeTab === 'info')} onClick={() => setActiveTab('info')}>
-          ℹ️ Informações
+        <button style={S.tab(activeTab === 'upload')} onClick={() => setActiveTab('upload')}>
+          📥 Importar Arquivo
         </button>
       </div>
 
@@ -245,14 +314,14 @@ export default function ImportacaoPage() {
       {error && <div style={S.error}>❌ {error}</div>}
       {success && <div style={S.success}>✅ {success}</div>}
 
-      {/* Aba: Mapeamentos */}
+      {/* Aba: Configurar Categorias */}
       {activeTab === 'mappings' && (
         <div>
           <div style={{ ...S.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h2 style={S.sectionTitle}>Configurar Mapeamentos</h2>
+              <h2 style={S.sectionTitle}>Mapeamento de Categorias</h2>
               <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>
-                Mapeie as categorias do seu arquivo ERP para as contas do Plano de Contas. Esses mapeamentos serão aplicados automaticamente nas importações.
+                Mapeie as categorias do seu arquivo para as contas do Plano de Contas.
               </p>
             </div>
             <button style={S.btn} onClick={() => setShowModal(true)}>
@@ -260,21 +329,19 @@ export default function ImportacaoPage() {
             </button>
           </div>
 
-          {/* Tabela de Mapeamentos */}
           <div style={S.card}>
             {mappings.length === 0 ? (
               <p style={{ color: '#9ca3af', textAlign: 'center', padding: '32px' }}>
-                Nenhum mapeamento configurado ainda. Clique em "Novo Mapeamento" para começar.
+                Nenhum mapeamento configurado. Clique em "Novo Mapeamento" para começar.
               </p>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={S.table}>
                   <thead>
                     <tr>
-                      <th style={S.th}>Categoria (ERP)</th>
-                      <th style={S.th}>Conta (Plano de Contas)</th>
+                      <th style={S.th}>Categoria (Arquivo)</th>
+                      <th style={S.th}>Conta (Plano)</th>
                       <th style={S.th}>Tipo</th>
-                      <th style={S.th}>Status</th>
                       <th style={S.th}>Ações</th>
                     </tr>
                   </thead>
@@ -283,21 +350,12 @@ export default function ImportacaoPage() {
                       <tr key={m.id}>
                         <td style={S.td}><strong>{m.categoria_origem}</strong></td>
                         <td style={S.td}>{m.plano_contas?.codigo} - {m.plano_contas?.nome}</td>
-                        <td style={S.td}>{getTipoLabel(m.tipo_destino)}</td>
+                        <td style={S.td}>{m.tipo_destino}</td>
                         <td style={S.td}>
-                          <span style={S.badge}>{m.ativo ? '✅ Ativo' : '⏸️ Inativo'}</span>
-                        </td>
-                        <td style={S.td}>
-                          <button
-                            style={{ ...S.btnDanger, background: '#3b82f6', color: '#fff', marginRight: '8px' }}
-                            onClick={() => handleEditMapping(m)}
-                          >
+                          <button style={{ ...S.btnDanger, background: '#3b82f6', color: '#fff', marginRight: '8px' }} onClick={() => handleEditMapping(m)}>
                             ✏️ Editar
                           </button>
-                          <button
-                            style={S.btnDanger}
-                            onClick={() => handleDeleteMapping(m.id)}
-                          >
+                          <button style={S.btnDanger} onClick={() => handleDeleteMapping(m.id)}>
                             🗑️ Deletar
                           </button>
                         </td>
@@ -311,18 +369,56 @@ export default function ImportacaoPage() {
         </div>
       )}
 
-      {/* Aba: Informações */}
-      {activeTab === 'info' && (
-        <div style={S.card}>
-          <h2 style={S.sectionTitle}>Como Funciona</h2>
-          <div style={{ color: '#9ca3af', lineHeight: '1.8' }}>
-            <p><strong style={{ color: '#f3f4f6' }}>1. Configurar Mapeamentos:</strong> Defina como as categorias do seu arquivo ERP devem ser mapeadas para as contas do Plano de Contas.</p>
-            <p><strong style={{ color: '#f3f4f6' }}>2. Importar Arquivo:</strong> Quando você importar um arquivo XLS, o sistema automaticamente aplicará esses mapeamentos.</p>
-            <p><strong style={{ color: '#f3f4f6' }}>3. Visualizar no DRE:</strong> Os dados importados aparecerão automaticamente nos Demonstrativos, agrupados por conta.</p>
-            <p style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #374151' }}>
-              <strong style={{ color: '#f3f4f6' }}>Dica:</strong> Use categorias consistentes no seu arquivo ERP para facilitar o mapeamento. Por exemplo: "Vendas", "Custos Diretos", "Despesas Operacionais".
-            </p>
+      {/* Aba: Importar Arquivo */}
+      {activeTab === 'upload' && (
+        <div>
+          <div style={S.card}>
+            <h2 style={S.sectionTitle}>Selecionar Arquivo</h2>
+            <UploadExcel onDataLoaded={setUploadedData} />
           </div>
+
+          {uploadedData && uploadedData.length > 0 && (
+            <div style={S.card}>
+              <h2 style={S.sectionTitle}>Preview dos Dados ({uploadedData.length} registros)</h2>
+              
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: '#9ca3af', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>
+                  Importar para:
+                </label>
+                <select style={S.select} value={importTarget} onChange={(e) => setImportTarget(e.target.value)}>
+                  <option value="dre">📊 DRE (Demonstrativos)</option>
+                  <option value="fluxo">💰 Fluxo de Caixa</option>
+                </select>
+              </div>
+
+              <div style={{ overflowX: 'auto', marginBottom: '16px' }}>
+                <table style={S.table}>
+                  <thead>
+                    <tr>
+                      <th style={S.th}>Nome</th>
+                      <th style={S.th}>Descrição (Categoria)</th>
+                      <th style={S.th}>Valor</th>
+                      <th style={S.th}>Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uploadedData.slice(0, 10).map((row, idx) => (
+                      <tr key={idx}>
+                        <td style={S.td}>{row['Nome'] || row['nome'] || '-'}</td>
+                        <td style={S.td}><span style={S.badge}>{row['Descrição'] || row['descrição'] || '-'}</span></td>
+                        <td style={S.td}>{row['Valor Pago/Recebido'] || row['Valor'] || '-'}</td>
+                        <td style={S.td}>{row['Data'] || row['data'] || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <button style={S.btn} onClick={handleImportData} disabled={isImporting}>
+                {isImporting ? '⏳ Importando...' : '✅ Importar Dados'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -333,12 +429,12 @@ export default function ImportacaoPage() {
             <h2 style={S.sectionTitle}>{editingId ? 'Editar' : 'Novo'} Mapeamento</h2>
 
             <label style={{ display: 'block', marginBottom: '8px', color: '#9ca3af', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>
-              Categoria do Arquivo ERP *
+              Categoria do Arquivo *
             </label>
             <input
               type="text"
               style={S.input}
-              placeholder="Ex: Vendas, Custos Diretos, Despesas Operacionais"
+              placeholder="Ex: Receita de Serviços, Juros_Antecipação"
               value={newMapping.categoria_origem}
               onChange={(e) => setNewMapping({ ...newMapping, categoria_origem: e.target.value })}
             />
@@ -354,8 +450,8 @@ export default function ImportacaoPage() {
               <option value="receita">💰 Receita</option>
               <option value="custo">📊 Custo</option>
               <option value="despesa">💸 Despesa</option>
-              <option value="fluxo_entrada">⬆️ Entrada (Fluxo de Caixa)</option>
-              <option value="fluxo_saida">⬇️ Saída (Fluxo de Caixa)</option>
+              <option value="fluxo_entrada">⬆️ Entrada (Fluxo)</option>
+              <option value="fluxo_saida">⬇️ Saída (Fluxo)</option>
             </select>
 
             <label style={{ display: 'block', marginBottom: '8px', color: '#9ca3af', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>
@@ -369,7 +465,6 @@ export default function ImportacaoPage() {
               <option value="">Selecione uma conta...</option>
               {planoContas
                 .filter(c => {
-                  // Filtrar contas por tipo
                   if (newMapping.tipo_destino === 'receita') return c.tipo === 'receita'
                   if (newMapping.tipo_destino === 'custo') return c.tipo === 'custo'
                   if (newMapping.tipo_destino === 'despesa') return c.tipo === 'despesa'
@@ -386,10 +481,7 @@ export default function ImportacaoPage() {
               <button style={{ ...S.btn, flex: 1 }} onClick={handleSaveMapping}>
                 💾 Salvar
               </button>
-              <button
-                style={{ ...S.btn, background: '#6b7280', flex: 1 }}
-                onClick={closeModal}
-              >
+              <button style={{ ...S.btn, background: '#6b7280', flex: 1 }} onClick={closeModal}>
                 ❌ Cancelar
               </button>
             </div>

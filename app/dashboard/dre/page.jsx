@@ -78,9 +78,24 @@ const CustomTooltip = ({ active, payload, data }) => {
   if (!active || !payload?.[0]) return null
   const entry = payload[0].payload
   const getTop = (tipo) => {
-    const items = [...(data||[]).filter(d => d.tipo === tipo)].sort((a,b)=>Number(b.valor)-Number(a.valor))
-    const total = items.reduce((a,c)=>a+Number(c.valor),0)
-    let acc=0; return items.filter(i=>{acc+=Number(i.valor);return acc<=total*0.8}).slice(0,3)
+    // 1. Agrupar por cliente (descricao), somando os valores
+    const grouped = {}
+    ;(data||[]).filter(d => d.tipo === tipo).forEach(d => {
+      const key = (d.descricao || d.categoria || 'Sem nome').trim()
+      grouped[key] = (grouped[key] || 0) + Number(d.valor)
+    })
+    // 2. Ordenar pelo total acumulado por cliente (desc)
+    const sorted = Object.entries(grouped)
+      .map(([nome, valor]) => ({ nome, valor }))
+      .sort((a, b) => b.valor - a.valor)
+    // 3. Aplicar regra de Pareto 80%
+    const total = sorted.reduce((acc, cur) => acc + cur.valor, 0)
+    let acc = 0
+    return sorted.filter(item => {
+      if (acc >= total * 0.8) return false
+      acc += item.valor
+      return true
+    })
   }
   let details = []
   if (entry.name==='Receita Bruta') details=getTop('receita')
@@ -88,12 +103,16 @@ const CustomTooltip = ({ active, payload, data }) => {
   else if (entry.name==='Despesas') details=getTop('despesa')
   return (
     <div style={{ background:'var(--fs-input-bg)', border:'1px solid var(--fs-border)', borderRadius:8, padding:10, fontSize:12, boxShadow:'0 8px 24px rgba(0,0,0,0.5)' }}>
-      <p style={{ margin:'0 0 6px', fontWeight:700, color:CHART_PALETTE.receita }}>{entry.name}</p>
+      <p style={{ margin:'0 0 6px', fontWeight:700, color:
+        entry.name==='Receita Bruta'||entry.name==='Lucro Bruto'||entry.name==='EBITDA'
+          ? CHART_PALETTE.receita
+          : CHART_PALETTE.custo
+      }}>{entry.name}</p>
       <p style={{ margin:'3px 0', color:'var(--fs-text-4)' }}>Total: <span style={{ color:'var(--fs-text-1)', fontWeight:700 }}>{fmtFull(Math.abs(entry.value))}</span></p>
       {details.length > 0 && <>
         <p style={{ margin:'8px 0 3px', color:'var(--fs-text-4)', fontSize:11, borderTop:'1px solid var(--fs-border)', paddingTop:5 }}>Top 80% (Pareto):</p>
         {details.map((d,i)=>(
-          <p key={i} style={{ margin:'1px 0 1px 8px', color:'var(--fs-text-2)', fontSize:11 }}>• {(d.descricao||d.categoria||'Item').substring(0,24)}: {fmtFull(Number(d.valor))}</p>
+          <p key={i} style={{ margin:'1px 0 1px 8px', color:'var(--fs-text-2)', fontSize:11 }}>• {d.nome.substring(0,26)}: <strong>{fmtFull(d.valor)}</strong></p>
         ))}
       </>}
     </div>

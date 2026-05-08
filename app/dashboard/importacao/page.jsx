@@ -238,6 +238,7 @@ export default function ImportacaoPage() {
   const [savingMapping,  setSavingMapping]  = useState(false)
   const [editingRow,     setEditingRow]     = useState(null)
   const [toast,          setToast]          = useState(null)
+  const [confirmModal,   setConfirmModal]   = useState(null) // { modulo, periodo, count, onConfirm }
   const fileRefDre   = useRef(null)
   const fileRefFluxo = useRef(null)
 
@@ -332,25 +333,75 @@ export default function ImportacaoPage() {
     }
   }
 
+  // ─── Verificar duplicatas por período ────────────────────────────────────────
+  const checkDuplicates = async (rows, tabela) => {
+    if (!rows.length) return { hasDupe: false, count: 0, periodo: '' }
+    const datas  = rows.map(r => r.data).sort()
+    const minDt  = datas[0]
+    const maxDt  = datas[datas.length - 1]
+    const { count } = await supabase
+      .from(tabela)
+      .select('id', { count: 'exact', head: true })
+      .eq('empresa_id', empresaId)
+      .gte('data', minDt)
+      .lte('data', maxDt)
+    const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
+    return { hasDupe: (count || 0) > 0, count: count || 0, minDt, maxDt, periodo: `${fmt(minDt)} a ${fmt(maxDt)}` }
+  }
+
+  const deleteAndInsert = async (toInsert, tabela, minDt, maxDt) => {
+    await supabase.from(tabela).delete()
+      .eq('empresa_id', empresaId)
+      .gte('data', minDt)
+      .lte('data', maxDt)
+    for (let i = 0; i < toInsert.length; i += 100) {
+      const { error } = await supabase.from(tabela).insert(toInsert.slice(i, i + 100))
+      if (error) throw error
+    }
+  }
+
   // ─── Importar DRE → lancamentos ──────────────────────────────────────────
-  const importDre = async () => {
+  const importDre = async (forceReplace = false) => {
     if (!empresaId) { showToast('Selecione uma empresa.', 'error'); return }
+    const toInsert = (dataDre || []).map(row => {
+      const map = (mappingsDre || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
+      let tipo = map?.tipo_destino || (row.tipoCsv.includes('pagar') ? 'despesa' : 'receita')
+      if (!['receita','custo','despesa'].includes(tipo)) tipo = 'receita'
+      return { empresa_id: empresaId, data: row.data, descricao: row.nome || row.__desc || '', valor: row.valor, tipo, conta_id: map?.conta_id || null, categoria: row.__desc || '' }
+    }).filter(r => r.valor > 0)
+
+    if (!toInsert.length) { showToast('Nenhum lançamento válido.', 'error'); return }
+
+    if (!forceReplace) {
+      const dupe = await checkDuplicates(toInsert, 'lancamentos')
+      if (dupe.hasDupe) {
+        setConfirmModal({
+          modulo: 'dre',
+          periodo: dupe.periodo,
+          count: dupe.count,
+          minDt: dupe.minDt,
+          maxDt: dupe.maxDt,
+          toInsert,
+          tabela: 'lancamentos',
+        })
+        return
+      }
+    }
+
     setIsImporting(true)
     try {
-      const toInsert = (dataDre || []).map(row => {
-        const map = (mappingsDre || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
-        let tipo = map?.tipo_destino || (row.tipoCsv.includes('pagar') ? 'despesa' : 'receita')
-        if (!['receita','custo','despesa'].includes(tipo)) tipo = 'receita'
-        return { empresa_id: empresaId, data: row.data, descricao: row.nome || row.__desc || '', valor: row.valor, tipo, conta_id: map?.conta_id || null, categoria: row.__desc || '' }
-      }).filter(r => r.valor > 0)
-
-      if (!toInsert.length) { showToast('Nenhum lançamento válido.', 'error'); return }
-      for (let i = 0; i < toInsert.length; i += 100) {
-        const { error } = await supabase.from('lancamentos').insert(toInsert.slice(i, i + 100))
-        if (error) throw error
+      const dupe = await checkDuplicates(toInsert, 'lancamentos')
+      if (forceReplace && dupe.hasDupe) {
+        await deleteAndInsert(toInsert, 'lancamentos', dupe.minDt, dupe.maxDt)
+      } else {
+        for (let i = 0; i < toInsert.length; i += 100) {
+          const { error } = await supabase.from('lancamentos').insert(toInsert.slice(i, i + 100))
+          if (error) throw error
+        }
       }
       showToast(`✓ ${toInsert.length} lançamentos importados no DRE!`, 'success')
       setDataDre([])
+      setConfirmModal(null)
     } catch (e) {
       showToast('Erro na importação: ' + e.message, 'error')
     } finally {
@@ -359,7 +410,7 @@ export default function ImportacaoPage() {
   }
 
   // ─── Importar Fluxo de Caixa → fluxo_caixa + ciclo_financeiro ────────────
-  const importFluxo = async () => {
+  const importFluxo = async (forceReplace = false) => {
     if (!empresaId) { showToast('Selecione uma empresa.', 'error'); return }
     setIsImporting(true)
     try {
@@ -375,10 +426,27 @@ export default function ImportacaoPage() {
 
       if (!toInsert.length) { showToast('Nenhum registro válido.', 'error'); return }
 
-      // 1. Inserir no fluxo_caixa
-      for (let i = 0; i < toInsert.length; i += 100) {
-        const { error } = await supabase.from('fluxo_caixa').insert(toInsert.slice(i, i + 100))
-        if (error) throw error
+      if (!forceReplace) {
+        const dupe = await checkDuplicates(toInsert, 'fluxo_caixa')
+        if (dupe.hasDupe) {
+          setConfirmModal({
+            modulo: 'fluxo', periodo: dupe.periodo, count: dupe.count,
+            minDt: dupe.minDt, maxDt: dupe.maxDt, toInsert, tabela: 'fluxo_caixa',
+          })
+          setIsImporting(false)
+          return
+        }
+      }
+
+      // 1. Inserir (ou substituir) no fluxo_caixa
+      const dupeCheck = await checkDuplicates(toInsert, 'fluxo_caixa')
+      if (forceReplace && dupeCheck.hasDupe) {
+        await deleteAndInsert(toInsert, 'fluxo_caixa', dupeCheck.minDt, dupeCheck.maxDt)
+      } else {
+        for (let i = 0; i < toInsert.length; i += 100) {
+          const { error } = await supabase.from('fluxo_caixa').insert(toInsert.slice(i, i + 100))
+          if (error) throw error
+        }
       }
 
       // 2. Atualizar ciclo_financeiro — agregar por mês
@@ -414,6 +482,7 @@ export default function ImportacaoPage() {
 
       showToast(`✓ ${toInsert.length} registros importados! Fluxo de Caixa e Ciclo Financeiro atualizados.`, 'success')
       setDataFluxo([])
+      setConfirmModal(null)
     } catch (e) {
       showToast('Erro na importação: ' + e.message, 'error')
     } finally {
@@ -430,9 +499,60 @@ export default function ImportacaoPage() {
   const currentMappings = activeTab === 'dre' ? mappingsDre : mappingsFluxo
   const currentData     = activeTab === 'dre' ? dataDre     : dataFluxo
 
+  // ─── Modal de Confirmação de Substituição ─────────────────────────────────
+  const ConfirmReplaceModal = () => {
+    if (!confirmModal) return null
+    const isFluxo = confirmModal.modulo === 'fluxo'
+    return (
+      <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2000, padding:16 }}>
+        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:16, padding:28, width:'100%', maxWidth:460, boxShadow:'var(--fs-shadow-lg)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+            <div style={{ width:44, height:44, background:'var(--fs-warning-bg)', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>⚠️</div>
+            <div>
+              <h2 style={{ fontSize:17, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>Dados existentes detectados</h2>
+              <p style={{ fontSize:12, color:'var(--fs-text-4)', margin:'2px 0 0' }}>Conflito de período encontrado</p>
+            </div>
+          </div>
+
+          <div style={{ background:'var(--fs-warning-bg)', border:'1px solid rgba(var(--fs-warning-rgb),0.3)', borderRadius:8, padding:'12px 14px', marginBottom:20 }}>
+            <p style={{ fontSize:13, color:'var(--fs-text-2)', margin:'0 0 6px' }}>
+              Já existem <strong style={{ color:'var(--fs-warning)' }}>{confirmModal.count} registros</strong> na base para o período:
+            </p>
+            <p style={{ fontSize:14, fontWeight:700, color:'var(--fs-text-1)', margin:0 }}>
+              📅 {confirmModal.periodo}
+            </p>
+          </div>
+
+          <p style={{ fontSize:13, color:'var(--fs-text-3)', marginBottom:20 }}>
+            O que deseja fazer com os dados existentes?
+          </p>
+
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            <button
+              onClick={async () => {
+                if (isFluxo) await importFluxo(true)
+                else         await importDre(true)
+              }}
+              style={{ background:'var(--fs-danger)', color:'#fff', border:'none', borderRadius:9, padding:'12px', fontSize:14, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
+            >
+              🔄 Substituir — apagar os {confirmModal.count} existentes e importar os novos
+            </button>
+            <button
+              onClick={() => setConfirmModal(null)}
+              style={{ background:'var(--fs-surface-2)', color:'var(--fs-text-1)', border:'1px solid var(--fs-border)', borderRadius:9, padding:'12px', fontSize:14, fontWeight:600, cursor:'pointer' }}
+            >
+              Cancelar — manter os dados existentes
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ color: 'var(--fs-text-1)', maxWidth: 960 }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      <ConfirmReplaceModal />
       {editingRow && (
         <MappingModal
           row={editingRow} planoContas={planoContas}

@@ -56,7 +56,7 @@ export default function FluxoComparativo() {
         <select style={S.select} value={per1} onChange={e => setPer1(e.target.value)}>
           {periodos.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
-        <span style={{color:'#6b7280'}}>vs</span>
+        <span style={{color:'var(--fs-text-4)'}}>vs</span>
         <select style={S.select} value={per2} onChange={e => setPer2(e.target.value)}>
           {periodos.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
@@ -81,8 +81,8 @@ export default function FluxoComparativo() {
               return (
                 <tr key={i}>
                   <td style={{...S.td, fontWeight:600}}>{item.label}</td>
-                  <td style={{...S.tdRight, color: item.a < 0 ? '#ef4444' : '#e5e7eb'}}>R$ {Math.abs(item.a)} mil</td>
-                  <td style={{...S.tdRight, color:'#9ca3af'}}>R$ {Math.abs(item.b)} mil</td>
+                  <td style={{...S.tdRight, color: item.a < 0 ? '#ef4444' : 'var(--fs-text-1)'}}>R$ {Math.abs(item.a)} mil</td>
+                  <td style={{...S.tdRight, color:'var(--fs-text-2)'}}>R$ {Math.abs(item.b)} mil</td>
                   <td style={{...S.tdRight, color: cor, fontWeight:700}}>{d.v > 0 ? '+' : ''}{d.v} mil</td>
                   <td style={{...S.tdRight, color: cor}}>{Number(d.pct) > 0 ? '+' : ''}{d.pct}%</td>
                 </tr>
@@ -102,7 +102,7 @@ export default function FluxoComparativo() {
               <div key={i} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:8}}>
                 <span style={{fontSize:12, color:'#3b82f6', fontWeight:700}}>R$ {d.saldo}</span>
                 <div style={{width:'100%', height:h, background:'#3b82f6', borderRadius:'4px 4px 0 0', opacity:0.8}} />
-                <span style={{fontSize:11, color:'#6b7280'}}>{d.mes}</span>
+                <span style={{fontSize:11, color:'var(--fs-text-4)'}}>{d.mes}</span>
               </div>
             )
           })}

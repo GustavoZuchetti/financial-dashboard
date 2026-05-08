@@ -91,9 +91,9 @@ const CustomTooltip = ({ active, payload, data }) => {
       <p style={{ margin:'0 0 6px', fontWeight:700, color:CHART_PALETTE.receita }}>{entry.name}</p>
       <p style={{ margin:'3px 0', color:'var(--fs-text-4)' }}>Total: <span style={{ color:'var(--fs-text-1)', fontWeight:700 }}>{fmtFull(Math.abs(entry.value))}</span></p>
       {details.length > 0 && <>
-        <p style={{ margin:'8px 0 3px', color:'var(--fs-text-4)', fontSize:11, borderTop:'1px solid #334155', paddingTop:5 }}>Top 80% (Pareto):</p>
+        <p style={{ margin:'8px 0 3px', color:'var(--fs-text-4)', fontSize:11, borderTop:'1px solid var(--fs-border)', paddingTop:5 }}>Top 80% (Pareto):</p>
         {details.map((d,i)=>(
-          <p key={i} style={{ margin:'1px 0 1px 8px', color:'#94a3b8', fontSize:11 }}>• {(d.descricao||d.categoria||'Item').substring(0,24)}: {fmtFull(Number(d.valor))}</p>
+          <p key={i} style={{ margin:'1px 0 1px 8px', color:'var(--fs-text-2)', fontSize:11 }}>• {(d.descricao||d.categoria||'Item').substring(0,24)}: {fmtFull(Number(d.valor))}</p>
         ))}
       </>}
     </div>
@@ -112,7 +112,7 @@ const PresentationOverlay = ({ kpis, prevKpis, waterfallData, startDate, endDate
   const mL = kpis.receita > 0 ? ((kpis.receita-kpis.custo-kpis.despesa)/kpis.receita*100) : 0
 
   return (
-    <div style={{ position:'fixed', inset:0, zIndex:9999, background:'#0a1628', display:'flex', flexDirection:'column', padding:'36px 48px', overflowY:'auto' }}>
+    <div style={{ position:'fixed', inset:0, zIndex:9999, background:'var(--fs-bg)', display:'flex', flexDirection:'column', padding:'36px 48px', overflowY:'auto' }}>
       <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}} @keyframes countUp{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}`}</style>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:32 }}>
         <div>
@@ -134,14 +134,14 @@ const PresentationOverlay = ({ kpis, prevKpis, waterfallData, startDate, endDate
       </div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14, marginBottom:28 }}>
         {[{l:'Margem Bruta',v:mB,c:'#8b5cf6'},{l:'Margem EBITDA',v:mE,c:CHART_PALETTE.despesa},{l:'Margem Líquida',v:mL,c:CHART_PALETTE.ebitda}].map(m=>(
-          <div key={m.l} style={{ background:'#131f35', border:'1px solid var(--fs-border)', borderRadius:10, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div key={m.l} style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
             <span style={{ color:'var(--fs-text-4)', fontSize:13 }}>{m.l}</span>
             <span style={{ color:m.v>=0?m.c:CHART_PALETTE.custo, fontSize:26, fontWeight:900 }}>{m.v.toFixed(1)}%</span>
           </div>
         ))}
       </div>
-      <div style={{ background:'#131f35', border:'1px solid var(--fs-border)', borderRadius:12, padding:'22px 28px', flex:1, minHeight:300 }}>
-        <h2 style={{ fontSize:15, fontWeight:700, color:'#e2e8f0', marginBottom:20 }}>Fluxo do Resultado (Waterfall)</h2>
+      <div style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'22px 28px', flex:1, minHeight:300 }}>
+        <h2 style={{ fontSize:15, fontWeight:700, color:'var(--fs-text-1)', marginBottom:20 }}>Fluxo do Resultado (Waterfall)</h2>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={waterfallData} margin={{top:10,right:30,left:0,bottom:40}}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
@@ -229,7 +229,7 @@ export default function DREGeral() {
       <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}} @keyframes countUp{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}`}</style>
       {presentation && <PresentationOverlay kpis={kpis} prevKpis={prevKpis} waterfallData={wfData} startDate={startDate} endDate={endDate} isConsolidado={isConsolidado} loading={loading} onExit={()=>setPresentation(false)} data={data} />}
 
-      <div style={{ color:'#e2e8f0', padding:24 }}>
+      <div style={{ color:'var(--fs-text-1)', padding:24 }}>
         {/* Header */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexWrap:'wrap', gap:12 }}>
           <h1 style={{ fontSize:24, fontWeight:800, color:'var(--fs-text-1)', display:'flex', alignItems:'center' }}>
@@ -273,7 +273,7 @@ export default function DREGeral() {
 
         {/* Waterfall */}
         <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px', marginBottom:20, minHeight:400, display:'flex', flexDirection:'column' }}>
-          <h2 style={{ fontSize:15, fontWeight:700, color:'#f1f5f9', marginBottom:20 }}>Fluxo do Resultado (Waterfall)</h2>
+          <h2 style={{ fontSize:15, fontWeight:700, color:'var(--fs-text-1)', marginBottom:20 }}>Fluxo do Resultado (Waterfall)</h2>
           {loading ? (
             <div style={{ flex:1, height:300, background:'linear-gradient(90deg,var(--fs-surface) 25%,var(--fs-surface-2) 50%,var(--fs-surface) 75%)', backgroundSize:'200% 100%', animation:'shimmer 1.5s infinite', borderRadius:8 }} />
           ) : data.length===0 ? (

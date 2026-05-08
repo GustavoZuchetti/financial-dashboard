@@ -282,7 +282,7 @@ export default function ImportacaoPage() {
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          style={{ border: `2px dashed ${isDragging ? '#3b82f6' : '#334155'}`, borderRadius: 16, padding: '64px 24px', textAlign: 'center', cursor: 'pointer', background: isDragging ? 'rgba(59,130,246,0.06)' : '#1e293b', transition: 'all 0.2s', marginBottom: 20 }}
+          style={{ border: `2px dashed ${isDragging ? '#3b82f6' : 'var(--fs-border)'}`, borderRadius: 16, padding: '64px 24px', textAlign: 'center', cursor: 'pointer', background: isDragging ? 'rgba(59,130,246,0.06)' : '#1e293b', transition: 'all 0.2s', marginBottom: 20 }}
         >
           <div style={{ width: 56, height: 56, background: 'rgba(59,130,246,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
             <svg width="28" height="28" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
@@ -347,7 +347,7 @@ export default function ImportacaoPage() {
                       </td>
                       <td style={{ padding: '10px 12px' }}>
                         <button onClick={() => { setEditingRow(row); setSelectedContaId('') }}
-                          style={{ background: map ? 'transparent' : '#2563eb', color: map ? 'var(--fs-text-4)' : '#fff', border: map ? '1px solid #334155' : 'none', padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                          style={{ background: map ? 'transparent' : '#2563eb', color: map ? 'var(--fs-text-4)' : '#fff', border: map ? '1px solid var(--fs-border)' : 'none', padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                           {map ? 'Alterar' : 'Configurar'}
                         </button>
                       </td>

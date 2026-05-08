@@ -31,7 +31,7 @@ export default function LoginPage() {
         @keyframes float1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(30px,-20px) scale(1.05)} }
         @keyframes float2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-20px,30px) scale(1.03)} }
         @keyframes float3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(20px,20px)  scale(1.04)} }
-        .inp { width:100%; background:#1a2540; border:1px solid; border-radius:10px; padding:12px 14px; color:#f1f5f9; font-size:14px; outline:none; box-sizing:border-box; transition:border-color 0.2s, box-shadow 0.2s; }
+        .inp { width:100%; background:var(--fs-input-bg); border:1px solid var(--fs-input-border); border-radius:10px; padding:12px 14px; color:var(--fs-text-1); font-size:14px; outline:none; box-sizing:border-box; transition:border-color 0.2s, box-shadow 0.2s; }
         .inp:focus { border-color:#3b82f6 !important; box-shadow:0 0 0 3px rgba(59,130,246,0.15); }
         .btn-login { width:100%; background:linear-gradient(135deg,#1d4ed8,#3b82f6); color:#fff; border:none; border-radius:10px; padding:13px; font-size:15px; font-weight:700; cursor:pointer; transition:all 0.2s; letter-spacing:0.3px; }
         .btn-login:hover:not(:disabled) { background:linear-gradient(135deg,#1e40af,#2563eb); transform:translateY(-1px); box-shadow:0 8px 25px rgba(59,130,246,0.35); }
@@ -100,24 +100,24 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom:16 }}>
-              <label style={{ display:'block', fontSize:13, fontWeight:600, color:'#94a3b8', marginBottom:6 }}>E-mail</label>
+              <label style={{ display:'block', fontSize:13, fontWeight:600, color:'var(--fs-text-2)', marginBottom:6 }}>E-mail</label>
               <input
                 className="inp"
                 type="email" value={email}
                 onChange={e => setEmail(e.target.value)}
                 onFocus={() => setFocus('email')} onBlur={() => setFocus(null)}
-                style={{ borderColor: focus === 'email' ? '#3b82f6' : '#334155' }}
+                style={{ borderColor: focus === 'email' ? '#3b82f6' : 'var(--fs-border)' }}
                 placeholder="seu@email.com" required
               />
             </div>
             <div style={{ marginBottom:24 }}>
-              <label style={{ display:'block', fontSize:13, fontWeight:600, color:'#94a3b8', marginBottom:6 }}>Senha</label>
+              <label style={{ display:'block', fontSize:13, fontWeight:600, color:'var(--fs-text-2)', marginBottom:6 }}>Senha</label>
               <input
                 className="inp"
                 type="password" value={password}
                 onChange={e => setPassword(e.target.value)}
                 onFocus={() => setFocus('password')} onBlur={() => setFocus(null)}
-                style={{ borderColor: focus === 'password' ? '#3b82f6' : '#334155' }}
+                style={{ borderColor: focus === 'password' ? '#3b82f6' : 'var(--fs-border)' }}
                 placeholder="••••••••" required
               />
             </div>

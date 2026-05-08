@@ -42,7 +42,7 @@ export default function FluxoCaixaProjecao() {
 
       <div style={{display:'flex', gap:8, marginBottom:24}}>
         {['base','otimista','pessimista'].map(c => (
-          <button key={c} onClick={() => setCenario(c)} style={{padding:'8px 20px', borderRadius:8, border:'1px solid var(--fs-border)', background: cenario===c?'#3b82f6':'transparent', color: cenario===c?'#000':'#9ca3af', fontWeight:600, cursor:'pointer', fontSize:13, textTransform:'capitalize'}}>
+          <button key={c} onClick={() => setCenario(c)} style={{padding:'8px 20px', borderRadius:8, border:'1px solid var(--fs-border)', background: cenario===c?'#3b82f6':'transparent', color: cenario===c?'var(--fs-text-1)':'var(--fs-text-4)', fontWeight:600, cursor:'pointer', fontSize:13, textTransform:'capitalize'}}>
             {c}
           </button>
         ))}
@@ -52,17 +52,17 @@ export default function FluxoCaixaProjecao() {
         <div style={S.card}>
           <div style={S.kpiLabel}>Projecao Proximos 6 Meses</div>
           <div style={{...S.kpiValue, color:'#3b82f6'}}>R$ {(projecoes.reduce((s,p) => s + p.entradas, 0) * multiplicador).toFixed(0)} mil</div>
-          <div style={{fontSize:12,color:'#6b7280',marginTop:4}}>Total entradas projetadas</div>
+          <div style={{fontSize:12,color:'var(--fs-text-4)',marginTop:4}}>Total entradas projetadas</div>
         </div>
         <div style={S.card}>
           <div style={S.kpiLabel}>Total Saidas Projetadas</div>
           <div style={{...S.kpiValue, color:'#ef4444'}}>R$ {(projecoes.reduce((s,p) => s + p.saidas, 0) * multiplicador).toFixed(0)} mil</div>
-          <div style={{fontSize:12,color:'#6b7280',marginTop:4}}>Total saidas projetadas</div>
+          <div style={{fontSize:12,color:'var(--fs-text-4)',marginTop:4}}>Total saidas projetadas</div>
         </div>
         <div style={S.card}>
           <div style={S.kpiLabel}>Saldo Projetado Acumulado</div>
           <div style={{...S.kpiValue, color:'#3b82f6'}}>R$ {(projecoes[projecoes.length-1].acumulado * multiplicador).toFixed(0)} mil</div>
-          <div style={{fontSize:12,color:'#6b7280',marginTop:4}}>Acumulado Dez/2026</div>
+          <div style={{fontSize:12,color:'var(--fs-text-4)',marginTop:4}}>Acumulado Dez/2026</div>
         </div>
       </div>
 

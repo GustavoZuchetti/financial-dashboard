@@ -93,9 +93,9 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
     }}>
       <style>{`
         .nav-item-btn { transition: ${TRANSITION}; }
-        .nav-item-btn:hover { background: rgba(255,255,255,0.04) !important; }
+        .nav-item-btn:hover { background: rgba(var(--fs-brand-rgb),0.06) !important; }
         .sub-item-link { transition: ${TRANSITION}; }
-        .sub-item-link:hover { color: #cbd5e1 !important; background: rgba(255,255,255,0.03) !important; }
+        .sub-item-link:hover { color: var(--fs-text-1) !important; background: rgba(var(--fs-brand-rgb),0.04) !important; }
         .select-empresa { transition: ${TRANSITION}; }
         .select-empresa:focus { border-color: #3b82f6 !important; }
         .logout-btn { transition: ${TRANSITION}; }
@@ -158,14 +158,14 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '9px 14px',
                     cursor: 'pointer',
-                    color: active ? '#e2e8f0' : '#64748b',
-                    background: active ? 'rgba(59,130,246,0.07)' : 'transparent',
-                    borderLeft: active ? '2px solid #3b82f6' : '2px solid transparent',
+                    color: active ? 'var(--fs-text-1)' : 'var(--fs-text-4)',
+                    background: active ? 'rgba(var(--fs-brand-rgb),0.08)' : 'transparent',
+                    borderLeft: active ? '2px solid var(--fs-brand)' : '2px solid transparent',
                     fontSize: 13, fontWeight: active ? 600 : 400,
                     userSelect: 'none',
                   }}
                 >
-                  <span style={{ color: active ? '#3b82f6' : '#475569', flexShrink: 0 }}>
+                  <span style={{ color: active ? 'var(--fs-brand)' : 'var(--fs-text-4)', flexShrink: 0 }}>
                     <Icon path={ICONS[item.icon]} size={15} color="currentColor" />
                   </span>
                   <span style={{ flex: 1 }}>{item.label}</span>
@@ -184,14 +184,14 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '9px 14px',
-                    color: active ? '#e2e8f0' : '#64748b',
-                    background: active ? 'rgba(59,130,246,0.07)' : 'transparent',
-                    borderLeft: active ? '2px solid #3b82f6' : '2px solid transparent',
+                    color: active ? 'var(--fs-text-1)' : 'var(--fs-text-4)',
+                    background: active ? 'rgba(var(--fs-brand-rgb),0.08)' : 'transparent',
+                    borderLeft: active ? '2px solid var(--fs-brand)' : '2px solid transparent',
                     fontSize: 13, fontWeight: active ? 600 : 400,
                     textDecoration: 'none',
                   }}
                 >
-                  <span style={{ color: active ? '#3b82f6' : '#475569', flexShrink: 0 }}>
+                  <span style={{ color: active ? 'var(--fs-brand)' : 'var(--fs-text-4)', flexShrink: 0 }}>
                     <Icon path={ICONS[item.icon]} size={15} color="currentColor" />
                   </span>
                   {item.label}
@@ -210,9 +210,9 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
                         display: 'flex', alignItems: 'center', gap: 8,
                         padding: '7px 14px 7px 40px',
                         fontSize: 12,
-                        color: pathname === child.href ? '#93c5fd' : '#475569',
+                        color: pathname === child.href ? 'var(--fs-brand)' : 'var(--fs-text-4)',
                         textDecoration: 'none',
-                        borderLeft: pathname === child.href ? '2px solid rgba(59,130,246,0.4)' : '2px solid transparent',
+                        borderLeft: pathname === child.href ? '2px solid rgba(var(--fs-brand-rgb),0.4)' : '2px solid transparent',
                       }}
                     >
                       <span style={{ width: 4, height: 4, borderRadius: '50%', background: pathname === child.href ? '#3b82f6' : '#475569', flexShrink: 0 }} />

@@ -14,10 +14,10 @@ const S = {
     display: 'flex',
     alignItems: 'center',
     padding: `${12 + level * 8}px 16px`,
-    borderBottom: '1px solid #1f2937',
-    background: isTotal ? '#111827' : isExpanded ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
+    borderBottom: '1px solid var(--fs-border)',
+    background: isTotal ? 'var(--fs-surface-2)' : isExpanded ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
     fontWeight: isTotal ? '700' : level === 0 ? '600' : '400',
-    color: isTotal ? '#3b82f6' : '#e5e7eb',
+    color: isTotal ? 'var(--fs-brand)' : 'var(--fs-text-1)',
     cursor: 'pointer',
     transition: 'all 0.2s'
   }),

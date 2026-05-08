@@ -141,8 +141,8 @@ export default function DREAnalise() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={historico}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={fmt} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 11 }} tickFormatter={fmt} />
                 <Tooltip contentStyle={{ backgroundColor: 'var(--fs-bg)', border: '1px solid var(--fs-border)' }} formatter={(v) => fmt(v)} cursor={{ stroke: 'transparent' }} />
                 <Legend iconType="circle" />
                 <Line type="monotone" dataKey="receita" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} name="Receita" />
@@ -160,7 +160,7 @@ export default function DREAnalise() {
               <BarChart data={clientes} layout="vertical" margin={{ left: 100 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--fs-border)" />
                 <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} width={100} />
+                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 10 }} width={100} />
                 <Tooltip content={<CustomTooltipClientes data={allData} />} cursor={{ fill: 'transparent' }} />
                 <Bar dataKey="valor" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
@@ -175,8 +175,8 @@ export default function DREAnalise() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={historico}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 12 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 11 }} />
               <Tooltip contentStyle={{ backgroundColor: 'var(--fs-bg)', border: '1px solid var(--fs-border)' }} formatter={(v) => fmt(v)} cursor={{ stroke: 'transparent' }} />
               <Legend />
               <Line type="monotone" dataKey="ebitda" stroke="#8b5cf6" strokeWidth={2} name="EBITDA" />

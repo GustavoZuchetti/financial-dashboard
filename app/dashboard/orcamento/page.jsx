@@ -31,14 +31,14 @@ const S = {
   thLeft: { padding: '10px 12px', fontSize: '11px', color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--fs-border)', fontWeight: 700, textAlign: 'left' },
   td: { padding: '10px 12px', fontSize: '13px', color: 'var(--fs-text-1)', borderBottom: '1px solid var(--fs-border)', textAlign: 'right' },
   tdLeft: { padding: '10px 12px', fontSize: '13px', color: 'var(--fs-text-1)', borderBottom: '1px solid var(--fs-border)', textAlign: 'left' },
-  subtotal: { background: 'var(--fs-surface-2)', fontWeight: 700 },
+  subtotal: { background: 'var(--fs-surface-2)', fontWeight: 700, transition: 'background-color 0.3s' },
   total: { background: '#1e2235', fontWeight: 800, borderTop: '2px solid #2a2a4a' },
-  groupHeader: { background: 'var(--fs-bg)', borderTop: '2px solid var(--fs-border)', borderBottom: '1px solid var(--fs-border)' },
+  groupHeader: { background: 'var(--fs-surface-2)', borderTop: '1px solid var(--fs-border)', borderBottom: '1px solid var(--fs-border)' },
 }
 
 // ─── Badge F / D ─────────────────────────────────────────────────────────────────
 const FDBadge = ({ favorable, size = 'sm' }) => {
-  if (favorable === null) return <span style={{ color: '#4b5563', fontSize: '11px' }}>—</span>
+  if (favorable === null) return <span style={{ color: 'var(--fs-text-4)', fontSize: '11px' }}>—</span>
   return (
     <span style={{
       display: 'inline-block',
@@ -60,7 +60,7 @@ const FDBadge = ({ favorable, size = 'sm' }) => {
 const DRERow = ({ label, orcado, realizado, isExpense, isSubtotal, isTotal, isGroupHeader, indent = false }) => {
   const fd = calcFD(realizado, orcado, isExpense)
   const rowStyle = isTotal ? S.total : isSubtotal ? S.subtotal : isGroupHeader ? S.groupHeader : {}
-  const labelColor = isTotal ? '#fff' : isSubtotal ? '#e5e7eb' : isGroupHeader ? '#9ca3af' : '#d1d5db'
+  const labelColor = isTotal ? 'var(--fs-text-1)' : isSubtotal ? 'var(--fs-text-1)' : isGroupHeader ? 'var(--fs-text-3)' : 'var(--fs-text-2)'
   const fontSize = isTotal ? '14px' : isSubtotal ? '13px' : isGroupHeader ? '11px' : '13px'
 
   return (
@@ -68,7 +68,7 @@ const DRERow = ({ label, orcado, realizado, isExpense, isSubtotal, isTotal, isGr
       <td style={{ ...S.tdLeft, color: labelColor, fontSize, paddingLeft: indent ? '28px' : '12px', fontWeight: isTotal || isSubtotal ? 700 : 400, letterSpacing: isGroupHeader ? '0.8px' : 0 }}>
         {isGroupHeader ? label.toUpperCase() : label}
       </td>
-      <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : '#9ca3af' }}>
+      <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : 'var(--fs-text-3)' }}>
         {isGroupHeader ? '' : fmtFull(orcado)}
       </td>
       <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : '#fff', fontWeight: isTotal || isSubtotal ? 700 : 400 }}>
@@ -95,8 +95,8 @@ const KPICard = ({ label, orcado, realizado, isExpense, color }) => {
   return (
     <div style={{ background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: '12px', padding: '16px 20px', borderLeft: `3px solid ${color}` }}>
       <div style={{ fontSize: '11px', color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
-      <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--fs-text-1)', marginBottom: '4px' }}>{fmtFull(realizado)}</div>
-      <div style={{ fontSize: '12px', color: '#4b5563', marginBottom: '8px' }}>Orçado: {fmtFull(orcado)}</div>
+      <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--fs-brand)', marginBottom: '4px' }}>{fmtFull(realizado)}</div>
+      <div style={{ fontSize: '12px', color: 'var(--fs-text-4)', marginBottom: '8px' }}>Orçado: {fmtFull(orcado)}</div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ flex: 1, height: '4px', background: 'var(--fs-surface-3)', borderRadius: '2px', marginRight: '10px', overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${Math.min(100, atingimento)}%`, background: fd?.favorable ? '#10b981' : '#ef4444', borderRadius: '2px', transition: 'width 0.5s ease' }} />
@@ -232,7 +232,7 @@ export default function OrcamentoPage() {
               style={{
                 padding: '8px 16px', fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer',
                 background: viewMode === mode ? '#1d4ed8' : 'transparent',
-                color: viewMode === mode ? '#bfdbfe' : '#6b7280',
+                color: viewMode === mode ? '#fff' : 'var(--fs-text-4)',
                 transition: 'all 0.2s'
               }}
             >
@@ -240,7 +240,7 @@ export default function OrcamentoPage() {
             </button>
           ))}
         </div>
-        <span style={{ fontSize: '13px', color: '#4b5563', marginLeft: '4px' }}>{periodoLabel}</span>
+        <span style={{ fontSize: '13px', color: 'var(--fs-text-4)', marginLeft: '4px' }}>{periodoLabel}</span>
       </div>
 
       {loading ? (
@@ -280,7 +280,7 @@ export default function OrcamentoPage() {
                   {/* RECEITAS */}
                   <DRERow label="Receitas" isGroupHeader />
                   {receitaRows.length === 0
-                    ? <tr><td colSpan={6} style={{ ...S.tdLeft, color: '#4b5563', padding: '10px 28px', fontStyle: 'italic' }}>Sem lançamentos de receita neste período</td></tr>
+                    ? <tr><td colSpan={6} style={{ ...S.tdLeft, color: 'var(--fs-text-4)', padding: '10px 28px', fontStyle: 'italic' }}>Sem lançamentos de receita neste período</td></tr>
                     : receitaRows.map((r, i) => <DRERow key={i} label={r.categoria} orcado={r.orcado} realizado={r.realizado} isExpense={false} indent />)
                   }
                   <DRERow label="(=) Receita Bruta" orcado={totRec.o} realizado={totRec.r} isExpense={false} isSubtotal />
@@ -288,7 +288,7 @@ export default function OrcamentoPage() {
                   {/* CUSTOS */}
                   <DRERow label="Custos" isGroupHeader />
                   {custoRows.length === 0
-                    ? <tr><td colSpan={6} style={{ ...S.tdLeft, color: '#4b5563', padding: '10px 28px', fontStyle: 'italic' }}>Sem lançamentos de custo neste período</td></tr>
+                    ? <tr><td colSpan={6} style={{ ...S.tdLeft, color: 'var(--fs-text-4)', padding: '10px 28px', fontStyle: 'italic' }}>Sem lançamentos de custo neste período</td></tr>
                     : custoRows.map((r, i) => <DRERow key={i} label={r.categoria} orcado={r.orcado} realizado={r.realizado} isExpense={true} indent />)
                   }
                   <DRERow label="(–) Total Custos" orcado={totCus.o} realizado={totCus.r} isExpense={true} isSubtotal />
@@ -299,7 +299,7 @@ export default function OrcamentoPage() {
                   {/* DESPESAS */}
                   <DRERow label="Despesas Operacionais" isGroupHeader />
                   {despesaRows.length === 0
-                    ? <tr><td colSpan={6} style={{ ...S.tdLeft, color: '#4b5563', padding: '10px 28px', fontStyle: 'italic' }}>Sem lançamentos de despesa neste período</td></tr>
+                    ? <tr><td colSpan={6} style={{ ...S.tdLeft, color: 'var(--fs-text-4)', padding: '10px 28px', fontStyle: 'italic' }}>Sem lançamentos de despesa neste período</td></tr>
                     : despesaRows.map((r, i) => <DRERow key={i} label={r.categoria} orcado={r.orcado} realizado={r.realizado} isExpense={true} indent />)
                   }
                   <DRERow label="(–) Total Despesas" orcado={totDesp.o} realizado={totDesp.r} isExpense={true} isSubtotal />
@@ -319,8 +319,8 @@ export default function OrcamentoPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartMeses} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 11 }} tickFormatter={fmtCompact} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-4)', fontSize: 12 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-4)', fontSize: 11 }} tickFormatter={fmtCompact} />
                     <Tooltip
                       contentStyle={{ backgroundColor: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '8px', fontSize: '12px' }}
                       formatter={(v, name) => [fmtFull(v), name === 'orcado' ? 'Orçado' : 'Realizado']}
@@ -339,7 +339,7 @@ export default function OrcamentoPage() {
           )}
 
           {/* Legenda F/D */}
-          <div style={{ background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '8px', padding: '12px 16px', fontSize: '12px', color: '#4b5563', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+          <div style={{ background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '8px', padding: '12px 16px', fontSize: '12px', color: 'var(--fs-text-4)', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
             <span><strong style={{ color: 'var(--fs-text-4)' }}>Lógica F/D aplicada:</strong></span>
             <span>📈 <strong style={{ color: '#10b981' }}>Receita:</strong> Realizado {'>'} Orçado = Favorável</span>
             <span>📉 <strong style={{ color: '#10b981' }}>Custo/Despesa:</strong> Realizado {'<'} Orçado = Favorável</span>

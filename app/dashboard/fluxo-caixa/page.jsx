@@ -181,8 +181,8 @@ export default function FluxoCaixaGeral() {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} tickFormatter={fmt} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 12 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 12 }} tickFormatter={fmt} />
               <Tooltip content={<CustomTooltipFluxo data={data} />} cursor={{ fill: 'transparent' }} />
               <Legend verticalAlign="bottom" height={36}/>
               <Bar dataKey="entradas" fill="#3b82f6" barSize={40} radius={[4, 4, 0, 0]} name="Entradas" />

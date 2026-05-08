@@ -88,9 +88,9 @@ export default function CicloFinanceiroPage() {
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={MOCK_HIST} barGap={2}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--fs-border)" />
-              <XAxis dataKey="mes" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} />
-              <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickFormatter={v => v + 'd'} width={40} />
-              <Tooltip contentStyle={{ background: 'var(--fs-surface-2)', border: '1px solid #475569', borderRadius: 8 }} labelStyle={{ color: 'var(--fs-text-1)' }} formatter={(v, n) => [v + ' dias', n.toUpperCase()]} />
+              <XAxis dataKey="mes" tick={{ fill: 'var(--fs-text-4)', fontSize: 11 }} axisLine={false} />
+              <YAxis tick={{ fill: 'var(--fs-text-4)', fontSize: 11 }} axisLine={false} tickFormatter={v => v + 'd'} width={40} />
+              <Tooltip contentStyle={{ background: 'var(--fs-surface-2)', border: '1px solid var(--fs-border-2)', borderRadius: 8 }} labelStyle={{ color: 'var(--fs-text-1)' }} formatter={(v, n) => [v + ' dias', n.toUpperCase()]} />
               <Bar dataKey="pmr" fill="#3b82f6" radius={[4,4,0,0]} name="PMR" />
               <Bar dataKey="pmp" fill="#3b82f6" radius={[4,4,0,0]} name="PMP" />
               <Bar dataKey="pme" fill="#8b5cf6" radius={[4,4,0,0]} name="PME" />
@@ -102,10 +102,10 @@ export default function CicloFinanceiroPage() {
           <ResponsiveContainer width="100%" height={220}>
             <RadarChart data={RADAR_DATA}>
               <PolarGrid stroke="var(--fs-border)" />
-              <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 11 }} />
+              <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--fs-text-4)', fontSize: 11 }} />
               <Radar name="Atual" dataKey="A" stroke="#3b82f6" fill="rgba(59,130,246,0.15)" strokeWidth={2} />
               <Radar name="Ideal" dataKey="ideal" stroke="#3b82f6" fill="rgba(59,130,246,0.1)" strokeWidth={2} strokeDasharray="4 4" />
-              <Tooltip contentStyle={{ background: 'var(--fs-surface-2)', border: '1px solid #475569', borderRadius: 8 }} formatter={(v) => [v + ' dias']} />
+              <Tooltip contentStyle={{ background: 'var(--fs-surface-2)', border: '1px solid var(--fs-border-2)', borderRadius: 8 }} formatter={(v) => [v + ' dias']} />
             </RadarChart>
           </ResponsiveContainer>
         </div>

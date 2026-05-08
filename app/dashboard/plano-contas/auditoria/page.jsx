@@ -7,7 +7,7 @@ const S = {
   title: { fontSize: 26, fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 },
   subtitle: { color: 'var(--fs-text-4)', fontSize: 14, margin: '4px 0 0' },
   tabs: { display: 'flex', gap: 4, marginBottom: 24, background: 'var(--fs-surface)', borderRadius: 10, padding: 4, width: 'fit-content' },
-  tab: (a) => ({ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: a ? 600 : 400, color: a ? '#fff' : '#6b7280', background: a ? 'var(--fs-border)' : 'transparent', border: 'none', cursor: 'pointer' }),
+  tab: (a) => ({ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: a ? 600 : 400, color: a ? 'var(--fs-text-1)' : 'var(--fs-text-4)', background: a ? 'var(--fs-surface-2)' : 'transparent', border: 'none', cursor: 'pointer' }),
   card: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '24px', marginBottom: 16 },
   cardTitle: { fontSize: 16, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 16 },
   table: { width: '100%', borderCollapse: 'collapse' },

@@ -193,8 +193,8 @@ export default function FluxoCaixaAnalise() {
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={evolucaoData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11 }} tickFormatter={fmtCompact} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-4)', fontSize: 11 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-4)', fontSize: 11 }} tickFormatter={fmtCompact} />
               <Tooltip contentStyle={{ background: 'var(--fs-surface-2)', border: '1px solid var(--fs-border)', borderRadius: 8, fontSize: 12 }} formatter={(v, n) => [fmtFull(v), n === 'entradas' ? 'Entradas' : n === 'saidas' ? 'Saídas' : 'Saldo']} />
               <Legend formatter={v => v === 'entradas' ? 'Entradas' : v === 'saidas' ? 'Saídas' : 'Saldo'} />
               <Bar dataKey="entradas" fill={CHART_PALETTE.entrada} radius={[3,3,0,0]} barSize={22} name="entradas" />

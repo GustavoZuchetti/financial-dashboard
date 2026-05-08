@@ -43,8 +43,8 @@ const DREColumn = ({ title, startDate, endDate, waterfallData, kpis, onDateChang
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={waterfallData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} angle={-25} textAnchor="end" interval={0} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} tickFormatter={fmt} />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 10 }} angle={-25} textAnchor="end" interval={0} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 10 }} tickFormatter={fmt} />
             <Tooltip formatter={(v) => fmtFull(v)} contentStyle={{ backgroundColor: 'var(--fs-bg)', border: '1px solid var(--fs-border)' }} />
             <Bar dataKey="range">
               {waterfallData.map((entry, i) => (

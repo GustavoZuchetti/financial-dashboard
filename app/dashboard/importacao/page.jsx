@@ -334,7 +334,15 @@ export default function ImportacaoPage() {
         __id:    i,
         __desc:  (row['Descrição'] || row['descricao'] || row['Categoria'] || row['categoria'] || '').trim(),
         nome:    (row['Nome'] || row['nome'] || '').replace(/[\t\n\r]+/g, ' ').trim(),
-        valor:   parseValueBR(row['Valor Pago/Recebido'] || row['Valor Pago'] || row['Valor'] || row['valor'] || 0),
+        valor: (() => {
+          if (modulo === 'dre') {
+            // DRE (competência): usa Valor FATURADO (col D) — inclui não recebidos
+            return parseValueBR(row['Valor'] || row['valor'] || row['Valor Pago/Recebido'] || 0)
+          } else {
+            // FC (caixa): usa apenas Valor PAGO/RECEBIDO (col E) — só o que entrou no caixa
+            return parseValueBR(row['Valor Pago/Recebido'] || row['Valor Pago'] || 0)
+          }
+        })(),
         data: (() => {
           if (modulo === 'dre') {
             // DRE: regime de competência — usar campo Competência, fallback Data

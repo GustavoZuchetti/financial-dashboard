@@ -110,7 +110,7 @@ export default function FluxoCaixaGeral() {
             .eq('user_id', (await supabase.auth.getSession()).data.session.user.id);
           
           if (userEmpresas) {
-            const ids = userEmpresas.map(e => e.id);
+            const ids = (userEmpresas || []).map(e => e.id);
             query = query.in('empresa_id', ids);
           }
         } else {

@@ -181,7 +181,7 @@ export default function PlanoContasPage() {
         {filteredContas.length === 0 ? (
           <div style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>Nenhuma conta encontrada.</div>
         ) : (
-          filteredContas.map(conta => (
+          (filteredContas || []).map(conta => (
             <div key={conta.id} style={S.row2}>
               <div style={{ color: '#9ca3af', fontFamily: 'monospace' }}>{conta.codigo}</div>
               <div style={{ color: '#fff', fontWeight: 600 }}>{conta.nome}</div>

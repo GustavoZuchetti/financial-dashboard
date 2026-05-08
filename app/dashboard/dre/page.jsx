@@ -182,7 +182,7 @@ export default function DREGeral() {
     let q = supabase.from('lancamentos').select('*, empresas(nome)').gte('data',s).lte('data',e)
     if (consol) {
       const { data: ue } = await supabase.from('empresas').select('id').eq('user_id',(await supabase.auth.getSession()).data.session.user.id)
-      if (ue) q = q.in('empresa_id', ue.map(x=>x.id))
+      if (ue?.length) q = q.in('empresa_id', ue.map(x=>x.id))
     } else { q = q.eq('empresa_id', empId) }
     const { data: r, error: err } = await q
     if (err) throw err

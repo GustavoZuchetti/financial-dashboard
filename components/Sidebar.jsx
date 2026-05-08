@@ -132,7 +132,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
           onChange={e => onEmpresaChange(e.target.value)}
         >
           {empresas.length === 0 && <option value="">Nenhuma entidade</option>}
-          {empresas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+          {(empresas || []).map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
           {empresas.length > 1 && <option value="todas">📊 Todas (Consolidado)</option>}
         </select>
         {empresa === 'todas' && (
@@ -144,7 +144,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
 
       {/* ── Navegação ───────────────────────────────────────────── */}
       <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
-        {navItems.map(item => {
+        {(navItems || []).map(item => {
           const active = isGroupActive(item)
           const open = openMenus[item.href]
           return (
@@ -200,7 +200,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
               {/* Sub-itens */}
               {item.children && open && (
                 <div style={{ paddingBottom: 4 }}>
-                  {item.children.map(child => (
+                  {(item.children || []).map(child => (
                     <Link
                       key={child.href}
                       href={child.href}

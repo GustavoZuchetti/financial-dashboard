@@ -76,7 +76,7 @@ export default function DREDetalhado() {
             .eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
 
           if (userEmpresas) {
-            const ids = userEmpresas.map(e => e.id)
+            const ids = (userEmpresas || []).map(e => e.id)
             query = query.in('empresa_id', ids)
           }
         } else {
@@ -206,7 +206,7 @@ export default function DREDetalhado() {
 
         {hasChildren && isOpen && (
           <div>
-            {item.children.map(child => (
+            {(item.children || []).map(child => (
               <div key={`${key}-${child.codigo}`}>
                 <div style={S.row(child.level, false, false)}>
                   <div style={S.label}>
@@ -292,7 +292,7 @@ export default function DREDetalhado() {
 
       <div style={S.card}>
         <div style={{ overflowX: 'auto' }}>
-          {dreStructure.map(group => renderRow(group, 'root'))}
+          {(dreStructure || []).map(group => renderRow(group, 'root'))}
         </div>
       </div>
     </div>

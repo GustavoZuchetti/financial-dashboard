@@ -51,7 +51,7 @@ export default function FluxoCaixaAnalise() {
         let query = supabase.from('fluxo_caixa').select('*').gte('data', startDate).lte('data', endDate)
         if (isConsolidado) {
           const { data: userEmpresas } = await supabase.from('empresas').select('id').eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
-          if (userEmpresas) query = query.in('empresa_id', userEmpresas.map(e => e.id))
+          if (userEmpresas?.length) query = query.in('empresa_id', userEmpresas.map(e => e.id))
         } else {
           query = query.eq('empresa_id', empresaId)
         }

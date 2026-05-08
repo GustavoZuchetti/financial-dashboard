@@ -128,7 +128,7 @@ export default function ConfiguracoesPage() {
             {empresas.length === 0 ? (
               <p style={{ color: '#6b7280', fontSize: 13 }}>Nenhuma empresa cadastrada.</p>
             ) : (
-              empresas.map(emp => (
+              (empresas || []).map(emp => (
                 <div key={emp.id} style={S.empresaRow}>
                   <div>
                     <div style={{ fontWeight: 600, color: '#fff', fontSize: 14 }}>{emp.nome}</div>

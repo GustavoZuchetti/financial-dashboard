@@ -33,7 +33,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
       }
       const sheetName = workbook.SheetNames[0]
       const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
-      const rows = rawRows.map(row => {
+      const rows = (rawRows || []).map(row => {
         const r = {}
         Object.keys(row).forEach(k => { r[k.trim()] = typeof row[k] === 'string' ? row[k].trim() : row[k] })
         return r
@@ -206,7 +206,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
                   className="w-full bg-zinc-800 border border-zinc-700 rounded p-3 text-white outline-none focus:border-blue-500 appearance-none"
                 >
                   <option value="">Selecione uma conta...</option>
-                  {planoContas.map(c => (
+                  {(planoContas || []).map(c => (
                     <option key={c.id} value={c.id}>{c.nome}</option>
                   ))}
                 </select>

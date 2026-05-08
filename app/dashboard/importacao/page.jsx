@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import * as XLSX from 'xlsx'
-import { CheckCircle2, AlertCircle, Plus, Upload, FileText, Trash2 } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Plus, Upload, FileText, Trash2, Play } from 'lucide-react'
 
 export default function ImportacaoPage() {
   const [empresaId, setEmpresaId] = useState(null)
@@ -73,6 +73,20 @@ export default function ImportacaoPage() {
     }
   }
 
+  const simulateData = () => {
+    const data = [
+      { 'Nome': 'CLIENTE TESTE 1', 'Descrição': 'Receita de Serviços', 'Valor': 1500.00, 'Data': '2026-05-01' },
+      { 'Nome': 'FORNECEDOR TESTE 2', 'Descrição': 'AWS Cloud', 'Valor': 450.00, 'Data': '2026-05-02' },
+      { 'Nome': 'FORNECEDOR TESTE 3', 'Descrição': 'Aluguel Escritório', 'Valor': 2000.00, 'Data': '2026-05-03' }
+    ]
+    const processed = data.map((row, idx) => ({
+      ...row,
+      __id: idx,
+      __desc: String(row['Descrição'] || '').trim()
+    }))
+    setUploadedData(processed)
+  }
+
   const saveMapping = async () => {
     if (!selectedContaId || !editingRow) return
     try {
@@ -133,7 +147,15 @@ export default function ImportacaoPage() {
 
   return (
     <div className="p-6 text-gray-200 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-extrabold mb-8 text-white">Importação / De-Para</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-extrabold text-white">Importação / De-Para</h1>
+        <button 
+          onClick={simulateData}
+          className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-400 px-4 py-2 rounded-lg text-xs font-bold transition-all"
+        >
+          <Play size={14} /> Simular Dados (Teste)
+        </button>
+      </div>
 
       <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-6">
         <label className="block mb-2 text-gray-400 text-xs font-bold uppercase tracking-wider">Empresa Selecionada</label>

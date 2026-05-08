@@ -22,9 +22,22 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
     setStatus('processing')
     try {
       const buffer = await file.arrayBuffer()
-      const workbook = XLSX.read(buffer, { type: 'array' })
+      const isCsv = file.name.toLowerCase().endsWith('.csv')
+      let workbook
+      if (isCsv) {
+        const text = new TextDecoder('utf-8').decode(buffer).replace(/^\uFEFF/, '')
+        const sep = text.split('\n')[0].includes(';') ? ';' : ','
+        workbook = XLSX.read(text, { type: 'string', FS: sep })
+      } else {
+        workbook = XLSX.read(buffer, { type: 'array' })
+      }
       const sheetName = workbook.SheetNames[0]
-      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
+      const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
+      const rows = rawRows.map(row => {
+        const r = {}
+        Object.keys(row).forEach(k => { r[k.trim()] = typeof row[k] === 'string' ? row[k].trim() : row[k] })
+        return r
+      })
       
       const processed = rows.map((row, index) => ({
         ...row,

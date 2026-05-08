@@ -50,13 +50,26 @@ export default function ImportacaoPage() {
     
     reader.onload = (evt) => {
       try {
-        const data = new Uint8Array(evt.target.result)
-        const workbook = XLSX.read(data, { type: 'array' })
+        const isCsv = file.name.toLowerCase().endsWith('.csv')
+        let workbook
+        if (isCsv) {
+          const text = new TextDecoder('utf-8').decode(evt.target.result).replace(/^\uFEFF/, '')
+          const sep = text.split('\n')[0].includes(';') ? ';' : ','
+          workbook = XLSX.read(text, { type: 'string', FS: sep })
+        } else {
+          workbook = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' })
+        }
         const firstSheetName = workbook.SheetNames[0]
         const worksheet = workbook.Sheets[firstSheetName]
         
         // Converter para JSON com suporte a cabeçalhos flexíveis
-        const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' })
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: '' })
+        // Normalizar: trim em chaves e valores string
+        const json = rawJson.map(row => {
+          const r = {}
+          Object.keys(row).forEach(k => { r[k.trim()] = typeof row[k] === 'string' ? row[k].trim() : row[k] })
+          return r
+        })
         
         if (json.length === 0) {
           setStatus('Arquivo vazio.')
@@ -68,7 +81,15 @@ export default function ImportacaoPage() {
           const desc = row['Descrição'] || row['descricao'] || row['Categoria'] || row['categoria'] || row['DESCRIÇÃO'] || ''
           const nome = row['Nome'] || row['nome'] || row['NOME'] || ''
           const valor = row['Valor'] || row['valor'] || row['Valor Pago/Recebido'] || 0
-          const data = row['Data'] || row['data'] || row['DATA'] || ''
+          // Converter data DD/MM/YYYY → YYYY-MM-DD para o banco
+          const rawDate = row['Liquidação'] || row['Data'] || row['data'] || row['DATA'] || ''
+          const parseBR = (s) => {
+            const m = String(s).trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+            if (m) return `${m[3]}-${m[2]}-${m[1]}`
+            if (String(s).match(/^\d{4}-\d{2}-\d{2}/)) return String(s).split('T')[0]
+            return new Date().toISOString().split('T')[0]
+          }
+          const data = parseBR(rawDate)
 
           return {
             __id: i,
@@ -126,7 +147,7 @@ export default function ImportacaoPage() {
         
         return {
           empresa_id: empresaId,
-          data: row.data || new Date().toISOString(),
+          data: row.data || new Date().toISOString().split('T')[0],
           descricao: row.nome || '',
           valor: isNaN(valor) ? 0 : valor,
           tipo: map.tipo_destino,

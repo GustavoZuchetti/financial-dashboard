@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import * as XLSX from 'xlsx'
-import { CheckCircle2, AlertCircle, Plus, Upload, FileText, Trash2, Play } from 'lucide-react'
 
 export default function ImportacaoPage() {
   const [empresaId, setEmpresaId] = useState(null)
@@ -20,94 +19,52 @@ export default function ImportacaoPage() {
     const init = async () => {
       try {
         const { data: emps } = await supabase.from('empresas').select('*').order('nome')
-        const allEmps = emps || []
-        setEmpresas(allEmps)
-        
+        setEmpresas(emps || [])
         const savedId = localStorage.getItem('empresa_id')
-        const initialId = (savedId && allEmps.some(e => e.id === savedId)) ? savedId : allEmps[0]?.id
+        const initialId = savedId || emps?.[0]?.id
         setEmpresaId(initialId)
-        
         const { data: plano } = await supabase.from('plano_contas').select('*').order('nome')
         setPlanoContas(plano || [])
-
         if (initialId) {
           const { data: maps } = await supabase.from('categoria_mappings').select('*').eq('empresa_id', initialId)
           setMappings(maps || [])
         }
-      } catch (e) { 
-        console.error('Erro na inicialização:', e) 
-      } finally { 
-        setLoading(false) 
-      }
+      } catch (e) { console.error(e) } finally { setLoading(false) }
     }
     init()
   }, [])
 
-  const handleFile = async (e) => {
+  const handleFile = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    
-    try {
-      const reader = new FileReader()
-      reader.onload = (evt) => {
-        try {
-          const bstr = evt.target.result
-          const wb = XLSX.read(bstr, { type: 'binary' })
-          const wsname = wb.SheetNames[0]
-          const ws = wb.Sheets[wsname]
-          const data = XLSX.utils.sheet_to_json(ws, { defval: '' })
-          
-          const processed = data.map((row, idx) => ({
-            ...row,
-            __id: idx,
-            __desc: String(row['Descrição'] || row['descrição'] || '').trim()
-          }))
-          setUploadedData(processed)
-        } catch (err) {
-          alert('Erro ao ler o conteúdo do arquivo: ' + err.message)
-        }
-      }
-      reader.readAsBinaryString(file)
-    } catch (err) {
-      alert('Erro ao carregar o arquivo: ' + err.message)
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result
+        const wb = XLSX.read(bstr, { type: 'binary' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const data = XLSX.utils.sheet_to_json(ws, { defval: '' })
+        setUploadedData(data.map((row, i) => ({ ...row, __id: i, __desc: String(row['Descrição'] || row['descrição'] || '').trim() })))
+      } catch (err) { alert('Erro ao ler arquivo') }
     }
-  }
-
-  const simulateData = () => {
-    const data = [
-      { 'Nome': 'CLIENTE TESTE 1', 'Descrição': 'Receita de Serviços', 'Valor': 1500.00, 'Data': '2026-05-01' },
-      { 'Nome': 'FORNECEDOR TESTE 2', 'Descrição': 'AWS Cloud', 'Valor': 450.00, 'Data': '2026-05-02' },
-      { 'Nome': 'FORNECEDOR TESTE 3', 'Descrição': 'Aluguel Escritório', 'Valor': 2000.00, 'Data': '2026-05-03' }
-    ]
-    const processed = data.map((row, idx) => ({
-      ...row,
-      __id: idx,
-      __desc: String(row['Descrição'] || '').trim()
-    }))
-    setUploadedData(processed)
+    reader.readAsBinaryString(file)
   }
 
   const saveMapping = async () => {
     if (!selectedContaId || !editingRow) return
     try {
       const conta = planoContas.find(c => c.id === selectedContaId)
-      const { error } = await supabase.from('categoria_mappings').upsert({
+      await supabase.from('categoria_mappings').upsert({
         empresa_id: empresaId,
         categoria_origem: editingRow.__desc,
         conta_id: selectedContaId,
         tipo_destino: conta?.tipo || 'receita',
         ativo: true
       }, { onConflict: 'empresa_id,categoria_origem' })
-
-      if (error) throw error
-      
       const { data: maps } = await supabase.from('categoria_mappings').select('*').eq('empresa_id', empresaId)
       setMappings(maps || [])
       setEditingRow(null)
-      setSelectedContaId('')
-    } catch (e) { 
-      alert('Erro ao salvar mapeamento: ' + e.message) 
-    }
+    } catch (e) { alert('Erro ao salvar') }
   }
 
   const finalizeImport = async () => {
@@ -116,10 +73,8 @@ export default function ImportacaoPage() {
       const toInsert = uploadedData.map(row => {
         const map = mappings.find(m => m.categoria_origem.toLowerCase() === row.__desc.toLowerCase())
         if (!map) return null
-        
-        let valorRaw = row['Valor Pago/Recebido'] || row['Valor'] || 0
-        let valor = typeof valorRaw === 'number' ? valorRaw : parseFloat(String(valorRaw).replace(/\./g, '').replace(',', '.'))
-
+        let v = row['Valor Pago/Recebido'] || row['Valor'] || 0
+        let valor = typeof v === 'number' ? v : parseFloat(String(v).replace(/\./g, '').replace(',', '.'))
         return {
           empresa_id: empresaId,
           data: row['Data'] || row['data'] || new Date().toISOString(),
@@ -130,39 +85,24 @@ export default function ImportacaoPage() {
           categoria: row.__desc
         }
       }).filter(Boolean)
-
-      if (toInsert.length === 0) throw new Error('Nenhum dado mapeado para importar.')
-      const { error } = await supabase.from('lancamentos').insert(toInsert)
-      if (error) throw error
-      alert(`${toInsert.length} registros importados com sucesso!`)
+      if (toInsert.length > 0) await supabase.from('lancamentos').insert(toInsert)
+      alert('Importado com sucesso!')
       setUploadedData([])
-    } catch (e) { 
-      alert('Erro na importação: ' + e.message) 
-    } finally { 
-      setIsImporting(false) 
-    }
+    } catch (e) { alert('Erro na importação') } finally { setIsImporting(false) }
   }
 
-  if (loading) return <div className="p-8 text-white">Carregando sistema...</div>
+  if (loading) return <div className="p-8 text-white">Carregando...</div>
 
   return (
-    <div className="p-6 text-gray-200 max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-extrabold text-white">Importação / De-Para</h1>
-        <button 
-          onClick={simulateData}
-          className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-400 px-4 py-2 rounded-lg text-xs font-bold transition-all"
-        >
-          <Play size={14} /> Simular Dados (Teste)
-        </button>
-      </div>
-
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-6">
-        <label className="block mb-2 text-gray-400 text-xs font-bold uppercase tracking-wider">Empresa Selecionada</label>
+    <div className="p-6 text-white max-w-5xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Importação / De-Para</h1>
+      
+      <div className="bg-gray-900 p-4 rounded-lg mb-6 border border-gray-800">
+        <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">Empresa</label>
         <select 
-          className="w-full bg-black border border-gray-800 rounded-lg p-3 text-white outline-none focus:ring-2 focus:ring-blue-600"
+          className="w-full bg-black p-2 rounded border border-gray-700"
           value={empresaId || ''} 
-          onChange={(e) => { setEmpresaId(e.target.value); localStorage.setItem('empresa_id', e.target.value) }}
+          onChange={(e) => setEmpresaId(e.target.value)}
         >
           {empresas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
         </select>
@@ -170,112 +110,69 @@ export default function ImportacaoPage() {
 
       {uploadedData.length === 0 ? (
         <div 
-          className="border-2 border-dashed border-gray-800 rounded-2xl p-16 text-center cursor-pointer hover:border-blue-600 transition-all bg-gray-900/40"
-          onClick={() => fileInputRef.current?.click()}
+          className="border-2 border-dashed border-gray-700 p-12 text-center rounded-lg cursor-pointer hover:border-blue-500"
+          onClick={() => fileInputRef.current.click()}
         >
-          <Upload size={56} className="text-blue-600 mx-auto mb-6" />
-          <h3 className="text-xl font-bold text-white mb-2">Selecione seu arquivo CSV ou Excel</h3>
-          <p className="text-gray-500 text-sm">O sistema usará a coluna "Descrição" para o mapeamento automático</p>
-          <input ref={fileInputRef} type="file" hidden onChange={handleFile} accept=".csv,.xlsx" />
+          <p>Clique para selecionar o arquivo CSV ou Excel</p>
+          <input ref={fileInputRef} type="file" hidden onChange={handleFile} />
         </div>
       ) : (
-        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-3">
-              <FileText className="text-blue-600" />
-              <span className="font-bold text-white">{uploadedData.length} registros encontrados</span>
-            </div>
-            <button 
-              onClick={() => setUploadedData([])} 
-              className="text-red-500 hover:text-red-400 text-sm font-bold flex items-center gap-2 transition-colors"
-            >
-              <Trash2 size={18} /> Remover Arquivo
-            </button>
+        <div className="bg-gray-900 p-4 rounded-lg border border-gray-800">
+          <div className="flex justify-between mb-4">
+            <span>{uploadedData.length} registros</span>
+            <button onClick={() => setUploadedData([])} className="text-red-500 text-sm">Remover</button>
           </div>
-
-          <div className="overflow-x-auto rounded-lg border border-gray-800">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-800 text-gray-400 text-xs uppercase">
-                <tr>
-                  <th className="p-4">Descrição (Categoria)</th>
-                  <th className="p-4">Valor</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800">
-                {uploadedData.slice(0, 50).map(row => {
-                  const isMapped = mappings.some(m => m.categoria_origem.toLowerCase() === row.__desc.toLowerCase())
-                  return (
-                    <tr key={row.__id} className="hover:bg-gray-800/30 transition-colors">
-                      <td className="p-4 text-gray-200">{row.__desc || '-'}</td>
-                      <td className="p-4 text-gray-400">{row['Valor'] || row['Valor Pago/Recebido'] || '-'}</td>
-                      <td className="p-4">
-                        {isMapped ? 
-                          <span className="text-blue-500 font-bold text-[10px] flex items-center gap-1"><CheckCircle2 size={12}/> MAPEADO</span> : 
-                          <span className="text-red-500 font-bold text-[10px] flex items-center gap-1"><AlertCircle size={12}/> PENDENTE</span>
-                        }
-                      </td>
-                      <td className="p-4 text-right">
-                        {!isMapped && (
-                          <button 
-                            onClick={() => setEditingRow(row)} 
-                            className="text-blue-500 hover:text-blue-400 font-bold text-xs"
-                          >
-                            Configurar
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-gray-500 border-b border-gray-800">
+                <th className="py-2 text-left">Descrição</th>
+                <th className="py-2 text-left">Status</th>
+                <th className="py-2 text-right">Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {uploadedData.slice(0, 100).map(row => {
+                const map = mappings.find(m => m.categoria_origem.toLowerCase() === row.__desc.toLowerCase())
+                return (
+                  <tr key={row.__id} className="border-b border-gray-800/50">
+                    <td className="py-2">{row.__desc}</td>
+                    <td className="py-2">{map ? <span className="text-blue-400">Mapeado</span> : <span className="text-red-400">Pendente</span>}</td>
+                    <td className="py-2 text-right">
+                      {!map && <button onClick={() => setEditingRow(row)} className="text-blue-400">Configurar</button>}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
           <button 
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl mt-8 transition-all shadow-lg shadow-blue-900/20 disabled:opacity-50"
             onClick={finalizeImport} 
+            className="w-full bg-blue-600 py-3 rounded-lg mt-6 font-bold"
             disabled={isImporting}
           >
-            {isImporting ? '⏳ Importando...' : '🚀 Finalizar Importação'}
+            {isImporting ? 'Importando...' : 'Finalizar Importação'}
           </button>
         </div>
       )}
 
       {editingRow && (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-md shadow-2xl">
-            <h3 className="text-2xl font-black text-white mb-6">Configurar De-Para</h3>
-            <div className="mb-6">
-              <label className="block mb-2 text-gray-500 text-[10px] font-black uppercase tracking-widest">Categoria no Arquivo</label>
-              <div className="bg-black p-4 rounded-xl border border-gray-800 text-white font-bold">{editingRow.__desc}</div>
-            </div>
-            <div className="mb-8">
-              <label className="block mb-2 text-gray-500 text-[10px] font-black uppercase tracking-widest">Conta no Sistema (Destino)</label>
-              <select 
-                className="w-full bg-black border border-gray-800 rounded-xl p-4 text-white outline-none focus:ring-2 focus:ring-blue-600 appearance-none"
-                value={selectedContaId} 
-                onChange={(e) => setSelectedContaId(e.target.value)}
-              >
-                <option value="">Selecione uma conta...</option>
-                {planoContas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-              </select>
-            </div>
-            <div className="flex gap-4">
-              <button 
-                onClick={() => setEditingRow(null)} 
-                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-4 rounded-xl font-bold transition-all"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={saveMapping} 
-                disabled={!selectedContaId} 
-                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-bold transition-all disabled:opacity-50"
-              >
-                Salvar
-              </button>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md border border-gray-700">
+            <h2 className="text-xl font-bold mb-4">Configurar De-Para</h2>
+            <p className="text-sm text-gray-400 mb-2">Categoria no arquivo:</p>
+            <div className="bg-black p-2 rounded mb-4">{editingRow.__desc}</div>
+            <p className="text-sm text-gray-400 mb-2">Conta no sistema:</p>
+            <select 
+              className="w-full bg-black p-2 rounded border border-gray-700 mb-6"
+              value={selectedContaId} 
+              onChange={(e) => setSelectedContaId(e.target.value)}
+            >
+              <option value="">Selecione...</option>
+              {planoContas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </select>
+            <div className="flex gap-2">
+              <button onClick={() => setEditingRow(null)} className="flex-1 bg-gray-800 py-2 rounded">Cancelar</button>
+              <button onClick={saveMapping} className="flex-1 bg-blue-600 py-2 rounded">Salvar</button>
             </div>
           </div>
         </div>

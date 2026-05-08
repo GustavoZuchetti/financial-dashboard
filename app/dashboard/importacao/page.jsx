@@ -74,48 +74,6 @@ function Toast({ msg, type, onClose }) {
       <span style={{ color: colors[type], fontSize: 16 }}>{icons[type] || 'ℹ'}</span>
       <span style={{ flex: 1 }}>{msg}</span>
       <span onClick={onClose} style={{ cursor: 'pointer', color: 'var(--fs-text-4)', fontSize: 18, lineHeight: 1 }}>×</span>
-      {/* Gerenciar Dados */}
-      <div style={{ marginTop: 32, borderTop: '1px solid var(--fs-border)', paddingTop: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--fs-text-2)', margin: 0 }}>Gerenciar dados existentes</h3>
-            <p style={{ fontSize: 12, color: 'var(--fs-text-4)', margin: '2px 0 0' }}>
-              Remova todos os registros da empresa selecionada para começar do zero
-            </p>
-          </div>
-        </div>
-        {!confirmLimpar ? (
-          <div style={{ display: 'flex', gap: 10 }}>
-            {[
-              { label: 'Limpar DRE',           tabela: 'lancamentos',  color: 'var(--fs-danger)' },
-              { label: 'Limpar Fluxo de Caixa', tabela: 'fluxo_caixa', color: '#f59e0b'          },
-            ].map(btn => (
-              <button key={btn.tabela}
-                onClick={() => setConfirmLimpar(btn.tabela)}
-                style={{ background: 'transparent', border: `1px solid ${btn.color}`, borderRadius: 8, color: btn.color, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: 0.7 }}>
-                🗑 {btn.label}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={{ background: 'var(--fs-danger-bg)', border: '1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius: 10, padding: '14px 16px' }}>
-            <p style={{ fontSize: 13, color: 'var(--fs-text-1)', marginBottom: 12, fontWeight: 600 }}>
-              ⚠️ Confirma a exclusão de TODOS os registros de {confirmLimpar === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'} desta empresa?
-            </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => limparDados(confirmLimpar)} disabled={limpandoDados}
-                style={{ background: 'var(--fs-danger)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                {limpandoDados ? '⏳ Removendo...' : '✓ Confirmar exclusão'}
-              </button>
-              <button onClick={() => setConfirmLimpar(false)}
-                style={{ background: 'var(--fs-surface-2)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
     </div>
   )
 }
@@ -144,48 +102,6 @@ function DropZone({ onFile, label, sublabel, fileRef }) {
       <p style={{ color: 'var(--fs-text-1)', fontWeight: 700, fontSize: 15, margin: '0 0 5px' }}>{label}</p>
       <p style={{ color: 'var(--fs-text-4)', fontSize: 13, margin: 0 }}>{sublabel}</p>
       <input ref={fileRef} type="file" hidden accept=".csv,.xlsx,.xls" onChange={e => { onFile(e.target.files?.[0]); e.target.value = '' }} />
-      {/* Gerenciar Dados */}
-      <div style={{ marginTop: 32, borderTop: '1px solid var(--fs-border)', paddingTop: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--fs-text-2)', margin: 0 }}>Gerenciar dados existentes</h3>
-            <p style={{ fontSize: 12, color: 'var(--fs-text-4)', margin: '2px 0 0' }}>
-              Remova todos os registros da empresa selecionada para começar do zero
-            </p>
-          </div>
-        </div>
-        {!confirmLimpar ? (
-          <div style={{ display: 'flex', gap: 10 }}>
-            {[
-              { label: 'Limpar DRE',           tabela: 'lancamentos',  color: 'var(--fs-danger)' },
-              { label: 'Limpar Fluxo de Caixa', tabela: 'fluxo_caixa', color: '#f59e0b'          },
-            ].map(btn => (
-              <button key={btn.tabela}
-                onClick={() => setConfirmLimpar(btn.tabela)}
-                style={{ background: 'transparent', border: `1px solid ${btn.color}`, borderRadius: 8, color: btn.color, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: 0.7 }}>
-                🗑 {btn.label}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={{ background: 'var(--fs-danger-bg)', border: '1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius: 10, padding: '14px 16px' }}>
-            <p style={{ fontSize: 13, color: 'var(--fs-text-1)', marginBottom: 12, fontWeight: 600 }}>
-              ⚠️ Confirma a exclusão de TODOS os registros de {confirmLimpar === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'} desta empresa?
-            </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => limparDados(confirmLimpar)} disabled={limpandoDados}
-                style={{ background: 'var(--fs-danger)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                {limpandoDados ? '⏳ Removendo...' : '✓ Confirmar exclusão'}
-              </button>
-              <button onClick={() => setConfirmLimpar(false)}
-                style={{ background: 'var(--fs-surface-2)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
     </div>
   )
 }
@@ -258,48 +174,6 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
           </tbody>
         </table>
       </div>
-      {/* Gerenciar Dados */}
-      <div style={{ marginTop: 32, borderTop: '1px solid var(--fs-border)', paddingTop: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--fs-text-2)', margin: 0 }}>Gerenciar dados existentes</h3>
-            <p style={{ fontSize: 12, color: 'var(--fs-text-4)', margin: '2px 0 0' }}>
-              Remova todos os registros da empresa selecionada para começar do zero
-            </p>
-          </div>
-        </div>
-        {!confirmLimpar ? (
-          <div style={{ display: 'flex', gap: 10 }}>
-            {[
-              { label: 'Limpar DRE',           tabela: 'lancamentos',  color: 'var(--fs-danger)' },
-              { label: 'Limpar Fluxo de Caixa', tabela: 'fluxo_caixa', color: '#f59e0b'          },
-            ].map(btn => (
-              <button key={btn.tabela}
-                onClick={() => setConfirmLimpar(btn.tabela)}
-                style={{ background: 'transparent', border: `1px solid ${btn.color}`, borderRadius: 8, color: btn.color, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: 0.7 }}>
-                🗑 {btn.label}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={{ background: 'var(--fs-danger-bg)', border: '1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius: 10, padding: '14px 16px' }}>
-            <p style={{ fontSize: 13, color: 'var(--fs-text-1)', marginBottom: 12, fontWeight: 600 }}>
-              ⚠️ Confirma a exclusão de TODOS os registros de {confirmLimpar === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'} desta empresa?
-            </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => limparDados(confirmLimpar)} disabled={limpandoDados}
-                style={{ background: 'var(--fs-danger)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                {limpandoDados ? '⏳ Removendo...' : '✓ Confirmar exclusão'}
-              </button>
-              <button onClick={() => setConfirmLimpar(false)}
-                style={{ background: 'var(--fs-surface-2)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
     </div>
   )
 }
@@ -358,48 +232,6 @@ function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
           </button>
         </div>
       </div>
-      {/* Gerenciar Dados */}
-      <div style={{ marginTop: 32, borderTop: '1px solid var(--fs-border)', paddingTop: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--fs-text-2)', margin: 0 }}>Gerenciar dados existentes</h3>
-            <p style={{ fontSize: 12, color: 'var(--fs-text-4)', margin: '2px 0 0' }}>
-              Remova todos os registros da empresa selecionada para começar do zero
-            </p>
-          </div>
-        </div>
-        {!confirmLimpar ? (
-          <div style={{ display: 'flex', gap: 10 }}>
-            {[
-              { label: 'Limpar DRE',           tabela: 'lancamentos',  color: 'var(--fs-danger)' },
-              { label: 'Limpar Fluxo de Caixa', tabela: 'fluxo_caixa', color: '#f59e0b'          },
-            ].map(btn => (
-              <button key={btn.tabela}
-                onClick={() => setConfirmLimpar(btn.tabela)}
-                style={{ background: 'transparent', border: `1px solid ${btn.color}`, borderRadius: 8, color: btn.color, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: 0.7 }}>
-                🗑 {btn.label}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={{ background: 'var(--fs-danger-bg)', border: '1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius: 10, padding: '14px 16px' }}>
-            <p style={{ fontSize: 13, color: 'var(--fs-text-1)', marginBottom: 12, fontWeight: 600 }}>
-              ⚠️ Confirma a exclusão de TODOS os registros de {confirmLimpar === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'} desta empresa?
-            </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => limparDados(confirmLimpar)} disabled={limpandoDados}
-                style={{ background: 'var(--fs-danger)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                {limpandoDados ? '⏳ Removendo...' : '✓ Confirmar exclusão'}
-              </button>
-              <button onClick={() => setConfirmLimpar(false)}
-                style={{ background: 'var(--fs-surface-2)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
     </div>
   )
 }
@@ -856,23 +688,21 @@ export default function ImportacaoPage() {
       )}
       {/* Gerenciar Dados */}
       <div style={{ marginTop: 32, borderTop: '1px solid var(--fs-border)', paddingTop: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--fs-text-2)', margin: 0 }}>Gerenciar dados existentes</h3>
-            <p style={{ fontSize: 12, color: 'var(--fs-text-4)', margin: '2px 0 0' }}>
-              Remova todos os registros da empresa selecionada para começar do zero
-            </p>
-          </div>
+        <div style={{ marginBottom: 12 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--fs-text-2)', margin: 0 }}>Gerenciar dados existentes</h3>
+          <p style={{ fontSize: 12, color: 'var(--fs-text-4)', margin: '4px 0 0' }}>
+            Remova todos os registros da empresa selecionada para começar do zero
+          </p>
         </div>
         {!confirmLimpar ? (
           <div style={{ display: 'flex', gap: 10 }}>
             {[
-              { label: 'Limpar DRE',           tabela: 'lancamentos',  color: 'var(--fs-danger)' },
-              { label: 'Limpar Fluxo de Caixa', tabela: 'fluxo_caixa', color: '#f59e0b'          },
+              { label: 'Limpar DRE',            tabela: 'lancamentos',  color: 'var(--fs-danger)' },
+              { label: 'Limpar Fluxo de Caixa',  tabela: 'fluxo_caixa', color: 'var(--fs-warning)' },
             ].map(btn => (
               <button key={btn.tabela}
                 onClick={() => setConfirmLimpar(btn.tabela)}
-                style={{ background: 'transparent', border: `1px solid ${btn.color}`, borderRadius: 8, color: btn.color, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: 0.7 }}>
+                style={{ background: 'transparent', border: `1px solid ${btn.color}`, borderRadius: 8, color: btn.color, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                 🗑 {btn.label}
               </button>
             ))}

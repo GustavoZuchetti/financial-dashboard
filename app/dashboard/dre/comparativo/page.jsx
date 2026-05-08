@@ -7,11 +7,11 @@ const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency:
 const fmtFull = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
 const S = {
-  card: { backgroundColor: '#1f2937', borderRadius: '8px', padding: '20px', border: '1px solid #374151' },
-  kpiTitle: { fontSize: '12px', color: '#9ca3af', marginBottom: '4px' },
+  card: { backgroundColor: 'var(--fs-surface)', borderRadius: '8px', padding: '20px', border: '1px solid var(--fs-border)' },
+  kpiTitle: { fontSize: '12px', color: 'var(--fs-text-2)', marginBottom: '4px' },
   kpiValue: { fontSize: '18px', fontWeight: 'bold' },
-  sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', color: '#f3f4f6' },
-  input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' }
+  sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', color: 'var(--fs-text-1)' },
+  input: { background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' }
 }
 
 const KPICard = ({ title, value, color = '#3b82f6' }) => (
@@ -25,9 +25,9 @@ const DREColumn = ({ title, startDate, endDate, waterfallData, kpis, onDateChang
   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
     <div style={{ ...S.card, padding: '12px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-        <span style={{ fontSize: '13px', color: '#9ca3af' }}>Período 1:</span>
+        <span style={{ fontSize: '13px', color: 'var(--fs-text-2)' }}>Período 1:</span>
         <input type="date" style={S.input} value={startDate} onChange={(e) => onDateChange('start', e.target.value)} />
-        <span style={{ color: '#9ca3af' }}>→</span>
+        <span style={{ color: 'var(--fs-text-2)' }}>→</span>
         <input type="date" style={S.input} value={endDate} onChange={(e) => onDateChange('end', e.target.value)} />
       </div>
     </div>
@@ -42,10 +42,10 @@ const DREColumn = ({ title, startDate, endDate, waterfallData, kpis, onDateChang
       <div style={{ height: '300px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={waterfallData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} angle={-25} textAnchor="end" interval={0} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} tickFormatter={fmt} />
-            <Tooltip formatter={(v) => fmtFull(v)} contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} />
+            <Tooltip formatter={(v) => fmtFull(v)} contentStyle={{ backgroundColor: 'var(--fs-bg)', border: '1px solid var(--fs-border)' }} />
             <Bar dataKey="range">
               {waterfallData.map((entry, i) => (
                 <Cell key={i} fill={entry.type === 'total' ? '#3b82f6' : '#ef4444'} fillOpacity={entry.type === 'total' ? 0.8 : 1} />
@@ -133,7 +133,7 @@ export default function DREComparativo() {
   const waterfall2 = calcularWaterfall(kpis2);
 
   return (
-    <div style={{ padding: '24px', color: '#e5e7eb' }}>
+    <div style={{ padding: '24px', color: 'var(--fs-text-1)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>DRE Comparativo</h1>
       </div>

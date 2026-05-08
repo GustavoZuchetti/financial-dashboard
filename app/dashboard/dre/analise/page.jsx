@@ -7,9 +7,9 @@ const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency:
 const fmtFull = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
 const S = {
-  card: { backgroundColor: '#1f2937', borderRadius: '8px', padding: '20px', border: '1px solid #374151' },
-  sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', color: '#f3f4f6' },
-  input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' }
+  card: { backgroundColor: 'var(--fs-surface)', borderRadius: '8px', padding: '20px', border: '1px solid var(--fs-border)' },
+  sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', color: 'var(--fs-text-1)' },
+  input: { background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' }
 }
 
 // Componente CustomTooltip para Top Receitas com Pareto
@@ -27,14 +27,14 @@ const CustomTooltipClientes = ({ active, payload, data }) => {
   }).slice(0, 3);
 
   return (
-    <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: '#e5e7eb', fontSize: '12px' }}>
+    <div style={{ backgroundColor: 'var(--fs-bg)', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: 'var(--fs-text-1)', fontSize: '12px' }}>
       <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', color: '#3b82f6' }}>{entry.name}</p>
-      <p style={{ margin: '4px 0', color: '#9ca3af' }}>Total: <span style={{ color: '#fff', fontWeight: 'bold' }}>{fmtFull(entry.valor)}</span></p>
+      <p style={{ margin: '4px 0', color: 'var(--fs-text-2)' }}>Total: <span style={{ color: '#fff', fontWeight: 'bold' }}>{fmtFull(entry.valor)}</span></p>
       {topItems.length > 0 && (
         <>
-          <p style={{ margin: '8px 0 4px 0', color: '#9ca3af', fontSize: '11px' }}>Top 80% (Pareto):</p>
+          <p style={{ margin: '8px 0 4px 0', color: 'var(--fs-text-2)', fontSize: '11px' }}>Top 80% (Pareto):</p>
           {topItems.map((item, i) => (
-            <p key={i} style={{ margin: '2px 0 2px 8px', color: '#cbd5e1', fontSize: '11px' }}>
+            <p key={i} style={{ margin: '2px 0 2px 8px', color: 'var(--fs-text-1)', fontSize: '11px' }}>
               • {item.categoria?.substring(0, 20) || 'Item'}: {fmtFull(Number(item.valor))}
             </p>
           ))}
@@ -121,14 +121,14 @@ export default function DREAnalise() {
   }, [empresaId, startDate, endDate]);
 
   return (
-    <div style={{ padding: '24px', color: '#e5e7eb' }}>
+    <div style={{ padding: '24px', color: 'var(--fs-text-1)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>DRE Análise</h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#1f2937', padding: '8px 16px', borderRadius: '8px', border: '1px solid #374151' }}>
-            <span style={{ fontSize: '13px', color: '#9ca3af' }}>Período:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--fs-surface)', padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--fs-border)' }}>
+            <span style={{ fontSize: '13px', color: 'var(--fs-text-2)' }}>Período:</span>
             <input type="date" style={S.input} value={startDate} onChange={e => setStartDate(e.target.value)} />
-            <span style={{ color: '#9ca3af' }}>→</span>
+            <span style={{ color: 'var(--fs-text-2)' }}>→</span>
             <input type="date" style={S.input} value={endDate} onChange={e => setEndDate(e.target.value)} />
           </div>
         </div>
@@ -140,10 +140,10 @@ export default function DREAnalise() {
           <div style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={historico}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={fmt} />
-                <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} formatter={(v) => fmt(v)} cursor={{ stroke: 'transparent' }} />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--fs-bg)', border: '1px solid var(--fs-border)' }} formatter={(v) => fmt(v)} cursor={{ stroke: 'transparent' }} />
                 <Legend iconType="circle" />
                 <Line type="monotone" dataKey="receita" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} name="Receita" />
                 <Line type="monotone" dataKey="ebitda" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 4 }} name="EBITDA" />
@@ -158,7 +158,7 @@ export default function DREAnalise() {
           <div style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={clientes} layout="vertical" margin={{ left: 100 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#374151" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--fs-border)" />
                 <XAxis type="number" hide />
                 <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} width={100} />
                 <Tooltip content={<CustomTooltipClientes data={allData} />} cursor={{ fill: 'transparent' }} />
@@ -174,10 +174,10 @@ export default function DREAnalise() {
         <div style={{ height: '250px' }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={historico}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} />
-              <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }} formatter={(v) => fmt(v)} cursor={{ stroke: 'transparent' }} />
+              <Tooltip contentStyle={{ backgroundColor: 'var(--fs-bg)', border: '1px solid var(--fs-border)' }} formatter={(v) => fmt(v)} cursor={{ stroke: 'transparent' }} />
               <Legend />
               <Line type="monotone" dataKey="ebitda" stroke="#8b5cf6" strokeWidth={2} name="EBITDA" />
               <Line type="monotone" dataKey="receita" stroke="#3b82f6" strokeWidth={2} name="Receita" />

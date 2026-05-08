@@ -2,18 +2,18 @@
 import { useState } from 'react'
 
 const S = {
-  page: { color: '#e5e7eb' },
+  page: { color: 'var(--fs-text-1)' },
   header: { marginBottom: 24 },
   title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
-  subtitle: { color: '#6b7280', fontSize: 14, margin: '4px 0 0' },
-  card: { background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '24px', marginBottom: 16 },
+  subtitle: { color: 'var(--fs-text-4)', fontSize: 14, margin: '4px 0 0' },
+  card: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '24px', marginBottom: 16 },
   cardTitle: { fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 16 },
   table: { width: '100%', borderCollapse: 'collapse' },
-  th: { textAlign: 'left', color: '#6b7280', fontSize: 11, fontWeight: 600, padding: '10px 12px', borderBottom: '1px solid #334155', textTransform: 'uppercase' },
-  td: { padding: '12px', borderBottom: '1px solid #334155', fontSize: 14, color: '#e5e7eb' },
-  tdRight: { padding: '12px', borderBottom: '1px solid #334155', fontSize: 14, textAlign: 'right' },
+  th: { textAlign: 'left', color: 'var(--fs-text-4)', fontSize: 11, fontWeight: 600, padding: '10px 12px', borderBottom: '1px solid var(--fs-border)', textTransform: 'uppercase' },
+  td: { padding: '12px', borderBottom: '1px solid var(--fs-border)', fontSize: 14, color: 'var(--fs-text-1)' },
+  tdRight: { padding: '12px', borderBottom: '1px solid var(--fs-border)', fontSize: 14, textAlign: 'right' },
   grid3: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 },
-  kpiLabel: { fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', marginBottom: 8 },
+  kpiLabel: { fontSize: 11, fontWeight: 600, color: 'var(--fs-text-4)', textTransform: 'uppercase', marginBottom: 8 },
   kpiValue: { fontSize: 24, fontWeight: 800 },
   badge: (t) => ({ display:'inline-block', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700, background: t==='projetado'?'rgba(59,130,246,0.1)':'rgba(59,130,246,0.1)', color: t==='projetado'?'#3b82f6':'#3b82f6' }),
 }
@@ -42,7 +42,7 @@ export default function FluxoCaixaProjecao() {
 
       <div style={{display:'flex', gap:8, marginBottom:24}}>
         {['base','otimista','pessimista'].map(c => (
-          <button key={c} onClick={() => setCenario(c)} style={{padding:'8px 20px', borderRadius:8, border:'1px solid #334155', background: cenario===c?'#3b82f6':'transparent', color: cenario===c?'#000':'#9ca3af', fontWeight:600, cursor:'pointer', fontSize:13, textTransform:'capitalize'}}>
+          <button key={c} onClick={() => setCenario(c)} style={{padding:'8px 20px', borderRadius:8, border:'1px solid var(--fs-border)', background: cenario===c?'#3b82f6':'transparent', color: cenario===c?'#000':'#9ca3af', fontWeight:600, cursor:'pointer', fontSize:13, textTransform:'capitalize'}}>
             {c}
           </button>
         ))}

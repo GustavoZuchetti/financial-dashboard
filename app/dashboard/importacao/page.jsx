@@ -67,10 +67,10 @@ function Toast({ msg, type, onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 5000); return () => clearTimeout(t) }, [onClose])
   const colors = { success: '#10b981', error: '#ef4444', info: '#3b82f6' }
   return (
-    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, background: '#1e293b', border: `1px solid ${colors[type] || colors.info}`, borderRadius: 10, padding: '12px 18px', color: '#f1f5f9', fontSize: 13, fontWeight: 600, maxWidth: 400, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, background: 'var(--fs-surface)', border: `1px solid ${colors[type] || colors.info}`, borderRadius: 10, padding: '12px 18px', color: 'var(--fs-text-1)', fontSize: 13, fontWeight: 600, maxWidth: 400, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', gap: 10 }}>
       <span style={{ color: colors[type] || colors.info, fontSize: 16 }}>{type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span>
       <span style={{ flex: 1 }}>{msg}</span>
-      <span onClick={onClose} style={{ cursor: 'pointer', color: '#475569', fontSize: 18, lineHeight: 1 }}>×</span>
+      <span onClick={onClose} style={{ cursor: 'pointer', color: 'var(--fs-text-4)', fontSize: 18, lineHeight: 1 }}>×</span>
     </div>
   )
 }
@@ -255,19 +255,19 @@ export default function ImportacaoPage() {
   const mapeados = (uploadedData || []).length - pendentes.length
 
   return (
-    <div style={{ color: '#e2e8f0', maxWidth: 900 }}>
+    <div style={{ color: 'var(--fs-text-1)', maxWidth: 900 }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: '#f1f5f9', margin: 0 }}>Importação de Lançamentos</h1>
-        <p style={{ color: '#64748b', fontSize: 13, margin: '4px 0 0' }}>CSV ou XLSX do ERP Bling — separador detectado automaticamente</p>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 }}>Importação de Lançamentos</h1>
+        <p style={{ color: 'var(--fs-text-4)', fontSize: 13, margin: '4px 0 0' }}>CSV ou XLSX do ERP Bling — separador detectado automaticamente</p>
       </div>
 
       {/* Empresa */}
-      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '16px 20px', marginBottom: 20 }}>
-        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Empresa</label>
+      <div style={{ background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '16px 20px', marginBottom: 20 }}>
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Empresa</label>
         <select
-          style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, color: '#f1f5f9', padding: '9px 12px', fontSize: 13, width: '100%', outline: 'none' }}
+          style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, color: 'var(--fs-text-1)', padding: '9px 12px', fontSize: 13, width: '100%', outline: 'none' }}
           value={empresaId || ''}
           onChange={e => handleEmpresaChange(e.target.value)}
         >
@@ -287,12 +287,12 @@ export default function ImportacaoPage() {
           <div style={{ width: 56, height: 56, background: 'rgba(59,130,246,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
             <svg width="28" height="28" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
           </div>
-          <p style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 16, margin: '0 0 6px' }}>Arraste ou clique para selecionar</p>
-          <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>Suporta .csv (Bling) e .xlsx</p>
+          <p style={{ color: 'var(--fs-text-1)', fontWeight: 700, fontSize: 16, margin: '0 0 6px' }}>Arraste ou clique para selecionar</p>
+          <p style={{ color: 'var(--fs-text-4)', fontSize: 13, margin: 0 }}>Suporta .csv (Bling) e .xlsx</p>
           <input ref={fileInputRef} type="file" hidden accept=".csv,.xlsx,.xls" onChange={handleFileInput} />
         </div>
       ) : (
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 16, padding: 24, marginBottom: 20 }}>
+        <div style={{ background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 16, padding: 24, marginBottom: 20 }}>
           {/* Resumo */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <div style={{ display: 'flex', gap: 12 }}>
@@ -303,7 +303,7 @@ export default function ImportacaoPage() {
               ].map(k => (
                 <div key={k.label} style={{ background: `rgba(${k.color === '#3b82f6' ? '59,130,246' : k.color === '#10b981' ? '16,185,129' : '245,158,11'},0.1)`, border: `1px solid rgba(${k.color === '#3b82f6' ? '59,130,246' : k.color === '#10b981' ? '16,185,129' : '245,158,11'},0.2)`, borderRadius: 8, padding: '8px 16px', textAlign: 'center' }}>
                   <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.val}</div>
-                  <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase' }}>{k.label}</div>
+                  <div style={{ fontSize: 10, color: 'var(--fs-text-4)', textTransform: 'uppercase' }}>{k.label}</div>
                 </div>
               ))}
             </div>
@@ -319,12 +319,12 @@ export default function ImportacaoPage() {
           )}
 
           {/* Tabela */}
-          <div style={{ maxHeight: 380, overflowY: 'auto', borderRadius: 8, border: '1px solid #334155', marginBottom: 20 }}>
+          <div style={{ maxHeight: 380, overflowY: 'auto', borderRadius: 8, border: '1px solid var(--fs-border)', marginBottom: 20 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead style={{ position: 'sticky', top: 0, background: '#0f172a' }}>
+              <thead style={{ position: 'sticky', top: 0, background: 'var(--fs-bg)' }}>
                 <tr>
                   {['Descrição (Categoria)', 'Nome / Cliente', 'Valor', 'Data', 'Status', ''].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', textAlign: h === 'Valor' ? 'right' : 'left', color: '#64748b', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>{h}</th>
+                    <th key={h} style={{ padding: '10px 12px', textAlign: h === 'Valor' ? 'right' : 'left', color: 'var(--fs-text-4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', borderBottom: '1px solid var(--fs-border)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -332,13 +332,13 @@ export default function ImportacaoPage() {
                 {(uploadedData || []).map(row => {
                   const map = (mappings || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
                   return (
-                    <tr key={row.__id} style={{ borderBottom: '1px solid #1a2535' }}>
-                      <td style={{ padding: '10px 12px', color: '#cbd5e1', fontWeight: 600 }}>{row.__desc || '—'}</td>
-                      <td style={{ padding: '10px 12px', color: '#94a3b8', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.nome || '—'}</td>
+                    <tr key={row.__id} style={{ borderBottom: '1px solid var(--fs-border)' }}>
+                      <td style={{ padding: '10px 12px', color: 'var(--fs-text-1)', fontWeight: 600 }}>{row.__desc || '—'}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fs-text-2)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.nome || '—'}</td>
                       <td style={{ padding: '10px 12px', textAlign: 'right', color: '#10b981', fontWeight: 700 }}>
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(row.valor)}
                       </td>
-                      <td style={{ padding: '10px 12px', color: '#94a3b8' }}>{row.data}</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--fs-text-2)' }}>{row.data}</td>
                       <td style={{ padding: '10px 12px' }}>
                         {map
                           ? <span style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>✓ MAPEADO</span>
@@ -347,7 +347,7 @@ export default function ImportacaoPage() {
                       </td>
                       <td style={{ padding: '10px 12px' }}>
                         <button onClick={() => { setEditingRow(row); setSelectedContaId('') }}
-                          style={{ background: map ? 'transparent' : '#2563eb', color: map ? '#475569' : '#fff', border: map ? '1px solid #334155' : 'none', padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                          style={{ background: map ? 'transparent' : '#2563eb', color: map ? 'var(--fs-text-4)' : '#fff', border: map ? '1px solid #334155' : 'none', padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                           {map ? 'Alterar' : 'Configurar'}
                         </button>
                       </td>
@@ -370,18 +370,18 @@ export default function ImportacaoPage() {
       {/* Modal De-Para */}
       {editingRow && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-          <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 16, padding: 28, width: '100%', maxWidth: 480 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: '#f1f5f9', marginBottom: 20 }}>Configurar Mapeamento</h2>
+          <div style={{ background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 480 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--fs-text-1)', marginBottom: 20 }}>Configurar Mapeamento</h2>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>Categoria no arquivo</label>
-              <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '10px 14px', color: '#3b82f6', fontWeight: 700, fontSize: 14 }}>{editingRow.__desc}</div>
+              <label style={{ display: 'block', fontSize: 11, color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>Categoria no arquivo</label>
+              <div style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '10px 14px', color: '#3b82f6', fontWeight: 700, fontSize: 14 }}>{editingRow.__desc}</div>
             </div>
 
             <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', fontSize: 11, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>Conta de destino</label>
+              <label style={{ display: 'block', fontSize: 11, color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>Conta de destino</label>
               <select
-                style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, color: '#f1f5f9', padding: '10px 14px', fontSize: 14, width: '100%', outline: 'none' }}
+                style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, color: 'var(--fs-text-1)', padding: '10px 14px', fontSize: 14, width: '100%', outline: 'none' }}
                 value={selectedContaId}
                 onChange={e => setSelectedContaId(e.target.value)}
               >
@@ -394,7 +394,7 @@ export default function ImportacaoPage() {
 
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => { setEditingRow(null); setSelectedContaId('') }}
-                style={{ flex: 1, background: '#334155', color: '#e2e8f0', border: 'none', borderRadius: 8, padding: '11px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                style={{ flex: 1, background: 'var(--fs-surface-3)', color: 'var(--fs-text-1)', border: 'none', borderRadius: 8, padding: '11px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                 Cancelar
               </button>
               <button onClick={saveMapping} disabled={!selectedContaId}

@@ -7,11 +7,11 @@ const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency:
 const fmtFull = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
 const S = {
-  card: { backgroundColor: '#1f2937', borderRadius: '8px', padding: '20px', border: '1px solid #374151' },
-  kpiTitle: { fontSize: '14px', color: '#9ca3af', marginBottom: '8px' },
+  card: { backgroundColor: 'var(--fs-surface)', borderRadius: '8px', padding: '20px', border: '1px solid var(--fs-border)' },
+  kpiTitle: { fontSize: '14px', color: 'var(--fs-text-2)', marginBottom: '8px' },
   kpiValue: { fontSize: '24px', fontWeight: 'bold' },
-  sectionTitle: { fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', color: '#f3f4f6' },
-  input: { background: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' },
+  sectionTitle: { fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', color: 'var(--fs-text-1)' },
+  input: { background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' },
   badge: { display: 'inline-block', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', marginLeft: '8px' }
 }
 
@@ -54,15 +54,15 @@ const CustomTooltipFluxo = ({ active, payload, data }) => {
   }
 
   return (
-    <div style={{ backgroundColor: '#0f172a', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: '#e5e7eb', fontSize: '12px' }}>
+    <div style={{ backgroundColor: 'var(--fs-bg)', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: 'var(--fs-text-1)', fontSize: '12px' }}>
       <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', color: '#3b82f6' }}>{label}</p>
-      <p style={{ margin: '4px 0', color: '#9ca3af' }}>Período: <span style={{ color: '#fff', fontWeight: 'bold' }}>{entry.name}</span></p>
-      <p style={{ margin: '4px 0', color: '#9ca3af' }}>Total: <span style={{ color: '#fff', fontWeight: 'bold' }}>{fmtFull(payload[0]?.value || 0)}</span></p>
+      <p style={{ margin: '4px 0', color: 'var(--fs-text-2)' }}>Período: <span style={{ color: '#fff', fontWeight: 'bold' }}>{entry.name}</span></p>
+      <p style={{ margin: '4px 0', color: 'var(--fs-text-2)' }}>Total: <span style={{ color: '#fff', fontWeight: 'bold' }}>{fmtFull(payload[0]?.value || 0)}</span></p>
       {details.length > 0 && (
         <>
-          <p style={{ margin: '8px 0 4px 0', color: '#9ca3af', fontSize: '11px' }}>Top 80% (Pareto):</p>
+          <p style={{ margin: '8px 0 4px 0', color: 'var(--fs-text-2)', fontSize: '11px' }}>Top 80% (Pareto):</p>
           {details.map((d, i) => (
-            <p key={i} style={{ margin: '2px 0 2px 8px', color: '#cbd5e1', fontSize: '11px' }}>
+            <p key={i} style={{ margin: '2px 0 2px 8px', color: 'var(--fs-text-1)', fontSize: '11px' }}>
               • {d.descricao?.substring(0, 20) || d.categoria?.substring(0, 20) || 'Item'}: {fmtFull(Number(d.valor))}
             </p>
           ))}
@@ -153,17 +153,17 @@ export default function FluxoCaixaGeral() {
   });
 
   return (
-    <div style={{ padding: '24px', color: '#e5e7eb' }}>
+    <div style={{ padding: '24px', color: 'var(--fs-text-1)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>
           Fluxo de Caixa
           {isConsolidado && <span style={S.badge}>📊 Consolidado</span>}
         </h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#1f2937', padding: '8px 16px', borderRadius: '8px', border: '1px solid #374151' }}>
-            <span style={{ fontSize: '13px', color: '#9ca3af' }}>Período:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--fs-surface)', padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--fs-border)' }}>
+            <span style={{ fontSize: '13px', color: 'var(--fs-text-2)' }}>Período:</span>
             <input type="date" style={S.input} value={startDate} onChange={e => setStartDate(e.target.value)} />
-            <span style={{ color: '#9ca3af' }}>→</span>
+            <span style={{ color: 'var(--fs-text-2)' }}>→</span>
             <input type="date" style={S.input} value={endDate} onChange={e => setEndDate(e.target.value)} />
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function FluxoCaixaGeral() {
         <div style={{ height: '400px' }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} tickFormatter={fmt} />
               <Tooltip content={<CustomTooltipFluxo data={data} />} cursor={{ fill: 'transparent' }} />

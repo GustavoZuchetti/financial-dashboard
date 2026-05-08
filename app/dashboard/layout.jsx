@@ -82,10 +82,10 @@ export default function DashboardLayout({ children }) {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--fs-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
           <div style={{ width: 40, height: 40, border: '3px solid #1a1a2e', borderTop: '3px solid #3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-          <span style={{ color: '#9ca3af', fontSize: '14px', fontWeight: '500' }}>Carregando ambiente seguro...</span>
+          <span style={{ color: 'var(--fs-text-2)', fontSize: '14px', fontWeight: '500' }}>Carregando ambiente seguro...</span>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -94,7 +94,7 @@ export default function DashboardLayout({ children }) {
 
   return (
     <DashboardContext.Provider value={{ empresa, empresas, user, setEmpresa: handleEmpresaChange }}>
-      <div style={{ display: 'flex', minHeight: '100vh', background: '#0f172a' }}>
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--fs-bg)' }}>
         <Sidebar
           empresa={empresa}
           empresas={empresas}
@@ -104,7 +104,7 @@ export default function DashboardLayout({ children }) {
           {empresas.length === 0 && !loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '80vh', color: '#fff', textAlign: 'center' }}>
               <h2 style={{ fontSize: '24px', marginBottom: '12px' }}>Bem-vindo ao Financial Dashboard</h2>
-              <p style={{ color: '#9ca3af', marginBottom: '24px' }}>Você ainda não tem nenhuma empresa cadastrada.</p>
+              <p style={{ color: 'var(--fs-text-2)', marginBottom: '24px' }}>Você ainda não tem nenhuma empresa cadastrada.</p>
               <button 
                 onClick={() => router.push('/dashboard/configuracoes')}
                 style={{ background: '#3b82f6', color: '#000', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}

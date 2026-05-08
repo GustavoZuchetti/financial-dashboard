@@ -22,18 +22,18 @@ const calcFD = (realizado, orcado, isExpense) => {
 }
 
 const S = {
-  page: { color: '#e5e7eb', padding: '0' },
-  card: { background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '20px 24px', marginBottom: '16px' },
+  page: { color: 'var(--fs-text-1)', padding: '0' },
+  card: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: '12px', padding: '20px 24px', marginBottom: '16px' },
   cardTitle: { fontSize: '15px', fontWeight: 700, color: '#fff', marginBottom: '16px' },
-  select: { background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#e5e7eb', padding: '8px 12px', fontSize: '13px', outline: 'none' },
+  select: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: '8px', color: 'var(--fs-text-1)', padding: '8px 12px', fontSize: '13px', outline: 'none' },
   table: { width: '100%', borderCollapse: 'collapse' },
-  th: { padding: '10px 12px', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #334155', fontWeight: 700, textAlign: 'right' },
-  thLeft: { padding: '10px 12px', fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #334155', fontWeight: 700, textAlign: 'left' },
-  td: { padding: '10px 12px', fontSize: '13px', color: '#e5e7eb', borderBottom: '1px solid #1a2540', textAlign: 'right' },
-  tdLeft: { padding: '10px 12px', fontSize: '13px', color: '#e5e7eb', borderBottom: '1px solid #1a2540', textAlign: 'left' },
-  subtotal: { background: '#263548', fontWeight: 700 },
+  th: { padding: '10px 12px', fontSize: '11px', color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--fs-border)', fontWeight: 700, textAlign: 'right' },
+  thLeft: { padding: '10px 12px', fontSize: '11px', color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--fs-border)', fontWeight: 700, textAlign: 'left' },
+  td: { padding: '10px 12px', fontSize: '13px', color: 'var(--fs-text-1)', borderBottom: '1px solid var(--fs-border)', textAlign: 'right' },
+  tdLeft: { padding: '10px 12px', fontSize: '13px', color: 'var(--fs-text-1)', borderBottom: '1px solid var(--fs-border)', textAlign: 'left' },
+  subtotal: { background: 'var(--fs-surface-2)', fontWeight: 700 },
   total: { background: '#1e2235', fontWeight: 800, borderTop: '2px solid #2a2a4a' },
-  groupHeader: { background: '#131f35', borderTop: '2px solid #334155', borderBottom: '1px solid #334155' },
+  groupHeader: { background: 'var(--fs-bg)', borderTop: '2px solid var(--fs-border)', borderBottom: '1px solid var(--fs-border)' },
 }
 
 // ─── Badge F / D ─────────────────────────────────────────────────────────────────
@@ -93,12 +93,12 @@ const KPICard = ({ label, orcado, realizado, isExpense, color }) => {
   const atingimento = orcado > 0 ? (realizado / orcado * 100) : 0
 
   return (
-    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '16px 20px', borderLeft: `3px solid ${color}` }}>
-      <div style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
+    <div style={{ background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: '12px', padding: '16px 20px', borderLeft: `3px solid ${color}` }}>
+      <div style={{ fontSize: '11px', color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
       <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>{fmtFull(realizado)}</div>
       <div style={{ fontSize: '12px', color: '#4b5563', marginBottom: '8px' }}>Orçado: {fmtFull(orcado)}</div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ flex: 1, height: '4px', background: '#334155', borderRadius: '2px', marginRight: '10px', overflow: 'hidden' }}>
+        <div style={{ flex: 1, height: '4px', background: 'var(--fs-surface-3)', borderRadius: '2px', marginRight: '10px', overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${Math.min(100, atingimento)}%`, background: fd?.favorable ? '#10b981' : '#ef4444', borderRadius: '2px', transition: 'width 0.5s ease' }} />
         </div>
         <span style={{ fontSize: '12px', color: fd?.favorable ? '#10b981' : '#ef4444', fontWeight: 700, whiteSpace: 'nowrap' }}>
@@ -210,7 +210,7 @@ export default function OrcamentoPage() {
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#fff', margin: 0 }}>Budget vs. Realizado</h1>
-        <p style={{ color: '#6b7280', fontSize: '14px', margin: '4px 0 0' }}>
+        <p style={{ color: 'var(--fs-text-4)', fontSize: '14px', margin: '4px 0 0' }}>
           Análise de atingimento orçamentário com indicadores F/D (Favorável / Desfavorável)
         </p>
       </div>
@@ -224,7 +224,7 @@ export default function OrcamentoPage() {
           {[ANO_ATUAL, ANO_ATUAL - 1, ANO_ATUAL - 2].map(y => <option key={y} value={y}>{y}</option>)}
         </select>
         {/* Toggle Mensal / Acumulado */}
-        <div style={{ display: 'flex', background: '#131f35', border: '1px solid #334155', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '8px', overflow: 'hidden' }}>
           {['mensal', 'acumulado'].map(mode => (
             <button
               key={mode}
@@ -318,11 +318,11 @@ export default function OrcamentoPage() {
               <div style={{ height: '280px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartMeses} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 11 }} tickFormatter={fmtCompact} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '12px' }}
+                      contentStyle={{ backgroundColor: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '8px', fontSize: '12px' }}
                       formatter={(v, name) => [fmtFull(v), name === 'orcado' ? 'Orçado' : 'Realizado']}
                     />
                     <Legend formatter={(v) => v === 'orcado' ? 'Orçado' : 'Realizado'} />
@@ -339,8 +339,8 @@ export default function OrcamentoPage() {
           )}
 
           {/* Legenda F/D */}
-          <div style={{ background: '#131f35', border: '1px solid #334155', borderRadius: '8px', padding: '12px 16px', fontSize: '12px', color: '#4b5563', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-            <span><strong style={{ color: '#6b7280' }}>Lógica F/D aplicada:</strong></span>
+          <div style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '8px', padding: '12px 16px', fontSize: '12px', color: '#4b5563', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+            <span><strong style={{ color: 'var(--fs-text-4)' }}>Lógica F/D aplicada:</strong></span>
             <span>📈 <strong style={{ color: '#10b981' }}>Receita:</strong> Realizado {'>'} Orçado = Favorável</span>
             <span>📉 <strong style={{ color: '#10b981' }}>Custo/Despesa:</strong> Realizado {'<'} Orçado = Favorável</span>
             <span>⚠️ Resultado oposto em qualquer linha = Desfavorável</span>

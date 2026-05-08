@@ -2,23 +2,23 @@
 import { useState } from 'react'
 
 const S = {
-  page: { color: '#e5e7eb' },
+  page: { color: 'var(--fs-text-1)' },
   header: { marginBottom: 24 },
   title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
-  subtitle: { color: '#6b7280', fontSize: 14, margin: '4px 0 0' },
-  tabs: { display: 'flex', gap: 4, marginBottom: 24, background: '#1e293b', borderRadius: 10, padding: 4, width: 'fit-content' },
-  tab: (a) => ({ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: a ? 600 : 400, color: a ? '#fff' : '#6b7280', background: a ? '#334155' : 'transparent', border: 'none', cursor: 'pointer' }),
-  card: { background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '24px', marginBottom: 16 },
+  subtitle: { color: 'var(--fs-text-4)', fontSize: 14, margin: '4px 0 0' },
+  tabs: { display: 'flex', gap: 4, marginBottom: 24, background: 'var(--fs-surface)', borderRadius: 10, padding: 4, width: 'fit-content' },
+  tab: (a) => ({ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: a ? 600 : 400, color: a ? '#fff' : '#6b7280', background: a ? 'var(--fs-border)' : 'transparent', border: 'none', cursor: 'pointer' }),
+  card: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '24px', marginBottom: 16 },
   cardTitle: { fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 16 },
   table: { width: '100%', borderCollapse: 'collapse' },
-  th: { textAlign: 'left', color: '#6b7280', fontSize: 12, fontWeight: 600, padding: '10px 12px', borderBottom: '1px solid #334155', textTransform: 'uppercase' },
-  td: { padding: '12px', borderBottom: '1px solid #334155', fontSize: 14, color: '#e5e7eb' },
+  th: { textAlign: 'left', color: 'var(--fs-text-4)', fontSize: 12, fontWeight: 600, padding: '10px 12px', borderBottom: '1px solid var(--fs-border)', textTransform: 'uppercase' },
+  td: { padding: '12px', borderBottom: '1px solid var(--fs-border)', fontSize: 14, color: 'var(--fs-text-1)' },
   badge: (t) => ({ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: t === 'criacao' ? 'rgba(59,130,246,0.1)' : t === 'edicao' ? 'rgba(59,130,246,0.1)' : 'rgba(239,68,68,0.1)', color: t === 'criacao' ? '#3b82f6' : t === 'edicao' ? '#3b82f6' : '#ef4444' }),
-  input: { width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' },
+  input: { width: '100%', background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' },
   filterRow: { display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center' },
   kpiRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 },
-  kpi: { background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '20px 24px' },
-  kpiLabel: { fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', marginBottom: 8 },
+  kpi: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '20px 24px' },
+  kpiLabel: { fontSize: 11, fontWeight: 600, color: 'var(--fs-text-4)', textTransform: 'uppercase', marginBottom: 8 },
   kpiValue: { fontSize: 22, fontWeight: 800, color: '#fff' },
 }
 
@@ -99,17 +99,17 @@ export default function AuditoriaPage() {
           <tbody>
             {filtrados.map(l => (
               <tr key={l.id}>
-                <td style={{...S.td, color: '#6b7280', fontSize: 12}}>{l.data}</td>
+                <td style={{...S.td, color: 'var(--fs-text-4)', fontSize: 12}}>{l.data}</td>
                 <td style={S.td}>{l.usuario}</td>
                 <td style={S.td}><span style={S.badge(l.acao)}>{l.acao}</span></td>
                 <td style={{...S.td, fontWeight: 600}}>{l.conta}</td>
-                <td style={{...S.td, color: '#9ca3af'}}>{l.detalhe}</td>
+                <td style={{...S.td, color: 'var(--fs-text-2)'}}>{l.detalhe}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {filtrados.length === 0 && (
-          <div style={{textAlign:'center', padding: 40, color: '#6b7280'}}>Nenhum registro encontrado</div>
+          <div style={{textAlign:'center', padding: 40, color: 'var(--fs-text-4)'}}>Nenhum registro encontrado</div>
         )}
       </div>
     </div>

@@ -34,16 +34,16 @@ const KPICard = ({ title, rawValue, accent = CHART_PALETTE.receita, loading, pre
 
   return (
     <div style={{
-      background: '#1e293b',
-      border: '1px solid #334155',
+      background: 'var(--fs-surface)',
+      border: '1px solid var(--fs-border)',
       borderTop: `3px solid ${accent}`,
       borderRadius: 12,
       padding: large ? '24px 20px' : '16px 18px',
       transition: 'box-shadow 0.2s',
     }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>{title}</div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>{title}</div>
       {loading ? (
-        <div style={{ height: large ? 36 : 28, width: '75%', borderRadius: 6, background: 'linear-gradient(90deg,#1e293b 25%,#263548 50%,#1e293b 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+        <div style={{ height: large ? 36 : 28, width: '75%', borderRadius: 6, background: 'linear-gradient(90deg,var(--fs-surface) 25%,var(--fs-surface-2) 50%,var(--fs-surface) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
       ) : (
         <>
           <div style={{
@@ -57,7 +57,7 @@ const KPICard = ({ title, rawValue, accent = CHART_PALETTE.receita, loading, pre
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 13, color: favorable ? fColor : dColor }}>{delta >= 0 ? '▲' : '▼'}</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: favorable ? fColor : dColor }}>{fmtPct(delta)}</span>
-              <span style={{ fontSize: 10, color: '#334155' }}>vs anterior</span>
+              <span style={{ fontSize: 10, color: 'var(--fs-text-4)' }}>vs anterior</span>
               <span style={{
                 fontSize: 10, fontWeight: 700,
                 color: favorable ? fColor : dColor,
@@ -87,11 +87,11 @@ const CustomTooltip = ({ active, payload, data }) => {
   else if (entry.name==='Custos')   details=getTop('custo')
   else if (entry.name==='Despesas') details=getTop('despesa')
   return (
-    <div style={{ background:'#1a2540', border:'1px solid #334155', borderRadius:8, padding:10, fontSize:12, boxShadow:'0 8px 24px rgba(0,0,0,0.5)' }}>
+    <div style={{ background:'#1a2540', border:'1px solid var(--fs-border)', borderRadius:8, padding:10, fontSize:12, boxShadow:'0 8px 24px rgba(0,0,0,0.5)' }}>
       <p style={{ margin:'0 0 6px', fontWeight:700, color:CHART_PALETTE.receita }}>{entry.name}</p>
-      <p style={{ margin:'3px 0', color:'#475569' }}>Total: <span style={{ color:'#fff', fontWeight:700 }}>{fmtFull(Math.abs(entry.value))}</span></p>
+      <p style={{ margin:'3px 0', color:'var(--fs-text-4)' }}>Total: <span style={{ color:'#fff', fontWeight:700 }}>{fmtFull(Math.abs(entry.value))}</span></p>
       {details.length > 0 && <>
-        <p style={{ margin:'8px 0 3px', color:'#475569', fontSize:11, borderTop:'1px solid #334155', paddingTop:5 }}>Top 80% (Pareto):</p>
+        <p style={{ margin:'8px 0 3px', color:'var(--fs-text-4)', fontSize:11, borderTop:'1px solid #334155', paddingTop:5 }}>Top 80% (Pareto):</p>
         {details.map((d,i)=>(
           <p key={i} style={{ margin:'1px 0 1px 8px', color:'#94a3b8', fontSize:11 }}>• {(d.descricao||d.categoria||'Item').substring(0,24)}: {fmtFull(Number(d.valor))}</p>
         ))}
@@ -121,7 +121,7 @@ const PresentationOverlay = ({ kpis, prevKpis, waterfallData, startDate, endDate
             <span style={{ fontSize:20, fontWeight:900, color:'#fff', letterSpacing:'-0.5px' }}>Facesign</span>
             {isConsolidado && <span style={{ background:'rgba(59,130,246,0.12)', color:'#93c5fd', border:'1px solid rgba(59,130,246,0.25)', padding:'3px 12px', borderRadius:20, fontSize:11, fontWeight:700 }}>Consolidado</span>}
           </div>
-          <div style={{ color:'#334155', fontSize:13 }}>Demonstrativos Executivos — {formatPeriod(startDate, endDate)}</div>
+          <div style={{ color:'var(--fs-text-4)', fontSize:13 }}>Demonstrativos Executivos — {formatPeriod(startDate, endDate)}</div>
         </div>
         <button onClick={onExit} style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', color:'#f87171', padding:'9px 18px', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:700 }}>✕ Sair (ESC)</button>
       </div>
@@ -134,17 +134,17 @@ const PresentationOverlay = ({ kpis, prevKpis, waterfallData, startDate, endDate
       </div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14, marginBottom:28 }}>
         {[{l:'Margem Bruta',v:mB,c:'#8b5cf6'},{l:'Margem EBITDA',v:mE,c:CHART_PALETTE.despesa},{l:'Margem Líquida',v:mL,c:CHART_PALETTE.ebitda}].map(m=>(
-          <div key={m.l} style={{ background:'#131f35', border:'1px solid #334155', borderRadius:10, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <span style={{ color:'#475569', fontSize:13 }}>{m.l}</span>
+          <div key={m.l} style={{ background:'#131f35', border:'1px solid var(--fs-border)', borderRadius:10, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span style={{ color:'var(--fs-text-4)', fontSize:13 }}>{m.l}</span>
             <span style={{ color:m.v>=0?m.c:CHART_PALETTE.custo, fontSize:26, fontWeight:900 }}>{m.v.toFixed(1)}%</span>
           </div>
         ))}
       </div>
-      <div style={{ background:'#131f35', border:'1px solid #334155', borderRadius:12, padding:'22px 28px', flex:1, minHeight:300 }}>
+      <div style={{ background:'#131f35', border:'1px solid var(--fs-border)', borderRadius:12, padding:'22px 28px', flex:1, minHeight:300 }}>
         <h2 style={{ fontSize:15, fontWeight:700, color:'#e2e8f0', marginBottom:20 }}>Fluxo do Resultado (Waterfall)</h2>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={waterfallData} margin={{top:10,right:30,left:0,bottom:40}}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'#475569',fontSize:11}} interval={0} angle={-20} textAnchor="end" />
             <YAxis axisLine={false} tickLine={false} tick={{fill:'#475569',fontSize:11}} tickFormatter={fmt} />
             <Tooltip content={<CustomTooltip data={data} />} cursor={{fill:'transparent'}} />
@@ -154,7 +154,7 @@ const PresentationOverlay = ({ kpis, prevKpis, waterfallData, startDate, endDate
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <div style={{ textAlign:'center', marginTop:14, color:'#1e293b', fontSize:11 }}>Facesign — Uso Interno Confidencial — {new Date().toLocaleDateString('pt-BR')}</div>
+      <div style={{ textAlign:'center', marginTop:14, color:'var(--fs-text-4)', fontSize:11 }}>Facesign — Uso Interno Confidencial — {new Date().toLocaleDateString('pt-BR')}</div>
     </div>
   )
 }
@@ -237,11 +237,11 @@ export default function DREGeral() {
             {isConsolidado && <span style={badge}>📊 Consolidado</span>}
           </h1>
           <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8, background:'#1e293b', padding:'7px 14px', borderRadius:8, border:'1px solid #334155' }}>
-              <span style={{ fontSize:12, color:'#475569' }}>Período:</span>
-              <input type="date" style={{ background:'#1a2540', border:'1px solid #334155', borderRadius:6, color:'#fff', padding:'5px 8px', fontSize:12, outline:'none' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
-              <span style={{ color:'#334155' }}>→</span>
-              <input type="date" style={{ background:'#1a2540', border:'1px solid #334155', borderRadius:6, color:'#fff', padding:'5px 8px', fontSize:12, outline:'none' }} value={endDate}   onChange={e=>setEndDate(e.target.value)} />
+            <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--fs-surface)', padding:'7px 14px', borderRadius:8, border:'1px solid var(--fs-border)' }}>
+              <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>Período:</span>
+              <input type="date" style={{ background:'#1a2540', border:'1px solid var(--fs-border)', borderRadius:6, color:'#fff', padding:'5px 8px', fontSize:12, outline:'none' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
+              <span style={{ color:'var(--fs-text-4)' }}>→</span>
+              <input type="date" style={{ background:'#1a2540', border:'1px solid var(--fs-border)', borderRadius:6, color:'#fff', padding:'5px 8px', fontSize:12, outline:'none' }} value={endDate}   onChange={e=>setEndDate(e.target.value)} />
             </div>
             <button onClick={()=>setPresentation(true)} style={{ background:'linear-gradient(135deg,#1e3a5f,#1d4ed8)', border:'1px solid #2563eb', color:'#bfdbfe', padding:'8px 16px', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:700 }}>
               🎯 Apresentação
@@ -263,8 +263,8 @@ export default function DREGeral() {
         {!loading && data.length > 0 && (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:22 }}>
             {[{l:'Margem Bruta',v:mB,c:'#8b5cf6'},{l:'Margem EBITDA',v:mE,c:CHART_PALETTE.despesa},{l:'Margem Líquida',v:mL,c:CHART_PALETTE.ebitda}].map(m=>(
-              <div key={m.l} style={{ background:'#1a2540', border:'1px solid #334155', borderRadius:8, padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ color:'#475569', fontSize:12 }}>{m.l}</span>
+              <div key={m.l} style={{ background:'#1a2540', border:'1px solid var(--fs-border)', borderRadius:8, padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>{m.l}</span>
                 <span style={{ color:m.v>=0?m.c:CHART_PALETTE.custo, fontSize:17, fontWeight:800 }}>{m.v.toFixed(1)}%</span>
               </div>
             ))}
@@ -272,12 +272,12 @@ export default function DREGeral() {
         )}
 
         {/* Waterfall */}
-        <div style={{ background:'#1e293b', border:'1px solid #334155', borderRadius:12, padding:'20px 24px', marginBottom:20, minHeight:400, display:'flex', flexDirection:'column' }}>
+        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px', marginBottom:20, minHeight:400, display:'flex', flexDirection:'column' }}>
           <h2 style={{ fontSize:15, fontWeight:700, color:'#f1f5f9', marginBottom:20 }}>Fluxo do Resultado (Waterfall)</h2>
           {loading ? (
-            <div style={{ flex:1, height:300, background:'linear-gradient(90deg,#1e293b 25%,#263548 50%,#1e293b 75%)', backgroundSize:'200% 100%', animation:'shimmer 1.5s infinite', borderRadius:8 }} />
+            <div style={{ flex:1, height:300, background:'linear-gradient(90deg,var(--fs-surface) 25%,var(--fs-surface-2) 50%,var(--fs-surface) 75%)', backgroundSize:'200% 100%', animation:'shimmer 1.5s infinite', borderRadius:8 }} />
           ) : data.length===0 ? (
-            <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'#334155', flexDirection:'column', gap:8 }}>
+            <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--fs-text-4)', flexDirection:'column', gap:8 }}>
               <span style={{ fontSize:32 }}>📊</span>
               <span>Nenhum lançamento no período selecionado</span>
             </div>
@@ -285,7 +285,7 @@ export default function DREGeral() {
             <div style={{ height:360 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={wfData} margin={{top:10,right:30,left:0,bottom:40}}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'#475569',fontSize:11}} interval={0} angle={-25} textAnchor="end" />
                   <YAxis axisLine={false} tickLine={false} tick={{fill:'#475569',fontSize:11}} tickFormatter={fmt} />
                   <Tooltip content={<CustomTooltip data={data} />} cursor={{fill:'transparent'}} />
@@ -299,7 +299,7 @@ export default function DREGeral() {
         </div>
 
         {!loading && prevData.length > 0 && (
-          <div style={{ textAlign:'right', color:'#1e293b', fontSize:11 }}>
+          <div style={{ textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>
             ℹ️ Variações vs período anterior: {formatPeriod(...Object.values(getPrevPeriod(startDate,endDate)))}
           </div>
         )}

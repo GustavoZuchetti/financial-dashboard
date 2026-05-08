@@ -5,32 +5,32 @@ import { supabase } from '@/lib/supabase'
 const fmtFull = (v) => v !== undefined ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v) : ''
 
 const S = {
-  page: { color: '#e5e7eb' },
+  page: { color: 'var(--fs-text-1)' },
   header: { marginBottom: 24 },
   title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
-  subtitle: { color: '#6b7280', fontSize: 14, margin: '4px 0 0' },
+  subtitle: { color: 'var(--fs-text-4)', fontSize: 14, margin: '4px 0 0' },
   toolbar: { display: 'flex', gap: 10, marginBottom: 20, alignItems: 'center', justifyContent: 'space-between' },
-  searchInput: { background: '#1e293b', border: '1px solid #334155', borderRadius: 8, color: '#e5e7eb', padding: '8px 14px', fontSize: 13, width: 260 },
+  searchInput: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 8, color: 'var(--fs-text-1)', padding: '8px 14px', fontSize: 13, width: 260 },
   btn: { background: '#3b82f6', color: '#000', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
   btnImport: { background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
-  card: { background: '#1e293b', border: '1px solid #334155', borderRadius: 12, overflow: 'hidden' },
-  tableHead: { display: 'grid', gridTemplateColumns: '120px 1fr 100px 140px 100px', padding: '10px 16px', background: '#0f172a', borderBottom: '1px solid #334155' },
-  th: { color: '#9ca3af', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 },
-  row1: { padding: '12px 16px', display: 'grid', gridTemplateColumns: '120px 1fr 100px 140px 100px', borderBottom: '1px solid #334155', background: 'rgba(59,130,246,0.04)', alignItems: 'center' },
-  row2: { padding: '10px 16px', display: 'grid', gridTemplateColumns: '120px 1fr 100px 140px 100px', borderBottom: '1px solid #334155', background: 'rgba(255,255,255,0.02)', alignItems: 'center' },
+  card: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, overflow: 'hidden' },
+  tableHead: { display: 'grid', gridTemplateColumns: '120px 1fr 100px 140px 100px', padding: '10px 16px', background: 'var(--fs-bg)', borderBottom: '1px solid var(--fs-border)' },
+  th: { color: 'var(--fs-text-2)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 },
+  row1: { padding: '12px 16px', display: 'grid', gridTemplateColumns: '120px 1fr 100px 140px 100px', borderBottom: '1px solid var(--fs-border)', background: 'rgba(59,130,246,0.04)', alignItems: 'center' },
+  row2: { padding: '10px 16px', display: 'grid', gridTemplateColumns: '120px 1fr 100px 140px 100px', borderBottom: '1px solid var(--fs-border)', background: 'rgba(255,255,255,0.02)', alignItems: 'center' },
   row3: { padding: '9px 16px 9px 32px', display: 'grid', gridTemplateColumns: '120px 1fr 100px 140px 100px', borderBottom: '1px solid #0d0d18', alignItems: 'center' },
   badge: (t) => ({ display: 'inline-block', padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: t === 'analitica' ? 'rgba(59,130,246,0.15)' : 'rgba(139,92,246,0.15)', color: t === 'analitica' ? '#60a5fa' : '#a78bfa' }),
-  toggleBtn: { background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 16, marginRight: 6 },
+  toggleBtn: { background: 'transparent', border: 'none', color: 'var(--fs-text-2)', cursor: 'pointer', fontSize: 16, marginRight: 6 },
   editBtn: { background: 'transparent', border: '1px solid #3b82f6', borderRadius: 6, color: '#3b82f6', padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modal: { background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '24px', width: 500, maxWidth: '90%' },
+  modal: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '24px', width: 500, maxWidth: '90%' },
   modalTitle: { fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 20 },
   formGroup: { marginBottom: 16 },
-  label: { display: 'block', fontSize: 12, fontWeight: 600, color: '#9ca3af', marginBottom: 6 },
-  input: { width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: 8, color: '#fff', padding: '10px 12px', fontSize: 14 },
-  select: { width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: 8, color: '#fff', padding: '10px 12px', fontSize: 14 },
+  label: { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--fs-text-2)', marginBottom: 6 },
+  input: { width: '100%', background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, color: '#fff', padding: '10px 12px', fontSize: 14 },
+  select: { width: '100%', background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, color: '#fff', padding: '10px 12px', fontSize: 14 },
   modalActions: { display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 },
-  btnCancel: { background: 'transparent', color: '#9ca3af', border: '1px solid #334155', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' },
+  btnCancel: { background: 'transparent', color: 'var(--fs-text-2)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   btnSave: { background: '#3b82f6', color: '#000', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }
 }
 
@@ -179,11 +179,11 @@ export default function PlanoContasPage() {
         </div>
         
         {filteredContas.length === 0 ? (
-          <div style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>Nenhuma conta encontrada.</div>
+          <div style={{ padding: 20, textAlign: 'center', color: 'var(--fs-text-4)' }}>Nenhuma conta encontrada.</div>
         ) : (
           (filteredContas || []).map(conta => (
             <div key={conta.id} style={S.row2}>
-              <div style={{ color: '#9ca3af', fontFamily: 'monospace' }}>{conta.codigo}</div>
+              <div style={{ color: 'var(--fs-text-2)', fontFamily: 'monospace' }}>{conta.codigo}</div>
               <div style={{ color: '#fff', fontWeight: 600 }}>{conta.nome}</div>
               <div><span style={S.badge(conta.tipo)}>{conta.tipo}</span></div>
               <div>

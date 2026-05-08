@@ -3,23 +3,23 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const S = {
-  page: { color: '#e5e7eb' },
+  page: { color: 'var(--fs-text-1)' },
   header: { marginBottom: 24 },
   title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
-  subtitle: { color: '#6b7280', fontSize: 14, margin: '4px 0 0' },
-  tabs: { display: 'flex', gap: 4, marginBottom: 24, background: '#1e293b', borderRadius: 10, padding: 4, width: 'fit-content' },
-  tab: (a) => ({ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: a ? 600 : 400, color: a ? '#fff' : '#6b7280', background: a ? '#334155' : 'transparent', cursor: 'pointer', border: 'none' }),
-  card: { background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '24px', marginBottom: 16 },
+  subtitle: { color: 'var(--fs-text-4)', fontSize: 14, margin: '4px 0 0' },
+  tabs: { display: 'flex', gap: 4, marginBottom: 24, background: 'var(--fs-surface)', borderRadius: 10, padding: 4, width: 'fit-content' },
+  tab: (a) => ({ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: a ? 600 : 400, color: a ? '#fff' : '#6b7280', background: a ? 'var(--fs-border)' : 'transparent', cursor: 'pointer', border: 'none' }),
+  card: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '24px', marginBottom: 16 },
   cardTitle: { fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 4 },
-  cardSub: { color: '#6b7280', fontSize: 13, marginBottom: 20 },
-  label: { display: 'block', color: '#9ca3af', fontSize: 13, fontWeight: 500, marginBottom: 6 },
-  input: { width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 16 },
+  cardSub: { color: 'var(--fs-text-4)', fontSize: 13, marginBottom: 20 },
+  label: { display: 'block', color: 'var(--fs-text-2)', fontSize: 13, fontWeight: 500, marginBottom: 6 },
+  input: { width: '100%', background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 16 },
   grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
   btn: { background: '#3b82f6', color: '#000', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
-  btnGhost: { background: 'transparent', color: '#9ca3af', border: '1px solid #334155', borderRadius: 8, padding: '10px 20px', fontSize: 14, cursor: 'pointer' },
+  btnGhost: { background: 'transparent', color: 'var(--fs-text-2)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '10px 20px', fontSize: 14, cursor: 'pointer' },
   success: { background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, padding: '10px 14px', color: '#3b82f6', fontSize: 13, marginBottom: 16 },
   danger: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', color: '#f87171', fontSize: 13, marginBottom: 16 },
-  empresaRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#0f172a', borderRadius: 8, marginBottom: 8 },
+  empresaRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--fs-bg)', borderRadius: 8, marginBottom: 8 },
   badge: { display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'rgba(59,130,246,0.1)', color: '#3b82f6' },
 }
 
@@ -126,13 +126,13 @@ export default function ConfiguracoesPage() {
             <div style={S.cardTitle}>Empresas Cadastradas</div>
             <div style={S.cardSub}>Empresas vinculadas ao seu usuário</div>
             {empresas.length === 0 ? (
-              <p style={{ color: '#6b7280', fontSize: 13 }}>Nenhuma empresa cadastrada.</p>
+              <p style={{ color: 'var(--fs-text-4)', fontSize: 13 }}>Nenhuma empresa cadastrada.</p>
             ) : (
               (empresas || []).map(emp => (
                 <div key={emp.id} style={S.empresaRow}>
                   <div>
                     <div style={{ fontWeight: 600, color: '#fff', fontSize: 14 }}>{emp.nome}</div>
-                    <div style={{ color: '#6b7280', fontSize: 12 }}>CNPJ: {emp.cnpj || 'Não informado'}</div>
+                    <div style={{ color: 'var(--fs-text-4)', fontSize: 12 }}>CNPJ: {emp.cnpj || 'Não informado'}</div>
                   </div>
                   <span style={S.badge}>ativo</span>
                 </div>
@@ -174,10 +174,10 @@ export default function ConfiguracoesPage() {
               { label: 'Versão do Sistema', valor: 'v1.0.0', icon: '🔖' },
               { label: 'Banco de Dados', valor: 'Supabase (Online)', icon: '🖥️' },
             ].map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px', background: '#0f172a', borderRadius: 8 }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px', background: 'var(--fs-bg)', borderRadius: 8 }}>
                 <span style={{ fontSize: 20 }}>{item.icon}</span>
                 <div>
-                  <div style={{ color: '#9ca3af', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>{item.label}</div>
+                  <div style={{ color: 'var(--fs-text-2)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>{item.label}</div>
                   <div style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{item.valor}</div>
                 </div>
               </div>

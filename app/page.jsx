@@ -22,7 +22,7 @@ export default function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0f172a',
+      background: 'var(--fs-bg)',
       display: 'flex',
       position: 'relative',
       overflow: 'hidden',
@@ -61,7 +61,7 @@ export default function LoginPage() {
             Gestão financeira<br />
             <span style={{ background:'linear-gradient(135deg,#3b82f6,#8b5cf6)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>estratégica</span>
           </h1>
-          <p style={{ fontSize:16, color:'#475569', lineHeight:1.7, marginBottom:48 }}>
+          <p style={{ fontSize:16, color:'var(--fs-text-4)', lineHeight:1.7, marginBottom:48 }}>
             Demonstrativos executivos, fluxo de caixa e orçamento em tempo real para as entidades FACE, JAM e JB.
           </p>
 
@@ -74,7 +74,7 @@ export default function LoginPage() {
             ].map(m => (
               <div key={m.label} style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:10, padding:'12px 16px', textAlign:'center' }}>
                 <div style={{ fontSize:20, fontWeight:800, color:'#3b82f6', marginBottom:2 }}>{m.value}</div>
-                <div style={{ fontSize:11, color:'#475569', textTransform:'uppercase', letterSpacing:'0.8px' }}>{m.label}</div>
+                <div style={{ fontSize:11, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px' }}>{m.label}</div>
               </div>
             ))}
           </div>
@@ -89,7 +89,7 @@ export default function LoginPage() {
         <div style={{ width:'100%', maxWidth:360 }}>
           <div style={{ marginBottom:32 }}>
             <h2 style={{ fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Acessar plataforma</h2>
-            <p style={{ fontSize:14, color:'#475569' }}>Entre com suas credenciais para continuar</p>
+            <p style={{ fontSize:14, color:'var(--fs-text-4)' }}>Entre com suas credenciais para continuar</p>
           </div>
 
           {error && (
@@ -131,7 +131,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p style={{ textAlign:'center', color:'#1e293b', fontSize:12, marginTop:24 }}>
+          <p style={{ textAlign:'center', color:'var(--fs-text-4)', fontSize:12, marginTop:24 }}>
             Facesign © {new Date().getFullYear()} — Uso Interno Confidencial
           </p>
         </div>

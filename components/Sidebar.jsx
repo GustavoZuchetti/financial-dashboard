@@ -84,8 +84,8 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
     <div style={{
       width: 240,
       minHeight: '100vh',
-      background: '#131f35',
-      borderRight: '1px solid #334155',
+      background: 'var(--fs-bg)',
+      borderRight: '1px solid var(--fs-border)',
       display: 'flex',
       flexDirection: 'column',
       flexShrink: 0,
@@ -103,7 +103,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
       `}</style>
 
       {/* ── Logo Facesign ───────────────────────────────────────── */}
-      <div style={{ padding: '18px 16px 16px', borderBottom: '1px solid #334155' }}>
+      <div style={{ padding: '18px 16px 16px', borderBottom: '1px solid var(--fs-border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 34, height: 34,
@@ -115,20 +115,20 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
             flexShrink: 0,
           }}>FS</div>
           <div>
-            <div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: 15, letterSpacing: '-0.3px', lineHeight: 1.2 }}>Facesign</div>
-            <div style={{ fontSize: 10, color: '#64748b', fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Financeiro</div>
+            <div style={{ fontWeight: 800, color: 'var(--fs-text-1)', fontSize: 15, letterSpacing: '-0.3px', lineHeight: 1.2 }}>Facesign</div>
+            <div style={{ fontSize: 10, color: 'var(--fs-text-4)', fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Financeiro</div>
           </div>
         </div>
       </div>
 
       {/* ── Seletor de Empresa ──────────────────────────────────── */}
-      <div style={{ padding: '10px 12px', borderBottom: '1px solid #334155' }}>
-        <label style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.8px', marginBottom: 4, display: 'block', paddingLeft: 2 }}>
+      <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--fs-border)' }}>
+        <label style={{ fontSize: 9, color: 'var(--fs-text-4)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.8px', marginBottom: 4, display: 'block', paddingLeft: 2 }}>
           Entidade
         </label>
         <select
           className="select-empresa"
-          style={{ padding: '7px 10px', background: '#1a2540', border: '1px solid #334155', borderRadius: 8, color: '#e2e8f0', fontSize: 12, width: '100%', outline: 'none', cursor: 'pointer' }}
+          style={{ padding: '7px 10px', background: 'var(--fs-surface-2)', border: '1px solid var(--fs-border)', borderRadius: 8, color: 'var(--fs-text-1)', fontSize: 12, width: '100%', outline: 'none', cursor: 'pointer' }}
           value={empresa || ''}
           onChange={e => onEmpresaChange(e.target.value)}
         >
@@ -170,7 +170,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
                   </span>
                   <span style={{ flex: 1 }}>{item.label}</span>
                   <span style={{
-                    color: '#64748b', fontSize: 11,
+                    color: 'var(--fs-text-4)', fontSize: 11,
                     transform: open ? 'rotate(180deg)' : 'none',
                     transition: 'transform 0.2s',
                   }}>
@@ -227,8 +227,8 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
       </nav>
 
       {/* ── Footer com usuário ──────────────────────────────────── */}
-      <div style={{ padding: 12, borderTop: '1px solid #334155', background: '#131f35' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '6px 8px', background: '#1a2540', borderRadius: 8 }}>
+      <div style={{ padding: 12, borderTop: '1px solid var(--fs-border)', background: 'var(--fs-bg)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '6px 8px', background: 'var(--fs-surface-2)', borderRadius: 8 }}>
           <div style={{
             width: 30, height: 30, borderRadius: '50%',
             background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
@@ -238,8 +238,8 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
             {initials}
           </div>
           <div style={{ overflow: 'hidden', flex: 1 }}>
-            <div style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{username}</div>
-            <div style={{ fontSize: 10, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
+            <div style={{ fontSize: 12, color: 'var(--fs-text-1)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{username}</div>
+            <div style={{ fontSize: 10, color: 'var(--fs-text-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
           </div>
         </div>
         <div style={{ marginBottom: 8 }}>

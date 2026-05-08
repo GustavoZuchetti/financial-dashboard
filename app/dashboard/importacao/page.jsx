@@ -132,6 +132,30 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
         </button>
       </div>
 
+      {/* Distribuição por mês — permite verificar se está usando Competência corretamente */}
+      {(() => {
+        const dist = {}
+        ;(data || []).forEach(r => {
+          const m = r.data ? r.data.substring(0, 7) : '?'
+          dist[m] = (dist[m] || 0) + 1
+        })
+        const sorted = Object.entries(dist).sort()
+        return sorted.length > 0 ? (
+          <div style={{ background: 'rgba(var(--fs-brand-rgb),0.06)', border: '1px solid rgba(var(--fs-brand-rgb),0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 12 }}>
+            <span style={{ color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+              Distribuição por mês ({modulo === 'dre' ? 'Competência' : 'Liquidação'}):
+            </span>
+            <span style={{ marginLeft: 10 }}>
+              {sorted.map(([m, n]) => (
+                <span key={m} style={{ marginRight: 14, color: 'var(--fs-text-1)', fontWeight: 600 }}>
+                  {m}: <strong style={{ color: 'var(--fs-brand)' }}>{n}</strong>
+                </span>
+              ))}
+            </span>
+          </div>
+        ) : null
+      })()}
+
       {pendentes.length > 0 && (
         <div style={{ background: 'var(--fs-warning-bg)', border: '1px solid rgba(var(--fs-warning-rgb),0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: 'var(--fs-warning)' }}>
           ⚠️ {pendentes.length} categoria(s) sem mapeamento — serão importadas com tipo padrão. Clique em "Configurar" para mapear.
@@ -142,7 +166,7 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--fs-bg)' }}>
             <tr>
-              {['Categoria', 'Nome / Cliente', 'Valor', 'Data', 'Status', ''].map(h => (
+              {(['Categoria', 'Nome / Cliente', 'Valor', modulo === 'dre' ? 'Competência' : 'Liquidação', 'Status', '']).map(h => (
                 <th key={h} style={{ padding: '9px 12px', textAlign: h === 'Valor' ? 'right' : 'left', color: 'var(--fs-text-4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', borderBottom: '1px solid var(--fs-border)' }}>{h}</th>
               ))}
             </tr>
@@ -327,6 +351,12 @@ export default function ImportacaoPage() {
         tipoCsv: (row['Tipo'] || '').toLowerCase(),
         original: row,
       })).filter(r => r.__desc || r.valor > 0)
+
+      // Debug: verificar qual campo de data foi selecionado
+      const sampleRows = processed.filter(r => r.valor > 0).slice(0, 5)
+      console.log(`[importação ${modulo}] ${processed.length} registros. Campo de data usado:`,
+        sampleRows.map(r => ({ nome: r.nome.substring(0,20), data: r.data }))
+      )
 
       if (modulo === 'dre') setDataDre(processed)
       else                  setDataFluxo(processed)

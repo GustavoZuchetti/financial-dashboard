@@ -44,6 +44,19 @@ function parseDateBR(s) {
   return new Date().toISOString().split('T')[0]
 }
 
+// Retorna data ISO apenas se o campo for uma data válida — senão null
+function safeDateBR(s) {
+  const str = String(s || '').trim()
+  const m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (m) {
+    const iso = `${m[3]}-${m[2]}-${m[1]}`
+    const d = new Date(iso + 'T00:00:00')
+    return isNaN(d.getTime()) ? null : iso
+  }
+  if (str.match(/^\d{4}-\d{2}-\d{2}/)) return str.split('T')[0]
+  return null // Não é uma data válida
+}
+
 function parseValueBR(v) {
   const n = parseFloat(String(v || '0').replace(/\s/g, '').replace(/\./g, '').replace(',', '.'))
   return isNaN(n) ? 0 : Math.abs(n)
@@ -296,11 +309,19 @@ export default function ImportacaoPage() {
         __desc:  (row['Descrição'] || row['descricao'] || row['Categoria'] || row['categoria'] || '').trim(),
         nome:    (row['Nome'] || row['nome'] || '').replace(/[\t\n\r]+/g, ' ').trim(),
         valor:   parseValueBR(row['Valor Pago/Recebido'] || row['Valor Pago'] || row['Valor'] || row['valor'] || 0),
-        data:    parseDateBR(
-          modulo === 'dre'
-            ? (row['Competência'] || row['Competencia'] || row['competência'] || row['Data'] || row['data'] || '')
-            : (row['Liquidação']  || row['Liquidacao']  || row['Data']        || row['data'] || '')
-        ),
+        data: (() => {
+          if (modulo === 'dre') {
+            // DRE: regime de competência — usar campo Competência, fallback Data
+            return safeDateBR(row['Competência']) || safeDateBR(row['Competencia'])
+                || safeDateBR(row['competência']) || safeDateBR(row['competencia'])
+                || safeDateBR(row['Data'])         || parseDateBR(row['data'] || '')
+          } else {
+            // Fluxo de Caixa: regime de caixa — usar Liquidação SE for data válida, fallback Data
+            return safeDateBR(row['Liquidação'])   || safeDateBR(row['Liquidacao'])
+                || safeDateBR(row['liquidação'])   || safeDateBR(row['liquidacao'])
+                || safeDateBR(row['Data'])         || parseDateBR(row['data'] || '')
+          }
+        })(),
         tipoCsv: (row['Tipo'] || '').toLowerCase(),
         original: row,
       })).filter(r => r.__desc || r.valor > 0)
@@ -342,8 +363,16 @@ export default function ImportacaoPage() {
     if (!toInsert.length || !empresaId) return { hasDupe: false, count: 0 }
     const datas = toInsert.map(r => r.data).filter(Boolean).sort()
     if (!datas.length) return { hasDupe: false, count: 0 }
-    const minDt = datas[0]
-    const maxDt = datas[datas.length - 1]
+
+    // Usar PRIMEIRO DIA do mês mais antigo e ÚLTIMO DIA do mês mais recente.
+    // Isso garante que registros com Liquidação, Competência ou qualquer outra
+    // data dentro desses meses sejam detectados e deletados corretamente.
+    const first = new Date(datas[0] + 'T00:00:00')
+    const last  = new Date(datas[datas.length - 1] + 'T00:00:00')
+    const minDt = `${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2,'0')}-01`
+    const lastDay = new Date(last.getFullYear(), last.getMonth() + 1, 0).getDate()
+    const maxDt = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`
+
     try {
       const { count, error } = await supabase
         .from(tabela)
@@ -354,9 +383,10 @@ export default function ImportacaoPage() {
       if (error) throw error
       const total = count || 0
       const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
+      console.log(`checkDuplicates [${tabela}]: ${total} registros entre ${minDt} e ${maxDt}`)
       return { hasDupe: total > 0, count: total, minDt, maxDt, periodo: `${fmt(minDt)} a ${fmt(maxDt)}` }
     } catch (e) {
-      console.error('checkDuplicates:', e.message)
+      console.error('checkDuplicates erro:', e.message)
       return { hasDupe: false, count: 0 }
     }
   }
@@ -367,13 +397,21 @@ export default function ImportacaoPage() {
     try {
       // PASSO 1: se substituição, deletar registros existentes no período
       if (replace && minDt && maxDt) {
-        const { error: delError } = await supabase
+        // Garantir que o range cobre meses inteiros (primeiro ao último dia)
+        const first = new Date(minDt + 'T00:00:00')
+        const last  = new Date(maxDt + 'T00:00:00')
+        const delMin = `${first.getFullYear()}-${String(first.getMonth()+1).padStart(2,'0')}-01`
+        const lastDay = new Date(last.getFullYear(), last.getMonth()+1, 0).getDate()
+        const delMax = `${last.getFullYear()}-${String(last.getMonth()+1).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`
+        console.log(`DELETE [${tabela}]: removendo registros entre ${delMin} e ${delMax}`)
+        const { error: delError, count: delCount } = await supabase
           .from(tabela)
           .delete()
           .eq('empresa_id', empresaId)
-          .gte('data', minDt)
-          .lte('data', maxDt)
+          .gte('data', delMin)
+          .lte('data', delMax)
         if (delError) throw new Error('Erro ao remover dados antigos: ' + delError.message)
+        console.log(`DELETE concluído: ${delCount || '?'} registros removidos`)
       }
 
       // PASSO 2: inserir novos registros em lotes de 100

@@ -74,6 +74,48 @@ function Toast({ msg, type, onClose }) {
       <span style={{ color: colors[type], fontSize: 16 }}>{icons[type] || 'ℹ'}</span>
       <span style={{ flex: 1 }}>{msg}</span>
       <span onClick={onClose} style={{ cursor: 'pointer', color: 'var(--fs-text-4)', fontSize: 18, lineHeight: 1 }}>×</span>
+      {/* Gerenciar Dados */}
+      <div style={{ marginTop: 32, borderTop: '1px solid var(--fs-border)', paddingTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--fs-text-2)', margin: 0 }}>Gerenciar dados existentes</h3>
+            <p style={{ fontSize: 12, color: 'var(--fs-text-4)', margin: '2px 0 0' }}>
+              Remova todos os registros da empresa selecionada para começar do zero
+            </p>
+          </div>
+        </div>
+        {!confirmLimpar ? (
+          <div style={{ display: 'flex', gap: 10 }}>
+            {[
+              { label: 'Limpar DRE',           tabela: 'lancamentos',  color: 'var(--fs-danger)' },
+              { label: 'Limpar Fluxo de Caixa', tabela: 'fluxo_caixa', color: '#f59e0b'          },
+            ].map(btn => (
+              <button key={btn.tabela}
+                onClick={() => setConfirmLimpar(btn.tabela)}
+                style={{ background: 'transparent', border: `1px solid ${btn.color}`, borderRadius: 8, color: btn.color, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: 0.7 }}>
+                🗑 {btn.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div style={{ background: 'var(--fs-danger-bg)', border: '1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius: 10, padding: '14px 16px' }}>
+            <p style={{ fontSize: 13, color: 'var(--fs-text-1)', marginBottom: 12, fontWeight: 600 }}>
+              ⚠️ Confirma a exclusão de TODOS os registros de {confirmLimpar === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'} desta empresa?
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => limparDados(confirmLimpar)} disabled={limpandoDados}
+                style={{ background: 'var(--fs-danger)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                {limpandoDados ? '⏳ Removendo...' : '✓ Confirmar exclusão'}
+              </button>
+              <button onClick={() => setConfirmLimpar(false)}
+                style={{ background: 'var(--fs-surface-2)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }
@@ -102,6 +144,48 @@ function DropZone({ onFile, label, sublabel, fileRef }) {
       <p style={{ color: 'var(--fs-text-1)', fontWeight: 700, fontSize: 15, margin: '0 0 5px' }}>{label}</p>
       <p style={{ color: 'var(--fs-text-4)', fontSize: 13, margin: 0 }}>{sublabel}</p>
       <input ref={fileRef} type="file" hidden accept=".csv,.xlsx,.xls" onChange={e => { onFile(e.target.files?.[0]); e.target.value = '' }} />
+      {/* Gerenciar Dados */}
+      <div style={{ marginTop: 32, borderTop: '1px solid var(--fs-border)', paddingTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--fs-text-2)', margin: 0 }}>Gerenciar dados existentes</h3>
+            <p style={{ fontSize: 12, color: 'var(--fs-text-4)', margin: '2px 0 0' }}>
+              Remova todos os registros da empresa selecionada para começar do zero
+            </p>
+          </div>
+        </div>
+        {!confirmLimpar ? (
+          <div style={{ display: 'flex', gap: 10 }}>
+            {[
+              { label: 'Limpar DRE',           tabela: 'lancamentos',  color: 'var(--fs-danger)' },
+              { label: 'Limpar Fluxo de Caixa', tabela: 'fluxo_caixa', color: '#f59e0b'          },
+            ].map(btn => (
+              <button key={btn.tabela}
+                onClick={() => setConfirmLimpar(btn.tabela)}
+                style={{ background: 'transparent', border: `1px solid ${btn.color}`, borderRadius: 8, color: btn.color, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: 0.7 }}>
+                🗑 {btn.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div style={{ background: 'var(--fs-danger-bg)', border: '1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius: 10, padding: '14px 16px' }}>
+            <p style={{ fontSize: 13, color: 'var(--fs-text-1)', marginBottom: 12, fontWeight: 600 }}>
+              ⚠️ Confirma a exclusão de TODOS os registros de {confirmLimpar === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'} desta empresa?
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => limparDados(confirmLimpar)} disabled={limpandoDados}
+                style={{ background: 'var(--fs-danger)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                {limpandoDados ? '⏳ Removendo...' : '✓ Confirmar exclusão'}
+              </button>
+              <button onClick={() => setConfirmLimpar(false)}
+                style={{ background: 'var(--fs-surface-2)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }
@@ -174,6 +258,48 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
           </tbody>
         </table>
       </div>
+      {/* Gerenciar Dados */}
+      <div style={{ marginTop: 32, borderTop: '1px solid var(--fs-border)', paddingTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--fs-text-2)', margin: 0 }}>Gerenciar dados existentes</h3>
+            <p style={{ fontSize: 12, color: 'var(--fs-text-4)', margin: '2px 0 0' }}>
+              Remova todos os registros da empresa selecionada para começar do zero
+            </p>
+          </div>
+        </div>
+        {!confirmLimpar ? (
+          <div style={{ display: 'flex', gap: 10 }}>
+            {[
+              { label: 'Limpar DRE',           tabela: 'lancamentos',  color: 'var(--fs-danger)' },
+              { label: 'Limpar Fluxo de Caixa', tabela: 'fluxo_caixa', color: '#f59e0b'          },
+            ].map(btn => (
+              <button key={btn.tabela}
+                onClick={() => setConfirmLimpar(btn.tabela)}
+                style={{ background: 'transparent', border: `1px solid ${btn.color}`, borderRadius: 8, color: btn.color, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: 0.7 }}>
+                🗑 {btn.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div style={{ background: 'var(--fs-danger-bg)', border: '1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius: 10, padding: '14px 16px' }}>
+            <p style={{ fontSize: 13, color: 'var(--fs-text-1)', marginBottom: 12, fontWeight: 600 }}>
+              ⚠️ Confirma a exclusão de TODOS os registros de {confirmLimpar === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'} desta empresa?
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => limparDados(confirmLimpar)} disabled={limpandoDados}
+                style={{ background: 'var(--fs-danger)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                {limpandoDados ? '⏳ Removendo...' : '✓ Confirmar exclusão'}
+              </button>
+              <button onClick={() => setConfirmLimpar(false)}
+                style={{ background: 'var(--fs-surface-2)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }
@@ -232,6 +358,48 @@ function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
           </button>
         </div>
       </div>
+      {/* Gerenciar Dados */}
+      <div style={{ marginTop: 32, borderTop: '1px solid var(--fs-border)', paddingTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--fs-text-2)', margin: 0 }}>Gerenciar dados existentes</h3>
+            <p style={{ fontSize: 12, color: 'var(--fs-text-4)', margin: '2px 0 0' }}>
+              Remova todos os registros da empresa selecionada para começar do zero
+            </p>
+          </div>
+        </div>
+        {!confirmLimpar ? (
+          <div style={{ display: 'flex', gap: 10 }}>
+            {[
+              { label: 'Limpar DRE',           tabela: 'lancamentos',  color: 'var(--fs-danger)' },
+              { label: 'Limpar Fluxo de Caixa', tabela: 'fluxo_caixa', color: '#f59e0b'          },
+            ].map(btn => (
+              <button key={btn.tabela}
+                onClick={() => setConfirmLimpar(btn.tabela)}
+                style={{ background: 'transparent', border: `1px solid ${btn.color}`, borderRadius: 8, color: btn.color, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: 0.7 }}>
+                🗑 {btn.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div style={{ background: 'var(--fs-danger-bg)', border: '1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius: 10, padding: '14px 16px' }}>
+            <p style={{ fontSize: 13, color: 'var(--fs-text-1)', marginBottom: 12, fontWeight: 600 }}>
+              ⚠️ Confirma a exclusão de TODOS os registros de {confirmLimpar === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'} desta empresa?
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => limparDados(confirmLimpar)} disabled={limpandoDados}
+                style={{ background: 'var(--fs-danger)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                {limpandoDados ? '⏳ Removendo...' : '✓ Confirmar exclusão'}
+              </button>
+              <button onClick={() => setConfirmLimpar(false)}
+                style={{ background: 'var(--fs-surface-2)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }
@@ -251,6 +419,8 @@ export default function ImportacaoPage() {
   const [savingMapping,  setSavingMapping]  = useState(false)
   const [editingRow,     setEditingRow]     = useState(null)
   const [toast,          setToast]          = useState(null)
+  const [limpandoDados,  setLimpandoDados]  = useState(false)
+  const [confirmLimpar,  setConfirmLimpar]  = useState(false)
   const [confirmModal,   setConfirmModal]   = useState(null) // { modulo, periodo, count, onConfirm }
   const fileRefDre   = useRef(null)
   const fileRefFluxo = useRef(null)
@@ -367,11 +537,10 @@ export default function ImportacaoPage() {
     // Usar PRIMEIRO DIA do mês mais antigo e ÚLTIMO DIA do mês mais recente.
     // Isso garante que registros com Liquidação, Competência ou qualquer outra
     // data dentro desses meses sejam detectados e deletados corretamente.
-    const first = new Date(datas[0] + 'T00:00:00')
-    const last  = new Date(datas[datas.length - 1] + 'T00:00:00')
-    const minDt = `${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2,'0')}-01`
-    const lastDay = new Date(last.getFullYear(), last.getMonth() + 1, 0).getDate()
-    const maxDt = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`
+    // Verificar por ANO INTEIRO — captura registros independente do campo de data
+    const anos = [...new Set(datas.map(d => d.substring(0,4)).filter(Boolean))].sort()
+    const minDt = `${anos[0]}-01-01`
+    const maxDt = `${anos[anos.length-1]}-12-31`
 
     try {
       const { count, error } = await supabase
@@ -382,12 +551,29 @@ export default function ImportacaoPage() {
         .lte('data', maxDt)
       if (error) throw error
       const total = count || 0
-      const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
-      console.log(`checkDuplicates [${tabela}]: ${total} registros entre ${minDt} e ${maxDt}`)
-      return { hasDupe: total > 0, count: total, minDt, maxDt, periodo: `${fmt(minDt)} a ${fmt(maxDt)}` }
+      const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', {month:'short', year:'numeric'})
+      console.log(`checkDuplicates [${tabela}] empresa=${empresaId}: ${total} registros em ${anos.join(', ')}`)
+      return { hasDupe: total > 0, count: total, minDt, maxDt, periodo: anos.length === 1 ? `ano ${anos[0]}` : `${anos[0]} a ${anos[anos.length-1]}` }
     } catch (e) {
       console.error('checkDuplicates erro:', e.message)
       return { hasDupe: false, count: 0 }
+    }
+  }
+
+  // ─── Limpar todos os lançamentos da empresa ─────────────────────────────────
+  const limparDados = async (tabela) => {
+    if (!empresaId) { showToast('Selecione uma empresa.', 'error'); return }
+    setLimpandoDados(true)
+    try {
+      const label = tabela === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'
+      const { error } = await supabase.from(tabela).delete().eq('empresa_id', empresaId)
+      if (error) throw error
+      showToast(`✓ Todos os registros de ${label} removidos com sucesso.`, 'success')
+      setConfirmLimpar(false)
+    } catch (e) {
+      showToast('Erro ao limpar: ' + e.message, 'error')
+    } finally {
+      setLimpandoDados(false)
     }
   }
 
@@ -396,22 +582,21 @@ export default function ImportacaoPage() {
     setIsImporting(true)
     try {
       // PASSO 1: se substituição, deletar registros existentes no período
-      if (replace && minDt && maxDt) {
-        // Garantir que o range cobre meses inteiros (primeiro ao último dia)
-        const first = new Date(minDt + 'T00:00:00')
-        const last  = new Date(maxDt + 'T00:00:00')
-        const delMin = `${first.getFullYear()}-${String(first.getMonth()+1).padStart(2,'0')}-01`
-        const lastDay = new Date(last.getFullYear(), last.getMonth()+1, 0).getDate()
-        const delMax = `${last.getFullYear()}-${String(last.getMonth()+1).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`
-        console.log(`DELETE [${tabela}]: removendo registros entre ${delMin} e ${delMax}`)
-        const { error: delError, count: delCount } = await supabase
-          .from(tabela)
-          .delete()
-          .eq('empresa_id', empresaId)
-          .gte('data', delMin)
-          .lte('data', delMax)
-        if (delError) throw new Error('Erro ao remover dados antigos: ' + delError.message)
-        console.log(`DELETE concluído: ${delCount || '?'} registros removidos`)
+      if (replace) {
+        // DELETE por ANO INTEIRO — evita problema de Competência vs Liquidação
+        // Registros do mesmo ano são removidos independente do campo de data usado
+        const anos = [...new Set(toInsert.map(r => r.data?.substring(0,4)).filter(Boolean))]
+        console.log(`DELETE [${tabela}]: substituindo anos ${anos.join(', ')} para empresa ${empresaId}`)
+        for (const ano of anos) {
+          const { error: delError } = await supabase
+            .from(tabela)
+            .delete()
+            .eq('empresa_id', empresaId)
+            .gte('data', `${ano}-01-01`)
+            .lte('data', `${ano}-12-31`)
+          if (delError) throw new Error(`Erro ao remover dados de ${ano}: ${delError.message}`)
+        }
+        console.log(`DELETE concluído para anos: ${anos.join(', ')}`)
       }
 
       // PASSO 2: inserir novos registros em lotes de 100
@@ -669,6 +854,48 @@ export default function ImportacaoPage() {
           </>
         )
       )}
+      {/* Gerenciar Dados */}
+      <div style={{ marginTop: 32, borderTop: '1px solid var(--fs-border)', paddingTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--fs-text-2)', margin: 0 }}>Gerenciar dados existentes</h3>
+            <p style={{ fontSize: 12, color: 'var(--fs-text-4)', margin: '2px 0 0' }}>
+              Remova todos os registros da empresa selecionada para começar do zero
+            </p>
+          </div>
+        </div>
+        {!confirmLimpar ? (
+          <div style={{ display: 'flex', gap: 10 }}>
+            {[
+              { label: 'Limpar DRE',           tabela: 'lancamentos',  color: 'var(--fs-danger)' },
+              { label: 'Limpar Fluxo de Caixa', tabela: 'fluxo_caixa', color: '#f59e0b'          },
+            ].map(btn => (
+              <button key={btn.tabela}
+                onClick={() => setConfirmLimpar(btn.tabela)}
+                style={{ background: 'transparent', border: `1px solid ${btn.color}`, borderRadius: 8, color: btn.color, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: 0.7 }}>
+                🗑 {btn.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div style={{ background: 'var(--fs-danger-bg)', border: '1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius: 10, padding: '14px 16px' }}>
+            <p style={{ fontSize: 13, color: 'var(--fs-text-1)', marginBottom: 12, fontWeight: 600 }}>
+              ⚠️ Confirma a exclusão de TODOS os registros de {confirmLimpar === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'} desta empresa?
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => limparDados(confirmLimpar)} disabled={limpandoDados}
+                style={{ background: 'var(--fs-danger)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                {limpandoDados ? '⏳ Removendo...' : '✓ Confirmar exclusão'}
+              </button>
+              <button onClick={() => setConfirmLimpar(false)}
+                style={{ background: 'var(--fs-surface-2)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }

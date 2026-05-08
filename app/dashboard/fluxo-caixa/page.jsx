@@ -11,7 +11,7 @@ const S = {
   kpiTitle: { fontSize: '14px', color: 'var(--fs-text-2)', marginBottom: '8px' },
   kpiValue: { fontSize: '24px', fontWeight: 'bold' },
   sectionTitle: { fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', color: 'var(--fs-text-1)' },
-  input: { background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' },
+  input: { background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '6px', color: 'var(--fs-text-1)', padding: '6px 10px', fontSize: '13px', outline: 'none' },
   badge: { display: 'inline-block', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', marginLeft: '8px' }
 }
 
@@ -56,8 +56,8 @@ const CustomTooltipFluxo = ({ active, payload, data }) => {
   return (
     <div style={{ backgroundColor: 'var(--fs-bg)', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: 'var(--fs-text-1)', fontSize: '12px' }}>
       <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', color: '#3b82f6' }}>{label}</p>
-      <p style={{ margin: '4px 0', color: 'var(--fs-text-2)' }}>Período: <span style={{ color: '#fff', fontWeight: 'bold' }}>{entry.name}</span></p>
-      <p style={{ margin: '4px 0', color: 'var(--fs-text-2)' }}>Total: <span style={{ color: '#fff', fontWeight: 'bold' }}>{fmtFull(payload[0]?.value || 0)}</span></p>
+      <p style={{ margin: '4px 0', color: 'var(--fs-text-2)' }}>Período: <span style={{ color: 'var(--fs-text-1)', fontWeight: 'bold' }}>{entry.name}</span></p>
+      <p style={{ margin: '4px 0', color: 'var(--fs-text-2)' }}>Total: <span style={{ color: 'var(--fs-text-1)', fontWeight: 'bold' }}>{fmtFull(payload[0]?.value || 0)}</span></p>
       {details.length > 0 && (
         <>
           <p style={{ margin: '8px 0 4px 0', color: 'var(--fs-text-2)', fontSize: '11px' }}>Top 80% (Pareto):</p>

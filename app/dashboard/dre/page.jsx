@@ -87,9 +87,9 @@ const CustomTooltip = ({ active, payload, data }) => {
   else if (entry.name==='Custos')   details=getTop('custo')
   else if (entry.name==='Despesas') details=getTop('despesa')
   return (
-    <div style={{ background:'#1a2540', border:'1px solid var(--fs-border)', borderRadius:8, padding:10, fontSize:12, boxShadow:'0 8px 24px rgba(0,0,0,0.5)' }}>
+    <div style={{ background:'var(--fs-input-bg)', border:'1px solid var(--fs-border)', borderRadius:8, padding:10, fontSize:12, boxShadow:'0 8px 24px rgba(0,0,0,0.5)' }}>
       <p style={{ margin:'0 0 6px', fontWeight:700, color:CHART_PALETTE.receita }}>{entry.name}</p>
-      <p style={{ margin:'3px 0', color:'var(--fs-text-4)' }}>Total: <span style={{ color:'#fff', fontWeight:700 }}>{fmtFull(Math.abs(entry.value))}</span></p>
+      <p style={{ margin:'3px 0', color:'var(--fs-text-4)' }}>Total: <span style={{ color:'var(--fs-text-1)', fontWeight:700 }}>{fmtFull(Math.abs(entry.value))}</span></p>
       {details.length > 0 && <>
         <p style={{ margin:'8px 0 3px', color:'var(--fs-text-4)', fontSize:11, borderTop:'1px solid #334155', paddingTop:5 }}>Top 80% (Pareto):</p>
         {details.map((d,i)=>(
@@ -232,16 +232,16 @@ export default function DREGeral() {
       <div style={{ color:'#e2e8f0', padding:24 }}>
         {/* Header */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexWrap:'wrap', gap:12 }}>
-          <h1 style={{ fontSize:24, fontWeight:800, color:'#fff', display:'flex', alignItems:'center' }}>
+          <h1 style={{ fontSize:24, fontWeight:800, color:'var(--fs-text-1)', display:'flex', alignItems:'center' }}>
             Demonstrativos Executivos
             {isConsolidado && <span style={badge}>📊 Consolidado</span>}
           </h1>
           <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--fs-surface)', padding:'7px 14px', borderRadius:8, border:'1px solid var(--fs-border)' }}>
               <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>Período:</span>
-              <input type="date" style={{ background:'#1a2540', border:'1px solid var(--fs-border)', borderRadius:6, color:'#fff', padding:'5px 8px', fontSize:12, outline:'none' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
+              <input type="date" style={{ background:'var(--fs-input-bg)', border:'1px solid var(--fs-border)', borderRadius:6, color:'var(--fs-text-1)', padding:'5px 8px', fontSize:12, outline:'none' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
               <span style={{ color:'var(--fs-text-4)' }}>→</span>
-              <input type="date" style={{ background:'#1a2540', border:'1px solid var(--fs-border)', borderRadius:6, color:'#fff', padding:'5px 8px', fontSize:12, outline:'none' }} value={endDate}   onChange={e=>setEndDate(e.target.value)} />
+              <input type="date" style={{ background:'var(--fs-input-bg)', border:'1px solid var(--fs-border)', borderRadius:6, color:'var(--fs-text-1)', padding:'5px 8px', fontSize:12, outline:'none' }} value={endDate}   onChange={e=>setEndDate(e.target.value)} />
             </div>
             <button onClick={()=>setPresentation(true)} style={{ background:'linear-gradient(135deg,#1e3a5f,#1d4ed8)', border:'1px solid #2563eb', color:'#bfdbfe', padding:'8px 16px', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:700 }}>
               🎯 Apresentação
@@ -263,7 +263,7 @@ export default function DREGeral() {
         {!loading && data.length > 0 && (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:22 }}>
             {[{l:'Margem Bruta',v:mB,c:'#8b5cf6'},{l:'Margem EBITDA',v:mE,c:CHART_PALETTE.despesa},{l:'Margem Líquida',v:mL,c:CHART_PALETTE.ebitda}].map(m=>(
-              <div key={m.l} style={{ background:'#1a2540', border:'1px solid var(--fs-border)', borderRadius:8, padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <div key={m.l} style={{ background:'var(--fs-input-bg)', border:'1px solid var(--fs-border)', borderRadius:8, padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                 <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>{m.l}</span>
                 <span style={{ color:m.v>=0?m.c:CHART_PALETTE.custo, fontSize:17, fontWeight:800 }}>{m.v.toFixed(1)}%</span>
               </div>

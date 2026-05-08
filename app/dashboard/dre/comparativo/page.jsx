@@ -11,7 +11,7 @@ const S = {
   kpiTitle: { fontSize: '12px', color: 'var(--fs-text-2)', marginBottom: '4px' },
   kpiValue: { fontSize: '18px', fontWeight: 'bold' },
   sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', color: 'var(--fs-text-1)' },
-  input: { background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' }
+  input: { background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '6px', color: 'var(--fs-text-1)', padding: '6px 10px', fontSize: '13px', outline: 'none' }
 }
 
 const KPICard = ({ title, value, color = '#3b82f6' }) => (

@@ -24,8 +24,8 @@ const calcFD = (realizado, orcado, isExpense) => {
 const S = {
   page: { color: 'var(--fs-text-1)', padding: '0' },
   card: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: '12px', padding: '20px 24px', marginBottom: '16px' },
-  cardTitle: { fontSize: '15px', fontWeight: 700, color: '#fff', marginBottom: '16px' },
-  select: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: '8px', color: 'var(--fs-text-1)', padding: '8px 12px', fontSize: '13px', outline: 'none' },
+  cardTitle: { fontSize: '15px', fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: '16px' },
+  select: { background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '8px', color: 'var(--fs-text-1)', padding: '8px 12px', fontSize: '13px', outline: 'none' },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { padding: '10px 12px', fontSize: '11px', color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--fs-border)', fontWeight: 700, textAlign: 'right' },
   thLeft: { padding: '10px 12px', fontSize: '11px', color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--fs-border)', fontWeight: 700, textAlign: 'left' },
@@ -95,7 +95,7 @@ const KPICard = ({ label, orcado, realizado, isExpense, color }) => {
   return (
     <div style={{ background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: '12px', padding: '16px 20px', borderLeft: `3px solid ${color}` }}>
       <div style={{ fontSize: '11px', color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>{label}</div>
-      <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>{fmtFull(realizado)}</div>
+      <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--fs-text-1)', marginBottom: '4px' }}>{fmtFull(realizado)}</div>
       <div style={{ fontSize: '12px', color: '#4b5563', marginBottom: '8px' }}>Orçado: {fmtFull(orcado)}</div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ flex: 1, height: '4px', background: 'var(--fs-surface-3)', borderRadius: '2px', marginRight: '10px', overflow: 'hidden' }}>
@@ -209,7 +209,7 @@ export default function OrcamentoPage() {
     <div style={S.page}>
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#fff', margin: 0 }}>Budget vs. Realizado</h1>
+        <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 }}>Budget vs. Realizado</h1>
         <p style={{ color: 'var(--fs-text-4)', fontSize: '14px', margin: '4px 0 0' }}>
           Análise de atingimento orçamentário com indicadores F/D (Favorável / Desfavorável)
         </p>
@@ -224,7 +224,7 @@ export default function OrcamentoPage() {
           {[ANO_ATUAL, ANO_ATUAL - 1, ANO_ATUAL - 2].map(y => <option key={y} value={y}>{y}</option>)}
         </select>
         {/* Toggle Mensal / Acumulado */}
-        <div style={{ display: 'flex', background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '8px', overflow: 'hidden' }}>
           {['mensal', 'acumulado'].map(mode => (
             <button
               key={mode}
@@ -339,7 +339,7 @@ export default function OrcamentoPage() {
           )}
 
           {/* Legenda F/D */}
-          <div style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '8px', padding: '12px 16px', fontSize: '12px', color: '#4b5563', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+          <div style={{ background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '8px', padding: '12px 16px', fontSize: '12px', color: '#4b5563', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
             <span><strong style={{ color: 'var(--fs-text-4)' }}>Lógica F/D aplicada:</strong></span>
             <span>📈 <strong style={{ color: '#10b981' }}>Receita:</strong> Realizado {'>'} Orçado = Favorável</span>
             <span>📉 <strong style={{ color: '#10b981' }}>Custo/Despesa:</strong> Realizado {'<'} Orçado = Favorável</span>

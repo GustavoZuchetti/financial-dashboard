@@ -102,7 +102,7 @@ export default function DashboardLayout({ children }) {
         />
         <main style={{ flex: 1, overflowY: 'auto', padding: '24px', position: 'relative' }}>
           {empresas.length === 0 && !loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '80vh', color: '#fff', textAlign: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '80vh', color: 'var(--fs-text-1)', textAlign: 'center' }}>
               <h2 style={{ fontSize: '24px', marginBottom: '12px' }}>Bem-vindo ao Financial Dashboard</h2>
               <p style={{ color: 'var(--fs-text-2)', marginBottom: '24px' }}>Você ainda não tem nenhuma empresa cadastrada.</p>
               <button 

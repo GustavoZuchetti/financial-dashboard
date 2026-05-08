@@ -9,7 +9,7 @@ const fmtFull = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', curre
 const S = {
   card: { backgroundColor: 'var(--fs-surface)', borderRadius: '8px', padding: '20px', border: '1px solid var(--fs-border)' },
   sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', color: 'var(--fs-text-1)' },
-  input: { background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' }
+  input: { background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '6px', color: 'var(--fs-text-1)', padding: '6px 10px', fontSize: '13px', outline: 'none' }
 }
 
 // Componente CustomTooltip para Top Receitas com Pareto
@@ -29,7 +29,7 @@ const CustomTooltipClientes = ({ active, payload, data }) => {
   return (
     <div style={{ backgroundColor: 'var(--fs-bg)', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: 'var(--fs-text-1)', fontSize: '12px' }}>
       <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', color: '#3b82f6' }}>{entry.name}</p>
-      <p style={{ margin: '4px 0', color: 'var(--fs-text-2)' }}>Total: <span style={{ color: '#fff', fontWeight: 'bold' }}>{fmtFull(entry.valor)}</span></p>
+      <p style={{ margin: '4px 0', color: 'var(--fs-text-2)' }}>Total: <span style={{ color: 'var(--fs-text-1)', fontWeight: 'bold' }}>{fmtFull(entry.valor)}</span></p>
       {topItems.length > 0 && (
         <>
           <p style={{ margin: '8px 0 4px 0', color: 'var(--fs-text-2)', fontSize: '11px' }}>Top 80% (Pareto):</p>

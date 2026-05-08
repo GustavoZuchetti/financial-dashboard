@@ -34,18 +34,18 @@ const RADAR_DATA = [
 const S = {
   page: { color: 'var(--fs-text-1)' },
   header: { marginBottom: 24 },
-  title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
+  title: { fontSize: 26, fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 },
   subtitle: { color: 'var(--fs-text-4)', fontSize: 14, margin: '4px 0 0' },
   kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 },
   kpiCard: (c) => ({ background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '20px', borderTop: `3px solid ${c}` }),
   kpiIcon: { fontSize: 24, marginBottom: 8 },
   kpiLabel: { color: 'var(--fs-text-2)', fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  kpiValue: { fontSize: 28, fontWeight: 900, color: '#fff', marginBottom: 4 },
+  kpiValue: { fontSize: 28, fontWeight: 900, color: 'var(--fs-text-1)', marginBottom: 4 },
   kpiIdeal: { fontSize: 12, color: 'var(--fs-text-4)' },
   progressWrap: { marginTop: 10, background: 'var(--fs-surface-3)', borderRadius: 99, height: 6 },
   grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 },
   card: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '20px 24px', marginBottom: 16 },
-  cardTitle: { fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 16 },
+  cardTitle: { fontSize: 15, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 16 },
   badge: (ok) => ({ display: 'inline-block', padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: ok ? 'rgba(59,130,246,0.1)' : 'rgba(245,158,11,0.1)', color: ok ? '#3b82f6' : '#f59e0b' }),
 }
 
@@ -90,7 +90,7 @@ export default function CicloFinanceiroPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--fs-border)" />
               <XAxis dataKey="mes" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} />
               <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickFormatter={v => v + 'd'} width={40} />
-              <Tooltip contentStyle={{ background: 'var(--fs-surface-2)', border: '1px solid #475569', borderRadius: 8 }} labelStyle={{ color: '#fff' }} formatter={(v, n) => [v + ' dias', n.toUpperCase()]} />
+              <Tooltip contentStyle={{ background: 'var(--fs-surface-2)', border: '1px solid #475569', borderRadius: 8 }} labelStyle={{ color: 'var(--fs-text-1)' }} formatter={(v, n) => [v + ' dias', n.toUpperCase()]} />
               <Bar dataKey="pmr" fill="#3b82f6" radius={[4,4,0,0]} name="PMR" />
               <Bar dataKey="pmp" fill="#3b82f6" radius={[4,4,0,0]} name="PMP" />
               <Bar dataKey="pme" fill="#8b5cf6" radius={[4,4,0,0]} name="PME" />

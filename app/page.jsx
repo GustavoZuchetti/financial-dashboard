@@ -57,7 +57,7 @@ export default function LoginPage() {
             <span style={{ fontSize:24, fontWeight:800, color:'#fff', letterSpacing:'-0.5px' }}>Facesign</span>
           </div>
 
-          <h1 style={{ fontSize:42, fontWeight:900, color:'#fff', lineHeight:1.1, marginBottom:16, letterSpacing:'-1px' }}>
+          <h1 style={{ fontSize:42, fontWeight:900, color:'var(--fs-text-1)', lineHeight:1.1, marginBottom:16, letterSpacing:'-1px' }}>
             Gestão financeira<br />
             <span style={{ background:'linear-gradient(135deg,#3b82f6,#8b5cf6)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>estratégica</span>
           </h1>
@@ -88,7 +88,7 @@ export default function LoginPage() {
       <div style={{ width:460, display:'flex', alignItems:'center', justifyContent:'center', padding:48, position:'relative' }}>
         <div style={{ width:'100%', maxWidth:360 }}>
           <div style={{ marginBottom:32 }}>
-            <h2 style={{ fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Acessar plataforma</h2>
+            <h2 style={{ fontSize:24, fontWeight:800, color:'var(--fs-text-1)', marginBottom:6 }}>Acessar plataforma</h2>
             <p style={{ fontSize:14, color:'var(--fs-text-4)' }}>Entre com suas credenciais para continuar</p>
           </div>
 

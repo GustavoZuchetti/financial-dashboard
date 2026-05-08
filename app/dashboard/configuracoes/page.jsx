@@ -5,15 +5,15 @@ import { supabase } from '@/lib/supabase'
 const S = {
   page: { color: 'var(--fs-text-1)' },
   header: { marginBottom: 24 },
-  title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
+  title: { fontSize: 26, fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 },
   subtitle: { color: 'var(--fs-text-4)', fontSize: 14, margin: '4px 0 0' },
   tabs: { display: 'flex', gap: 4, marginBottom: 24, background: 'var(--fs-surface)', borderRadius: 10, padding: 4, width: 'fit-content' },
   tab: (a) => ({ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: a ? 600 : 400, color: a ? '#fff' : '#6b7280', background: a ? 'var(--fs-border)' : 'transparent', cursor: 'pointer', border: 'none' }),
   card: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '24px', marginBottom: 16 },
-  cardTitle: { fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 4 },
+  cardTitle: { fontSize: 16, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 4 },
   cardSub: { color: 'var(--fs-text-4)', fontSize: 13, marginBottom: 20 },
   label: { display: 'block', color: 'var(--fs-text-2)', fontSize: 13, fontWeight: 500, marginBottom: 6 },
-  input: { width: '100%', background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 16 },
+  input: { width: '100%', background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 16 },
   grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
   btn: { background: '#3b82f6', color: '#000', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
   btnGhost: { background: 'transparent', color: 'var(--fs-text-2)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '10px 20px', fontSize: 14, cursor: 'pointer' },
@@ -131,7 +131,7 @@ export default function ConfiguracoesPage() {
               (empresas || []).map(emp => (
                 <div key={emp.id} style={S.empresaRow}>
                   <div>
-                    <div style={{ fontWeight: 600, color: '#fff', fontSize: 14 }}>{emp.nome}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--fs-text-1)', fontSize: 14 }}>{emp.nome}</div>
                     <div style={{ color: 'var(--fs-text-4)', fontSize: 12 }}>CNPJ: {emp.cnpj || 'Não informado'}</div>
                   </div>
                   <span style={S.badge}>ativo</span>
@@ -178,7 +178,7 @@ export default function ConfiguracoesPage() {
                 <span style={{ fontSize: 20 }}>{item.icon}</span>
                 <div>
                   <div style={{ color: 'var(--fs-text-2)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>{item.label}</div>
-                  <div style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{item.valor}</div>
+                  <div style={{ color: 'var(--fs-text-1)', fontWeight: 600, fontSize: 14 }}>{item.valor}</div>
                 </div>
               </div>
             ))}

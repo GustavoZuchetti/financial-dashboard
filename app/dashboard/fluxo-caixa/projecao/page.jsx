@@ -4,10 +4,10 @@ import { useState } from 'react'
 const S = {
   page: { color: 'var(--fs-text-1)' },
   header: { marginBottom: 24 },
-  title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
+  title: { fontSize: 26, fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 },
   subtitle: { color: 'var(--fs-text-4)', fontSize: 14, margin: '4px 0 0' },
   card: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '24px', marginBottom: 16 },
-  cardTitle: { fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 16 },
+  cardTitle: { fontSize: 15, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 16 },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { textAlign: 'left', color: 'var(--fs-text-4)', fontSize: 11, fontWeight: 600, padding: '10px 12px', borderBottom: '1px solid var(--fs-border)', textTransform: 'uppercase' },
   td: { padding: '12px', borderBottom: '1px solid var(--fs-border)', fontSize: 14, color: 'var(--fs-text-1)' },

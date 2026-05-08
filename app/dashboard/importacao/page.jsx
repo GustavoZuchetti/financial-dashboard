@@ -267,7 +267,7 @@ export default function ImportacaoPage() {
       <div style={{ background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '16px 20px', marginBottom: 20 }}>
         <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Empresa</label>
         <select
-          style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, color: 'var(--fs-text-1)', padding: '9px 12px', fontSize: 13, width: '100%', outline: 'none' }}
+          style={{ background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: 8, color: 'var(--fs-text-1)', padding: '9px 12px', fontSize: 13, width: '100%', outline: 'none' }}
           value={empresaId || ''}
           onChange={e => handleEmpresaChange(e.target.value)}
         >
@@ -375,13 +375,13 @@ export default function ImportacaoPage() {
 
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 11, color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>Categoria no arquivo</label>
-              <div style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '10px 14px', color: '#3b82f6', fontWeight: 700, fontSize: 14 }}>{editingRow.__desc}</div>
+              <div style={{ background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: 8, padding: '10px 14px', color: '#3b82f6', fontWeight: 700, fontSize: 14 }}>{editingRow.__desc}</div>
             </div>
 
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: 'block', fontSize: 11, color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>Conta de destino</label>
               <select
-                style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, color: 'var(--fs-text-1)', padding: '10px 14px', fontSize: 14, width: '100%', outline: 'none' }}
+                style={{ background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: 8, color: 'var(--fs-text-1)', padding: '10px 14px', fontSize: 14, width: '100%', outline: 'none' }}
                 value={selectedContaId}
                 onChange={e => setSelectedContaId(e.target.value)}
               >
@@ -398,7 +398,7 @@ export default function ImportacaoPage() {
                 Cancelar
               </button>
               <button onClick={saveMapping} disabled={!selectedContaId}
-                style={{ flex: 2, background: selectedContaId ? '#2563eb' : '#1e3a5f', color: '#fff', border: 'none', borderRadius: 8, padding: '11px', fontSize: 14, fontWeight: 700, cursor: selectedContaId ? 'pointer' : 'not-allowed' }}>
+                style={{ flex: 2, background: selectedContaId ? '#2563eb' : '#1e3a5f', color: 'var(--fs-text-1)', border: 'none', borderRadius: 8, padding: '11px', fontSize: 14, fontWeight: 700, cursor: selectedContaId ? 'pointer' : 'not-allowed' }}>
                 Salvar Mapeamento
               </button>
             </div>

@@ -8,7 +8,7 @@ const S = {
   container: { padding: '24px', color: 'var(--fs-text-1)' },
   card: { backgroundColor: 'var(--fs-surface)', borderRadius: '8px', padding: '20px', border: '1px solid var(--fs-border)', marginBottom: '24px' },
   title: { fontSize: '24px', fontWeight: 'bold', marginBottom: '24px' },
-  input: { background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '6px', color: '#fff', padding: '6px 10px', fontSize: '13px', outline: 'none' },
+  input: { background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '6px', color: 'var(--fs-text-1)', padding: '6px 10px', fontSize: '13px', outline: 'none' },
   badge: { display: 'inline-block', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', marginLeft: '8px' },
   row: (level, isTotal, isExpanded) => ({
     display: 'flex',

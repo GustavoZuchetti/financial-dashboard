@@ -7,12 +7,12 @@ const fmtFull = (v) => v !== undefined ? new Intl.NumberFormat('pt-BR', { style:
 const S = {
   page: { color: 'var(--fs-text-1)' },
   header: { marginBottom: 24 },
-  title: { fontSize: 26, fontWeight: 800, color: '#fff', margin: 0 },
+  title: { fontSize: 26, fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 },
   subtitle: { color: 'var(--fs-text-4)', fontSize: 14, margin: '4px 0 0' },
   toolbar: { display: 'flex', gap: 10, marginBottom: 20, alignItems: 'center', justifyContent: 'space-between' },
   searchInput: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 8, color: 'var(--fs-text-1)', padding: '8px 14px', fontSize: 13, width: 260 },
   btn: { background: '#3b82f6', color: '#000', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
-  btnImport: { background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
+  btnImport: { background: '#3b82f6', color: 'var(--fs-text-1)', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
   card: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, overflow: 'hidden' },
   tableHead: { display: 'grid', gridTemplateColumns: '120px 1fr 100px 140px 100px', padding: '10px 16px', background: 'var(--fs-bg)', borderBottom: '1px solid var(--fs-border)' },
   th: { color: 'var(--fs-text-2)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 },
@@ -24,11 +24,11 @@ const S = {
   editBtn: { background: 'transparent', border: '1px solid #3b82f6', borderRadius: 6, color: '#3b82f6', padding: '4px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modal: { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '24px', width: 500, maxWidth: '90%' },
-  modalTitle: { fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 20 },
   formGroup: { marginBottom: 16 },
   label: { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--fs-text-2)', marginBottom: 6 },
-  input: { width: '100%', background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, color: '#fff', padding: '10px 12px', fontSize: 14 },
-  select: { width: '100%', background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, color: '#fff', padding: '10px 12px', fontSize: 14 },
+  input: { width: '100%', background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: 8, color: 'var(--fs-text-1)', padding: '10px 12px', fontSize: 14 },
+  select: { width: '100%', background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: 8, color: '#fff', padding: '10px 12px', fontSize: 14 },
   modalActions: { display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 },
   btnCancel: { background: 'transparent', color: 'var(--fs-text-2)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   btnSave: { background: '#3b82f6', color: '#000', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }
@@ -184,7 +184,7 @@ export default function PlanoContasPage() {
           (filteredContas || []).map(conta => (
             <div key={conta.id} style={S.row2}>
               <div style={{ color: 'var(--fs-text-2)', fontFamily: 'monospace' }}>{conta.codigo}</div>
-              <div style={{ color: '#fff', fontWeight: 600 }}>{conta.nome}</div>
+              <div style={{ color: 'var(--fs-text-1)', fontWeight: 600 }}>{conta.nome}</div>
               <div><span style={S.badge(conta.tipo)}>{conta.tipo}</span></div>
               <div>
                 <button style={S.editBtn} onClick={() => { setContaEditando(conta); setModalAberto(true); }}>Editar</button>

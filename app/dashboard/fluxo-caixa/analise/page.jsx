@@ -11,7 +11,7 @@ const fmtPct     = (v) => v.toFixed(1) + '%'
 const S = {
   page:      { color: 'var(--fs-text-1)' },
   card:      { background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: '20px 24px', marginBottom: 16 },
-  cardTitle: { fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 16 },
+  cardTitle: { fontSize: 15, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 16 },
   kpiCard: (accent) => ({
     background: 'var(--fs-surface)', border: '1px solid var(--fs-border)',
     borderTop: `3px solid ${accent}`, borderRadius: 12,
@@ -115,7 +115,7 @@ export default function FluxoCaixaAnalise() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: '#fff', margin: 0 }}>Análise do Fluxo de Caixa</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 }}>Análise do Fluxo de Caixa</h1>
           <p style={{ color: 'var(--fs-text-4)', fontSize: 14, margin: '4px 0 0' }}>Composição, evolução e indicadores de saúde financeira</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--fs-surface)', padding: '8px 14px', borderRadius: 8, border: '1px solid var(--fs-border)' }}>

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { COLORS, TRANSITION } from '@/lib/design-tokens'
+import ThemeToggle from '@/components/ThemeToggle'
 
 // ─── Ícones SVG inline ──────────────────────────────────────────────────────────
 const Icon = ({ path, size = 16, color = 'currentColor' }) => (
@@ -240,6 +241,9 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
             <div style={{ fontSize: 12, color: '#e2e8f0', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{username}</div>
             <div style={{ fontSize: 10, color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
           </div>
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          <ThemeToggle />
         </div>
         <button
           className="logout-btn"

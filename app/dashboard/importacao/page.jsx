@@ -177,7 +177,6 @@ export default function ImportacaoPage() {
         categoria_origem: editingRow.__desc,
         conta_id: selectedContaId,
         tipo_destino: conta?.tipo || 'receita',
-        ativo: true
       }, { onConflict: 'empresa_id,categoria_origem' })
       if (error) throw error
       const { data: maps } = await supabase.from('categoria_mappings').select('*').eq('empresa_id', empresaId)

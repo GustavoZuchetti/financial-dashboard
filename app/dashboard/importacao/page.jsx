@@ -296,7 +296,11 @@ export default function ImportacaoPage() {
         __desc:  (row['Descrição'] || row['descricao'] || row['Categoria'] || row['categoria'] || '').trim(),
         nome:    (row['Nome'] || row['nome'] || '').replace(/[\t\n\r]+/g, ' ').trim(),
         valor:   parseValueBR(row['Valor Pago/Recebido'] || row['Valor Pago'] || row['Valor'] || row['valor'] || 0),
-        data:    parseDateBR(row['Liquidação'] || row['Data'] || row['data'] || ''),
+        data:    parseDateBR(
+          modulo === 'dre'
+            ? (row['Competência'] || row['Competencia'] || row['competência'] || row['Data'] || row['data'] || '')
+            : (row['Liquidação']  || row['Liquidacao']  || row['Data']        || row['data'] || '')
+        ),
         tipoCsv: (row['Tipo'] || '').toLowerCase(),
         original: row,
       })).filter(r => r.__desc || r.valor > 0)
@@ -336,17 +340,26 @@ export default function ImportacaoPage() {
   // ─── Verificar duplicatas por período ────────────────────────────────────────
   const checkDuplicates = async (rows, tabela) => {
     if (!rows.length) return { hasDupe: false, count: 0, periodo: '' }
-    const datas  = rows.map(r => r.data).sort()
-    const minDt  = datas[0]
-    const maxDt  = datas[datas.length - 1]
-    const { count } = await supabase
+    const datas = rows.map(r => r.data).filter(Boolean).sort()
+    if (!datas.length) return { hasDupe: false, count: 0, periodo: '' }
+    const minDt = datas[0]
+    const maxDt = datas[datas.length - 1]
+    // Supabase JS v2: select('*', { count: 'exact', head: true }) para só retornar o count
+    const { count, error } = await supabase
       .from(tabela)
-      .select('id', { count: 'exact', head: true })
+      .select('*', { count: 'exact', head: true })
       .eq('empresa_id', empresaId)
       .gte('data', minDt)
       .lte('data', maxDt)
-    const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
-    return { hasDupe: (count || 0) > 0, count: count || 0, minDt, maxDt, periodo: `${fmt(minDt)} a ${fmt(maxDt)}` }
+    if (error) console.warn('checkDuplicates error:', error.message)
+    const total = count || 0
+    const fmt   = d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
+    return {
+      hasDupe: total > 0,
+      count:   total,
+      minDt, maxDt,
+      periodo: `${fmt(minDt)} a ${fmt(maxDt)}`
+    }
   }
 
   const deleteAndInsert = async (toInsert, tabela, minDt, maxDt) => {
@@ -375,6 +388,7 @@ export default function ImportacaoPage() {
     if (!forceReplace) {
       const dupe = await checkDuplicates(toInsert, 'lancamentos')
       if (dupe.hasDupe) {
+        showToast(`⚠️ ${dupe.count} lançamentos já existem no período ${dupe.periodo}`, 'error')
         setConfirmModal({
           modulo: 'dre',
           periodo: dupe.periodo,
@@ -390,9 +404,17 @@ export default function ImportacaoPage() {
 
     setIsImporting(true)
     try {
-      const dupe = await checkDuplicates(toInsert, 'lancamentos')
-      if (forceReplace && dupe.hasDupe) {
-        await deleteAndInsert(toInsert, 'lancamentos', dupe.minDt, dupe.maxDt)
+      if (forceReplace) {
+        // Substituir: buscar período e deletar antes de inserir
+        const dupe = await checkDuplicates(toInsert, 'lancamentos')
+        if (dupe.hasDupe) {
+          await deleteAndInsert(toInsert, 'lancamentos', dupe.minDt, dupe.maxDt)
+        } else {
+          for (let i = 0; i < toInsert.length; i += 100) {
+            const { error } = await supabase.from('lancamentos').insert(toInsert.slice(i, i + 100))
+            if (error) throw error
+          }
+        }
       } else {
         for (let i = 0; i < toInsert.length; i += 100) {
           const { error } = await supabase.from('lancamentos').insert(toInsert.slice(i, i + 100))
@@ -412,9 +434,8 @@ export default function ImportacaoPage() {
   // ─── Importar Fluxo de Caixa → fluxo_caixa + ciclo_financeiro ────────────
   const importFluxo = async (forceReplace = false) => {
     if (!empresaId) { showToast('Selecione uma empresa.', 'error'); return }
-    setIsImporting(true)
-    try {
-      const toInsert = (dataFluxo || []).map(row => {
+    // ⚠️ setIsImporting APÓS o check de duplicatas para não bloquear o modal
+    const toInsert = (dataFluxo || []).map(row => {
         const map = (mappingsFluxo || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
         let tipo = map?.tipo_destino
         if (!tipo) tipo = row.tipoCsv.includes('pagar') || row.tipoCsv.includes('saida') ? 'saida' : 'entrada'
@@ -429,14 +450,15 @@ export default function ImportacaoPage() {
       if (!forceReplace) {
         const dupe = await checkDuplicates(toInsert, 'fluxo_caixa')
         if (dupe.hasDupe) {
+          showToast(`⚠️ ${dupe.count} registros já existem no período ${dupe.periodo}`, 'error')
           setConfirmModal({
             modulo: 'fluxo', periodo: dupe.periodo, count: dupe.count,
             minDt: dupe.minDt, maxDt: dupe.maxDt, toInsert, tabela: 'fluxo_caixa',
           })
-          setIsImporting(false)
           return
         }
       }
+      setIsImporting(true)
 
       // 1. Inserir (ou substituir) no fluxo_caixa
       const dupeCheck = await checkDuplicates(toInsert, 'fluxo_caixa')

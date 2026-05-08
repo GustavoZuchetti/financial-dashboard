@@ -462,9 +462,13 @@ export default function ImportacaoPage() {
       }
 
       // PASSO 2: inserir novos registros em lotes de 100
+      let inserted = 0
       for (let i = 0; i < toInsert.length; i += 100) {
-        const { error } = await supabase.from(tabela).insert(toInsert.slice(i, i + 100))
+        const batch = toInsert.slice(i, i + 100)
+        const { error } = await supabase.from(tabela).insert(batch)
         if (error) throw new Error('Erro ao inserir registros: ' + error.message)
+        inserted += batch.length
+        console.log(`INSERT [${tabela}]: ${inserted}/${toInsert.length} inseridos`)
       }
 
       // PASSO 3: se Fluxo de Caixa, atualizar Ciclo Financeiro por mês
@@ -496,7 +500,12 @@ export default function ImportacaoPage() {
 
       const label = modulo === 'dre' ? 'lançamentos no DRE' : 'registros no Fluxo de Caixa'
       const extra = modulo === 'fluxo' ? ' · Ciclo Financeiro atualizado.' : ''
-      showToast(`✓ ${toInsert.length} ${label} importados!${extra}`, 'success')
+      // Mostrar distribuição por mês no sucesso
+      const dist = {}
+      toInsert.forEach(r => { const m = r.data?.substring(0,7); if(m) dist[m] = (dist[m]||0)+1 })
+      const distStr = Object.entries(dist).sort().map(([m,n])=>`${m}:${n}`).join(' ')
+      console.log(`✓ Import concluído [${tabela}]:`, dist)
+      showToast(`✓ ${toInsert.length} ${label} importados! (${distStr})${extra}`, 'success')
       if (modulo === 'dre') setDataDre([])
       else                  setDataFluxo([])
       setConfirmModal(null)
@@ -534,11 +543,13 @@ export default function ImportacaoPage() {
     if (!toInsert.length) { showToast('Nenhum lançamento válido para importar.', 'error'); return }
     const dupe = await checkDuplicates(toInsert, 'lancamentos')
     if (dupe.hasDupe) {
-      showToast(`⚠️ Já existem ${dupe.count} lançamentos no período ${dupe.periodo}`, 'error')
+      // Sempre exibe modal de confirmação quando há dados existentes
+      showToast(`⚠️ Já existem ${dupe.count} lançamentos em ${dupe.periodo}`, 'error')
       setConfirmModal({ toInsert, tabela: 'lancamentos', modulo: 'dre', ...dupe })
-      return
+    } else {
+      // Tabela vazia — importar direto
+      await executeImport({ toInsert, tabela: 'lancamentos', modulo: 'dre', replace: false })
     }
-    await executeImport({ toInsert, tabela: 'lancamentos', modulo: 'dre', replace: false })
   }
 
   // ─── Importar Fluxo de Caixa ──────────────────────────────────────────────
@@ -548,11 +559,11 @@ export default function ImportacaoPage() {
     if (!toInsert.length) { showToast('Nenhum registro válido para importar.', 'error'); return }
     const dupe = await checkDuplicates(toInsert, 'fluxo_caixa')
     if (dupe.hasDupe) {
-      showToast(`⚠️ Já existem ${dupe.count} registros no período ${dupe.periodo}`, 'error')
+      showToast(`⚠️ Já existem ${dupe.count} registros em ${dupe.periodo}`, 'error')
       setConfirmModal({ toInsert, tabela: 'fluxo_caixa', modulo: 'fluxo', ...dupe })
-      return
+    } else {
+      await executeImport({ toInsert, tabela: 'fluxo_caixa', modulo: 'fluxo', replace: false })
     }
-    await executeImport({ toInsert, tabela: 'fluxo_caixa', modulo: 'fluxo', replace: false })
   }
 
     // ─── Modal de Confirmação de Substituição ─────────────────────────────────
@@ -560,7 +571,7 @@ export default function ImportacaoPage() {
     if (!confirmModal) return null
     const isFluxo = confirmModal.modulo === 'fluxo'
     return (
-      <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2000, padding:16 }}>
+      <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9998, padding:16 }}>
         <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:16, padding:28, width:'100%', maxWidth:460, boxShadow:'var(--fs-shadow-lg)' }}>
           <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
             <div style={{ width:44, height:44, background:'var(--fs-warning-bg)', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>⚠️</div>
@@ -586,9 +597,10 @@ export default function ImportacaoPage() {
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             <button
               onClick={() => executeImport({ ...confirmModal, replace: true })}
-              style={{ background:'var(--fs-danger)', color:'#fff', border:'none', borderRadius:9, padding:'12px', fontSize:14, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
+              disabled={isImporting}
+              style={{ background: isImporting ? 'var(--fs-surface-3)' : 'var(--fs-danger)', color: isImporting ? 'var(--fs-text-4)' : '#fff', border:'none', borderRadius:9, padding:'12px', fontSize:14, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
             >
-              🔄 Substituir — apagar os {confirmModal.count} existentes e importar os novos
+              {isImporting ? '⏳ Substituindo dados...' : `🔄 Substituir — apagar os ${confirmModal.count} existentes e importar novos`}
             </button>
             <button
               onClick={() => setConfirmModal(null)}

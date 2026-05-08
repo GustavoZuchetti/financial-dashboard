@@ -1,7 +1,6 @@
 'use client'
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import * as XLSX from 'xlsx'
 
 export default function ImportacaoPage() {
   const [empresaId, setEmpresaId] = useState(null)
@@ -13,7 +12,8 @@ export default function ImportacaoPage() {
   const [isImporting, setIsImporting] = useState(false)
   const [editingRow, setEditingRow] = useState(null)
   const [selectedContaId, setSelectedContaId] = useState('')
-  const [debugInfo, setDebugInfo] = useState('')
+  const [status, setStatus] = useState('')
+  const [error, setError] = useState(null)
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -30,8 +30,9 @@ export default function ImportacaoPage() {
           const { data: maps } = await supabase.from('categoria_mappings').select('*').eq('empresa_id', initialId)
           setMappings(maps || [])
         }
+        setStatus('Sistema pronto.')
       } catch (e) { 
-        setDebugInfo('Erro inicial: ' + e.message)
+        setError('Erro ao carregar dados: ' + e.message)
       } finally { 
         setLoading(false) 
       }
@@ -39,88 +40,67 @@ export default function ImportacaoPage() {
     init()
   }, [])
 
-  const processCSV = (text) => {
-    const lines = text.split(/\r?\n/).filter(l => l.trim())
-    if (lines.length < 2) return []
-    
-    // Detectar separador (vírgula ou ponto e vírgula)
-    const firstLine = lines[0]
-    const separator = firstLine.includes(';') ? ';' : ','
-    
-    const headers = firstLine.split(separator).map(h => h.trim().replace(/"/g, ''))
-    
-    const findIdx = (names) => headers.findIndex(h => names.some(n => h.toLowerCase().includes(n.toLowerCase())))
-    
-    const descIdx = findIdx(['descrição', 'descricao', 'categoria'])
-    const valorIdx = findIdx(['valor', 'pago', 'recebido'])
-    const nomeIdx = findIdx(['nome', 'cliente', 'fornecedor'])
-    const dataIdx = findIdx(['data', 'vencimento'])
-
-    return lines.slice(1).map((line, i) => {
-      const cells = line.split(separator).map(c => c.trim().replace(/"/g, ''))
-      const desc = cells[descIdx] || ''
-      return {
-        __id: i,
-        __desc: String(desc).trim(),
-        'Nome': cells[nomeIdx] || '',
-        'Valor': cells[valorIdx] || '0',
-        'Data': cells[dataIdx] || '',
-        'Descrição': desc
-      }
-    })
-  }
-
   const handleFile = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    setDebugInfo('Processando: ' + file.name)
+    
+    setStatus('Lendo arquivo: ' + file.name)
+    setError(null)
     
     const reader = new FileReader()
     reader.onload = (evt) => {
       try {
-        const content = evt.target.result
-        let data = []
+        let content = evt.target.result
+        // Remover BOM de arquivos UTF-8
+        content = content.replace(/^\uFEFF/, '')
         
-        if (file.name.toLowerCase().endsWith('.csv')) {
-          data = processCSV(content)
-        } else {
-          const wb = XLSX.read(content, { type: 'binary' })
-          const ws = wb.Sheets[wb.SheetNames[0]]
-          const json = XLSX.utils.sheet_to_json(ws, { defval: '' })
-          data = json.map((row, i) => {
-            const desc = row['Descrição'] || row['descrição'] || row['Categoria'] || row['categoria'] || ''
-            return {
-              ...row,
-              __id: i,
-              __desc: String(desc).trim()
-            }
-          })
+        const lines = content.split(/\r?\n/).filter(l => l.trim())
+        if (lines.length < 2) {
+          throw new Error('O arquivo parece estar vazio ou não tem cabeçalho.')
         }
         
-        if (data.length === 0) {
-          setDebugInfo('Arquivo vazio ou sem colunas reconhecidas.')
-        } else {
-          setUploadedData(data)
-          setDebugInfo(`Sucesso: ${data.length} linhas carregadas.`)
+        const separator = lines[0].includes(';') ? ';' : ','
+        const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''))
+        
+        const findIdx = (names) => headers.findIndex(h => names.some(n => h.toLowerCase().includes(n.toLowerCase())))
+        const descIdx = findIdx(['descrição', 'descricao', 'categoria'])
+        const valorIdx = findIdx(['valor', 'pago', 'recebido'])
+        const nomeIdx = findIdx(['nome', 'cliente', 'fornecedor'])
+        const dataIdx = findIdx(['data', 'vencimento'])
+
+        if (descIdx === -1) {
+          throw new Error('Não encontrei a coluna "Descrição" no seu arquivo. Verifique o cabeçalho.')
         }
+
+        const data = lines.slice(1).map((line, i) => {
+          const cells = line.split(separator).map(c => c.trim().replace(/"/g, ''))
+          const desc = cells[descIdx] || ''
+          return {
+            __id: i,
+            __desc: String(desc).trim(),
+            'Nome': cells[nomeIdx] || '',
+            'Valor': cells[valorIdx] || '0',
+            'Data': cells[dataIdx] || '',
+            'Descrição': desc
+          }
+        })
+        
+        setUploadedData(data)
+        setStatus(`Sucesso: ${data.length} linhas carregadas.`)
       } catch (err) { 
-        setDebugInfo('Erro: ' + err.message)
+        setError('Erro no processamento: ' + err.message)
         console.error(err)
       }
     }
-
-    if (file.name.toLowerCase().endsWith('.csv')) {
-      reader.readAsText(file, 'UTF-8')
-    } else {
-      reader.readAsBinaryString(file)
-    }
+    reader.onerror = () => setError('Erro ao ler o arquivo físico.')
+    reader.readAsText(file, 'UTF-8')
   }
 
   const saveMapping = async () => {
     if (!selectedContaId || !editingRow) return
     try {
       const conta = planoContas.find(c => c.id === selectedContaId)
-      const { error } = await supabase.from('categoria_mappings').upsert({
+      const { error: err } = await supabase.from('categoria_mappings').upsert({
         empresa_id: empresaId,
         categoria_origem: editingRow.__desc,
         conta_id: selectedContaId,
@@ -128,14 +108,14 @@ export default function ImportacaoPage() {
         ativo: true
       }, { onConflict: 'empresa_id,categoria_origem' })
       
-      if (error) throw error
+      if (err) throw err
 
       const { data: maps } = await supabase.from('categoria_mappings').select('*').eq('empresa_id', empresaId)
       setMappings(maps || [])
       setEditingRow(null)
-      setDebugInfo('Mapeamento salvo!')
+      setStatus('Mapeamento salvo com sucesso!')
     } catch (e) { 
-      alert('Erro ao salvar: ' + e.message) 
+      setError('Erro ao salvar mapeamento: ' + e.message) 
     }
   }
 
@@ -143,7 +123,7 @@ export default function ImportacaoPage() {
     setIsImporting(true)
     try {
       const toInsert = uploadedData.map(row => {
-        const map = mappings.find(m => m.categoria_origem.toLowerCase() === row.__desc.toLowerCase())
+        const map = mappings.find(m => m.categoria_origem.toLowerCase() === (row.__desc || '').toLowerCase())
         if (!map) return null
         let v = row['Valor'] || 0
         let valor = typeof v === 'number' ? v : parseFloat(String(v).replace(/\./g, '').replace(',', '.'))
@@ -159,33 +139,38 @@ export default function ImportacaoPage() {
       }).filter(Boolean)
       
       if (toInsert.length > 0) {
-        const { error } = await supabase.from('lancamentos').insert(toInsert)
-        if (error) throw error
-        alert(`${toInsert.length} registros importados!`)
+        const { error: err } = await supabase.from('lancamentos').insert(toInsert)
+        if (err) throw err
+        setStatus(`${toInsert.length} registros importados!`)
         setUploadedData([])
       } else {
-        alert('Nenhum registro mapeado.')
+        setError('Nenhum registro mapeado para importar.')
       }
     } catch (e) { 
-      alert('Erro: ' + e.message) 
+      setError('Erro na importação: ' + e.message) 
     } finally { 
       setIsImporting(false) 
     }
   }
 
-  if (loading) return <div className="p-8 text-white">Carregando...</div>
+  if (loading) return <div className="p-8 text-white font-bold">Carregando sistema...</div>
 
   return (
-    <div className="p-6 text-white max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Importação / De-Para</h1>
-        <span className="text-[10px] text-gray-500">{debugInfo}</span>
+    <div className="p-6 text-white max-w-5xl mx-auto font-sans">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-black tracking-tighter">IMPORTAÇÃO / DE-PARA</h1>
+        <div className="text-right">
+          <p className={`text-[10px] font-bold uppercase ${error ? 'text-red-500' : 'text-blue-500'}`}>
+            {error ? '⚠️ ERRO' : '📡 STATUS'}
+          </p>
+          <p className="text-xs text-gray-400">{error || status}</p>
+        </div>
       </div>
       
-      <div className="bg-gray-900 p-4 rounded-lg mb-6 border border-gray-800">
-        <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">Empresa</label>
+      <div className="bg-gray-900 p-6 rounded-2xl mb-8 border border-gray-800 shadow-xl">
+        <label className="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">Empresa Selecionada</label>
         <select 
-          className="w-full bg-black p-2 rounded border border-gray-700 text-white"
+          className="w-full bg-black p-4 rounded-xl border border-gray-800 text-white font-bold outline-none focus:ring-2 focus:ring-blue-600 transition-all"
           value={empresaId || ''} 
           onChange={(e) => setEmpresaId(e.target.value)}
         >
@@ -195,40 +180,49 @@ export default function ImportacaoPage() {
 
       {uploadedData.length === 0 ? (
         <div 
-          className="border-2 border-dashed border-gray-700 p-16 text-center rounded-xl cursor-pointer hover:border-blue-500 bg-gray-900/50"
+          className="border-2 border-dashed border-gray-800 p-20 text-center rounded-3xl cursor-pointer hover:border-blue-600 bg-gray-900/40 transition-all group"
           onClick={() => fileInputRef.current.click()}
         >
-          <p className="text-lg font-medium mb-1">Selecione seu arquivo CSV ou Excel</p>
-          <p className="text-sm text-gray-500">Suporta CSV (vírgula ou ponto e vírgula) e Excel</p>
-          <input ref={fileInputRef} type="file" hidden onChange={handleFile} accept=".csv,.xlsx,.xls" />
+          <div className="bg-blue-600/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+            <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+          </div>
+          <h2 className="text-xl font-bold mb-2">Selecione seu arquivo CSV</h2>
+          <p className="text-gray-500 text-sm">O sistema detectará automaticamente o formato do seu arquivo.</p>
+          <input ref={fileInputRef} type="file" hidden onChange={handleFile} accept=".csv" />
         </div>
       ) : (
-        <div className="bg-gray-900 p-6 rounded-xl border border-gray-800">
-          <div className="flex justify-between items-center mb-6">
-            <span className="font-bold">{uploadedData.length} registros encontrados</span>
-            <button onClick={() => setUploadedData([])} className="text-red-500 text-xs font-bold">Remover Arquivo</button>
+        <div className="bg-gray-900 p-8 rounded-3xl border border-gray-800 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+              <span className="text-xl font-black">{uploadedData.length} REGISTROS</span>
+            </div>
+            <button onClick={() => setUploadedData([])} className="bg-red-500/10 text-red-500 px-4 py-2 rounded-lg text-[10px] font-black hover:bg-red-500/20 transition-all">REMOVER ARQUIVO</button>
           </div>
           
-          <div className="max-h-[400px] overflow-y-auto rounded-lg border border-gray-800">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-black text-gray-500">
+          <div className="max-h-[500px] overflow-y-auto rounded-2xl border border-gray-800 bg-black/50">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-black text-gray-500 sticky top-0 z-10">
                 <tr>
-                  <th className="p-3">Descrição (Arquivo)</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3 text-right">Ação</th>
+                  <th className="p-5 font-black uppercase text-[10px] tracking-widest">Descrição no Arquivo</th>
+                  <th className="p-5 font-black uppercase text-[10px] tracking-widest">Status</th>
+                  <th className="p-5 font-black uppercase text-[10px] tracking-widest text-right">Ação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
                 {uploadedData.map(row => {
                   const map = mappings.find(m => m.categoria_origem.toLowerCase() === (row.__desc || '').toLowerCase())
                   return (
-                    <tr key={row.__id} className="hover:bg-white/5">
-                      <td className="p-3 text-gray-300">{row.__desc}</td>
-                      <td className="p-3">
-                        {map ? <span className="text-blue-500 text-[10px] font-bold">MAPEADO</span> : <span className="text-red-500 text-[10px] font-bold">PENDENTE</span>}
+                    <tr key={row.__id} className="hover:bg-white/5 transition-colors">
+                      <td className="p-5 text-gray-300 font-medium">{row.__desc}</td>
+                      <td className="p-5">
+                        {map ? 
+                          <span className="bg-blue-500/10 text-blue-500 px-3 py-1 rounded-full text-[10px] font-black">MAPEADO</span> : 
+                          <span className="bg-red-500/10 text-red-500 px-3 py-1 rounded-full text-[10px] font-black">PENDENTE</span>
+                        }
                       </td>
-                      <td className="p-3 text-right">
-                        {!map && <button onClick={() => setEditingRow(row)} className="text-blue-500 font-bold text-xs">Configurar</button>}
+                      <td className="p-5 text-right">
+                        {!map && <button onClick={() => setEditingRow(row)} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-black text-[10px] transition-all">CONFIGURAR</button>}
                       </td>
                     </tr>
                   )
@@ -239,36 +233,36 @@ export default function ImportacaoPage() {
           
           <button 
             onClick={finalizeImport} 
-            className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl mt-8 font-black"
+            className="w-full bg-blue-600 hover:bg-blue-500 py-5 rounded-2xl mt-10 font-black text-xl transition-all shadow-2xl shadow-blue-900/40 active:scale-[0.98]"
             disabled={isImporting}
           >
-            {isImporting ? 'IMPORTANDO...' : 'FINALIZAR IMPORTAÇÃO'}
+            {isImporting ? 'PROCESSANDO...' : 'FINALIZAR IMPORTAÇÃO'}
           </button>
         </div>
       )}
 
       {editingRow && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-900 p-8 rounded-2xl w-full max-w-md border border-gray-800">
-            <h2 className="text-2xl font-black mb-6">Configurar De-Para</h2>
-            <div className="mb-6">
-              <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Categoria no arquivo</p>
-              <div className="bg-black p-4 rounded-xl border border-gray-800 text-blue-400 font-bold">{editingRow.__desc}</div>
-            </div>
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 z-50">
+          <div className="bg-gray-900 p-10 rounded-[2.5rem] w-full max-w-lg border border-gray-800 shadow-2xl animate-in zoom-in-95 duration-300">
+            <h2 className="text-3xl font-black mb-8 tracking-tighter">CONFIGURAR DE-PARA</h2>
             <div className="mb-8">
-              <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Conta no sistema</p>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Categoria Detectada</p>
+              <div className="bg-black p-6 rounded-2xl border border-gray-800 font-bold text-blue-400 text-lg">{editingRow.__desc}</div>
+            </div>
+            <div className="mb-10">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Conta de Destino (DRE)</p>
               <select 
-                className="w-full bg-black p-4 rounded-xl border border-gray-800 text-white"
+                className="w-full bg-black p-6 rounded-2xl border border-gray-800 text-white font-bold outline-none focus:ring-4 focus:ring-blue-600/20 transition-all appearance-none"
                 value={selectedContaId} 
                 onChange={(e) => setSelectedContaId(e.target.value)}
               >
-                <option value="">Selecione...</option>
+                <option value="">Selecione uma conta...</option>
                 {planoContas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
             </div>
-            <div className="flex gap-4">
-              <button onClick={() => setEditingRow(null)} className="flex-1 bg-gray-800 py-4 rounded-xl font-bold">Cancelar</button>
-              <button onClick={saveMapping} className="flex-1 bg-blue-600 py-4 rounded-xl font-bold">Salvar</button>
+            <div className="flex gap-6">
+              <button onClick={() => setEditingRow(null)} className="flex-1 bg-gray-800 hover:bg-gray-700 py-5 rounded-2xl font-black transition-all">CANCELAR</button>
+              <button onClick={saveMapping} className="flex-1 bg-blue-600 hover:bg-blue-500 py-5 rounded-2xl font-black transition-all shadow-lg shadow-blue-900/20">SALVAR</button>
             </div>
           </div>
         </div>

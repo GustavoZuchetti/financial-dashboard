@@ -6,24 +6,41 @@ import { supabase } from '@/lib/supabase'
 // ─── Parsers ──────────────────────────────────────────────────────────────────
 function parseCSV(text) {
   const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-  const lines = clean.split('\n').filter(l => l.trim())
-  if (lines.length < 2) return []
-  const sep = (lines[0].match(/;/g) || []).length > (lines[0].match(/,/g) || []).length ? ';' : ','
+  const sep   = (clean.split('\n')[0].match(/;/g) || []).length >
+                (clean.split('\n')[0].match(/,/g) || []).length ? ';' : ','
+
+  // Juntar linhas dentro de aspas abertas (campos multi-linha do Bling)
+  const rawLines = clean.split('\n')
+  const joined   = []
+  let buf = ''
+  for (const line of rawLines) {
+    buf = buf ? buf + '\n' + line : line
+    if ((buf.match(/"/g) || []).length % 2 === 0) { joined.push(buf); buf = '' }
+  }
+  if (buf) joined.push(buf)
+  if (joined.length < 2) return []
+
   const parseRow = (line) => {
     const cells = []; let cur = '', inQ = false
-    for (let i = 0; i < line.length; i++) {
-      if (line[i] === '"') { inQ = !inQ; continue }
-      if (line[i] === sep && !inQ) { cells.push(cur.trim()); cur = ''; continue }
-      cur += line[i]
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ; continue }
+      if (ch === sep && !inQ) { cells.push(cur.trim()); cur = ''; continue }
+      cur += ch
     }
     cells.push(cur.trim()); return cells
   }
-  const headers = parseRow(lines[0]).map(h => h.replace(/^"|"$/g, '').trim())
-  return lines.slice(1).map(line => {
-    const cells = parseRow(line); const obj = {}
-    headers.forEach((h, i) => { obj[h] = (cells[i] || '').replace(/^"|"$/g, '').replace(/[\t\n\r]+/g, ' ').trim() })
-    return obj
-  }).filter(row => Object.values(row).some(v => v !== ''))
+
+  const headers = parseRow(joined[0]).map(h => h.replace(/^"|"$/g, '').trim())
+  return joined.slice(1)
+    .map(line => {
+      const cells = parseRow(line)
+      const obj   = {}
+      headers.forEach((h, i) => {
+        obj[h] = (cells[i] || '').replace(/^"|"$/g, '').replace(/[\t\n\r]+/g, ' ').trim()
+      })
+      return obj
+    })
+    .filter(row => Object.values(row).some(v => v !== ''))
 }
 
 function parseXLSX(buffer) {

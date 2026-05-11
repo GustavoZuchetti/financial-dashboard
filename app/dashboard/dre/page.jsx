@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
+import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
 
 // ─── Paleta ──────────────────────────────────────────────────────────────────
 const C = {
@@ -66,44 +66,64 @@ function calcDRE(lancamentos) {
 }
 
 // ─── Montar dados do waterfall ────────────────────────────────────────────────
+// Técnica: spacer transparente + barra colorida empilhada
+// spacer = limite inferior da barra (pode ser negativo)
+// barHeight = magnitude visível (sempre positivo)
+// Resultado: barra colorida flutua entre [spacer, spacer+barHeight]
 function buildWaterfall(v) {
   const { rb, ded, rl, cv, lb, df, ebt, rf, dfin, resL, inv, resF } = v
   let acc = 0
   const bars = []
 
-  const addEntry = (name, amount, tipo, skip0=false) => {
-    if (skip0 && Math.abs(amount) < 0.01) return
-    if (tipo === 'open') {
-      bars.push({ name, value: amount, type: 'open', range: [0, amount], color: amount>=0?C.green:C.red })
-      acc = amount
-    } else if (tipo === 'add') {
-      bars.push({ name, value: amount, type: 'add', range: [acc, acc+amount], color: C.green })
-      acc += amount
-    } else if (tipo === 'sub') {
-      const after = acc - amount
-      bars.push({ name, value: -amount, type: 'sub', range: [Math.min(acc,after), Math.max(acc,after)], color: C.red })
-      acc = after
-    } else { // subtotal
-      const c = name==='Resultado Final' ? (acc>=0?C.blue:C.red) : name==='EBITDA' ? C.teal : name==='Resultado Líquido' ? C.purple : C.blue
-      bars.push({ name, value: acc, type: 'subtotal', range: [Math.min(0,acc), Math.max(0,acc)], color: c })
-    }
+  // Adiciona barra de abertura (anchored no zero)
+  const open = (name, val) => {
+    const lo = Math.min(0, val), hi = Math.max(0, val)
+    bars.push({ name, value: val, type:'open', color: val>=0?C.green:C.red,
+      spacer: lo, barHeight: hi - lo })
+    acc = val
   }
 
-  addEntry('Receita Bruta',      rb,   'open')
-  addEntry('Deduções',           ded,  'sub',  true)
-  if (ded > 0.01) addEntry('Receita Líquida',   rl,   'total_step')
-  addEntry('Custos Variáveis',   cv,   'sub',  true)
-  addEntry('Lucro Bruto',        0,    'subtotal')
-  addEntry('Despesas Fixas',     df,   'sub',  true)
-  addEntry('EBITDA',             0,    'subtotal')
-  addEntry('Rec. Financeiras',   rf,   'add',  true)
-  addEntry('Desp. Financeiras',  dfin, 'sub',  true)
-  if (rf > 0.01 || dfin > 0.01) addEntry('Resultado Líquido', 0, 'subtotal')
-  addEntry('Investimentos',      inv,  'sub',  true)
-  addEntry('Resultado Final',    0,    'subtotal')
+  // Adiciona contribuição positiva (sobe)
+  const add = (name, val, skip=false) => {
+    if (skip && Math.abs(val) < 0.01) return
+    const lo = acc, hi = acc + val
+    bars.push({ name, value: val, type:'add', color: C.green,
+      spacer: Math.min(lo, hi), barHeight: Math.abs(hi - lo) })
+    acc += val
+  }
 
-  // Corrigir entradas do tipo total_step
-  return bars.map(b => b.type === 'total_step' ? { ...b, type:'subtotal', color: C.blue, range:[Math.min(0,b.value),Math.max(0,b.value)] } : b)
+  // Adiciona contribuição negativa (desce)
+  const sub = (name, val, skip=false) => {
+    if (skip && Math.abs(val) < 0.01) return
+    const lo = acc - val, hi = acc
+    bars.push({ name, value: -val, type:'sub', color: C.red,
+      spacer: Math.min(lo, hi), barHeight: Math.abs(hi - lo) })
+    acc = lo
+  }
+
+  // Adiciona subtotal (anchored no zero, mostra acumulado)
+  const total = (name) => {
+    const color = name==='Resultado Final' ? (acc>=0?C.blue:C.red)
+      : name==='EBITDA' ? C.teal : name==='Resultado Líquido' ? C.purple : C.blue
+    const lo = Math.min(0, acc), hi = Math.max(0, acc)
+    bars.push({ name, value: acc, type:'subtotal', color,
+      spacer: lo, barHeight: hi - lo })
+  }
+
+  open('Receita Bruta',      rb)
+  sub( 'Deduções',           ded,  true)
+  if (ded > 0.01) total('Receita Líquida')
+  sub( 'Custos Variáveis',   cv,   true)
+  total('Lucro Bruto')
+  sub( 'Despesas Fixas',     df,   true)
+  total('EBITDA')
+  add( 'Rec. Financeiras',   rf,   true)
+  sub( 'Desp. Financeiras',  dfin, true)
+  if (rf > 0.01 || dfin > 0.01) total('Resultado Líquido')
+  sub( 'Investimentos',      inv,  true)
+  total('Resultado Final')
+
+  return bars
 }
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
@@ -263,15 +283,31 @@ export default function DREGeral() {
           <div style={{ background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:12,padding:'20px 24px',flex:1 }}>
             <h2 style={{ fontSize:14,fontWeight:700,color:'var(--fs-text-1)',marginBottom:16 }}>Da Receita ao Lucro</h2>
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={wf} margin={{top:8,right:20,left:0,bottom:48}}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} interval={0} angle={-25} textAnchor="end" />
-                <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fmt} />
-                <Tooltip content={<CustomTooltip lancamentos={data} />} cursor={{fill:'transparent'}} />
-                <Bar dataKey="range" radius={[3,3,0,0]}>
-                  {wf.map((e,i)=><Cell key={i} fill={e.color} fillOpacity={e.type==='subtotal'?0.75:1} />)}
-                </Bar>
-              </BarChart>
+              {(() => {
+                const allBots = wf.map(d => d.spacer)
+                const allTops = wf.map(d => d.spacer + d.barHeight)
+                const domMin  = Math.min(0, ...allBots)
+                const domMax  = Math.max(0, ...allTops)
+                const pad     = (domMax - domMin) * 0.12
+                return (
+                  <BarChart data={wf} margin={{top:8,right:20,left:0,bottom:48}} barCategoryGap="25%">
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false}
+                      tick={{fill:'var(--fs-text-4)',fontSize:10}} interval={0} angle={-25} textAnchor="end" />
+                    <YAxis axisLine={false} tickLine={false}
+                      tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fmt}
+                      domain={[domMin - pad, domMax + pad]} />
+                    <ReferenceLine y={0} stroke="var(--fs-border-2)" strokeWidth={1.5} />
+                    <Tooltip content={<CustomTooltip lancamentos={data} />} cursor={{fill:'transparent'}} />
+                    <Bar dataKey="spacer" stackId="wf" fill="transparent" isAnimationActive={false} />
+                    <Bar dataKey="barHeight" stackId="wf" radius={[3,3,0,0]} isAnimationActive={false}>
+                      {wf.map((e,i) => (
+                        <Cell key={i} fill={e.color} fillOpacity={e.type==='subtotal' ? 0.78 : 1} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                )
+              })()}
             </ResponsiveContainer>
           </div>
           <div style={{ textAlign:'center',marginTop:12,color:'var(--fs-text-4)',fontSize:11 }}>Uso Interno Confidencial — {new Date().toLocaleDateString('pt-BR')}</div>
@@ -342,15 +378,33 @@ export default function DREGeral() {
           ) : (
             <div style={{ height:380 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={wf} margin={{top:10,right:20,left:0,bottom:54}}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} interval={0} angle={-25} textAnchor="end" />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} tickFormatter={fmt} width={70} />
-                  <Tooltip content={<CustomTooltip lancamentos={data} />} cursor={{fill:'rgba(255,255,255,0.03)'}} />
-                  <Bar dataKey="range" radius={[3,3,0,0]}>
-                    {wf.map((e,i)=><Cell key={i} fill={e.color} fillOpacity={e.type==='subtotal'?0.80:1} />)}
-                  </Bar>
-                </BarChart>
+                {(() => {
+                  const allBots = wf.map(d => d.spacer)
+                  const allTops = wf.map(d => d.spacer + d.barHeight)
+                  const domMin  = Math.min(0, ...allBots)
+                  const domMax  = Math.max(0, ...allTops)
+                  const pad = (domMax - domMin) * 0.12
+                  return (
+                    <BarChart data={wf} margin={{top:10,right:20,left:0,bottom:54}} barCategoryGap="25%">
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false}
+                        tick={{fill:'var(--fs-text-4)',fontSize:11}} interval={0} angle={-25} textAnchor="end" />
+                      <YAxis axisLine={false} tickLine={false}
+                        tick={{fill:'var(--fs-text-4)',fontSize:11}} tickFormatter={fmt} width={72}
+                        domain={[domMin - pad, domMax + pad]} />
+                      <ReferenceLine y={0} stroke="var(--fs-border-2)" strokeWidth={1.5} />
+                      <Tooltip content={<CustomTooltip lancamentos={data} />} cursor={{fill:'rgba(255,255,255,0.03)'}} />
+                      {/* Spacer invisível — posiciona a barra colorida */}
+                      <Bar dataKey="spacer" stackId="wf" fill="transparent" isAnimationActive={false} />
+                      {/* Barra colorida — a magnitude visível */}
+                      <Bar dataKey="barHeight" stackId="wf" radius={[3,3,0,0]} isAnimationActive={false}>
+                        {wf.map((e,i) => (
+                          <Cell key={i} fill={e.color} fillOpacity={e.type==='subtotal' ? 0.78 : 1} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  )
+                })()}
               </ResponsiveContainer>
             </div>
           )}

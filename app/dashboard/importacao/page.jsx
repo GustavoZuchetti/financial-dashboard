@@ -225,7 +225,7 @@ function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
 
   // Filtrar contas por módulo
   const contasFiltradas = (planoContas || []).filter(c => {
-    if (modulo === 'dre') return ['receita','custo','despesa'].includes(c.tipo)
+    if (modulo === 'dre') return ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','investimento'].includes(c.tipo)
     if (modulo === 'fluxo') return ['entrada','saida','fluxo_entrada','fluxo_saida'].includes(c.tipo)
     return true
   })
@@ -547,7 +547,7 @@ export default function ImportacaoPage() {
     (dataDre || []).map(row => {
       const map = (mappingsDre || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
       let tipo = map?.tipo_destino || (row.tipoCsv.includes('pagar') ? 'despesa' : 'receita')
-      if (!['receita','custo','despesa'].includes(tipo)) tipo = 'receita'
+      if (!['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','investimento'].includes(tipo)) tipo = 'receita'
       return { empresa_id: empresaId, data: row.data, descricao: row.nome || row.__desc || '', valor: row.valor, tipo, conta_id: map?.conta_id || null, categoria: row.__desc || '' }
     }).filter(r => r.valor > 0)
 

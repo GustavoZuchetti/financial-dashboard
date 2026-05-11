@@ -79,9 +79,19 @@ function ModalConta({ conta, onClose, onSave }) {
             value={form.tipo} 
             onChange={(e) => setForm({...form, tipo: e.target.value})}
           >
-            <option value="receita">Receita</option>
-            <option value="custo">Custo</option>
-            <option value="despesa">Despesa</option>
+            <optgroup label="── DRE ──────────────────">
+              <option value="receita">Receita (Operacional)</option>
+              <option value="deducao">Dedução (Impostos/Dev.)</option>
+              <option value="custo">Custo Variável (CMV/CPV)</option>
+              <option value="despesa">Despesa Fixa</option>
+              <option value="receita_financeira">Receita Financeira</option>
+              <option value="despesa_financeira">Despesa Financeira</option>
+              <option value="investimento">Investimento (CAPEX)</option>
+            </optgroup>
+            <optgroup label="── Fluxo de Caixa ───────">
+              <option value="entrada">Entrada (FC)</option>
+              <option value="saida">Saída (FC)</option>
+            </optgroup>
             <option value="ativo">Ativo</option>
             <option value="passivo">Passivo</option>
           </select>

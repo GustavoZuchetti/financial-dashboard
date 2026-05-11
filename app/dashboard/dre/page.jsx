@@ -1,70 +1,131 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { supabase } from '@/lib/supabase'
-import { CHART_PALETTE } from '@/lib/design-tokens'
+import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 
-const fmt     = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact', maximumFractionDigits: 1 }).format(v)
-const fmtFull = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
-const fmtPct  = (v) => (v > 0 ? '+' : '') + v.toFixed(1) + '%'
-
-const calcDelta = (cur, prev) => (!prev || prev === 0) ? null : ((cur - prev) / Math.abs(prev)) * 100
-
-const formatPeriod = (start, end) => {
-  const opts = { day: '2-digit', month: 'short', year: 'numeric' }
-  return `${new Date(start+'T00:00:00').toLocaleDateString('pt-BR', opts)} → ${new Date(end+'T00:00:00').toLocaleDateString('pt-BR', opts)}`
+// ─── Paleta ──────────────────────────────────────────────────────────────────
+const C = {
+  green:    '#22c55e',
+  blue:     '#3b82f6',
+  red:      '#ef4444',
+  gray:     '#64748b',
+  purple:   '#8b5cf6',
+  yellow:   '#f59e0b',
+  teal:     '#14b8a6',
 }
 
-const getPrevPeriod = (s, e) => {
-  const start = new Date(s+'T00:00:00'), end = new Date(e+'T00:00:00')
-  const diff = end - start
-  const pEnd = new Date(start); pEnd.setDate(pEnd.getDate() - 1)
-  const pStart = new Date(pEnd - diff)
-  return { start: pStart.toISOString().split('T')[0], end: pEnd.toISOString().split('T')[0] }
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const fmt     = v => { const a=Math.abs(v); return a>=1e6?`R$${(a/1e6).toFixed(1)}mi`:a>=1e3?`R$${(a/1e3).toFixed(0)}mil`:`R$${a.toFixed(0)}` }
+const fmtFull = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
+const formatPeriod = (s,e) => {
+  const fmt_ = d => new Date(d+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})
+  return `${fmt_(s)} → ${fmt_(e)}`
+}
+const getPrevPeriod = (s,e) => {
+  const ms=new Date(s+'T00:00:00'), me=new Date(e+'T00:00:00')
+  const diff=me-ms; const ps=new Date(ms-diff-86400000); const pe=new Date(ms-86400000)
+  const iso=d=>d.toISOString().split('T')[0]
+  return { s:iso(ps), e:iso(pe) }
 }
 
-// ─── Item 5 + 8: KPI Card com animação, acento e paleta padronizada ─────────────
-const KPICard = ({ title, rawValue, accent = CHART_PALETTE.receita, loading, prevRawValue, isExpense = false, large = false }) => {
-  const [animated, setAnimated] = useState(false)
-  useEffect(() => { if (!loading) { setAnimated(false); const t = setTimeout(() => setAnimated(true), 50); return () => clearTimeout(t) } }, [loading, rawValue])
+// ─── Estrutura do DRE ─────────────────────────────────────────────────────────
+// Mapeia tipo → linha do DRE
+const DRE_STRUCTURE = [
+  { key:'receita_bruta',      label:'Receita Bruta',       tipos:['receita'],             sign:+1, subtotal:false, color: C.green  },
+  { key:'deducoes',           label:'Deduções',            tipos:['deducao'],             sign:-1, subtotal:false, color: C.red    },
+  { key:'receita_liquida',    label:'Receita Líquida',     tipos:[],                      sign: 0, subtotal:true,  color: C.blue   },
+  { key:'custos_variaveis',   label:'Custos Variáveis',    tipos:['custo'],               sign:-1, subtotal:false, color: C.red    },
+  { key:'lucro_bruto',        label:'Lucro Bruto',         tipos:[],                      sign: 0, subtotal:true,  color: C.blue   },
+  { key:'despesas_fixas',     label:'Despesas Fixas',      tipos:['despesa'],             sign:-1, subtotal:false, color: C.red    },
+  { key:'ebitda',             label:'EBITDA',              tipos:[],                      sign: 0, subtotal:true,  color: C.teal   },
+  { key:'receitas_financeiras',label:'Rec. Financeiras',   tipos:['receita_financeira'],  sign:+1, subtotal:false, color: C.green  },
+  { key:'despesas_financeiras',label:'Desp. Financeiras',  tipos:['despesa_financeira'],  sign:-1, subtotal:false, color: C.red    },
+  { key:'resultado_liquido',  label:'Resultado Líquido',   tipos:[],                      sign: 0, subtotal:true,  color: C.purple },
+  { key:'investimentos',      label:'Investimentos',       tipos:['investimento'],        sign:-1, subtotal:false, color: C.yellow },
+  { key:'resultado_final',    label:'Resultado Final',     tipos:[],                      sign: 0, subtotal:true,  color: C.blue   },
+]
 
-  const delta = prevRawValue != null ? calcDelta(Math.abs(rawValue), Math.abs(prevRawValue)) : null
-  const favorable = delta !== null ? (isExpense ? delta <= 0 : delta >= 0) : null
-  const fColor = '#10b981', dColor = '#ef4444'
+// ─── Calcular valores do DRE ──────────────────────────────────────────────────
+function calcDRE(lancamentos) {
+  const sum = (tipos) => lancamentos.filter(l => tipos.includes(l.tipo)).reduce((a,c)=>a+Number(c.valor),0)
 
+  const rb   = sum(['receita'])
+  const ded  = sum(['deducao'])
+  const rl   = rb - ded
+  const cv   = sum(['custo'])
+  const lb   = rl - cv
+  const df   = sum(['despesa'])
+  const ebt  = lb - df
+  const rf   = sum(['receita_financeira'])
+  const dfin = sum(['despesa_financeira'])
+  const resL = ebt + rf - dfin
+  const inv  = sum(['investimento'])
+  const resF = resL - inv
+
+  return { rb, ded, rl, cv, lb, df, ebt, rf, dfin, resL, inv, resF }
+}
+
+// ─── Montar dados do waterfall ────────────────────────────────────────────────
+function buildWaterfall(v) {
+  const { rb, ded, rl, cv, lb, df, ebt, rf, dfin, resL, inv, resF } = v
+  let acc = 0
+  const bars = []
+
+  const addEntry = (name, amount, tipo, skip0=false) => {
+    if (skip0 && Math.abs(amount) < 0.01) return
+    if (tipo === 'open') {
+      bars.push({ name, value: amount, type: 'open', range: [0, amount], color: amount>=0?C.green:C.red })
+      acc = amount
+    } else if (tipo === 'add') {
+      bars.push({ name, value: amount, type: 'add', range: [acc, acc+amount], color: C.green })
+      acc += amount
+    } else if (tipo === 'sub') {
+      const after = acc - amount
+      bars.push({ name, value: -amount, type: 'sub', range: [Math.min(acc,after), Math.max(acc,after)], color: C.red })
+      acc = after
+    } else { // subtotal
+      const c = name==='Resultado Final' ? (acc>=0?C.blue:C.red) : name==='EBITDA' ? C.teal : name==='Resultado Líquido' ? C.purple : C.blue
+      bars.push({ name, value: acc, type: 'subtotal', range: [Math.min(0,acc), Math.max(0,acc)], color: c })
+    }
+  }
+
+  addEntry('Receita Bruta',      rb,   'open')
+  addEntry('Deduções',           ded,  'sub',  true)
+  if (ded > 0.01) addEntry('Receita Líquida',   rl,   'total_step')
+  addEntry('Custos Variáveis',   cv,   'sub',  true)
+  addEntry('Lucro Bruto',        0,    'subtotal')
+  addEntry('Despesas Fixas',     df,   'sub',  true)
+  addEntry('EBITDA',             0,    'subtotal')
+  addEntry('Rec. Financeiras',   rf,   'add',  true)
+  addEntry('Desp. Financeiras',  dfin, 'sub',  true)
+  if (rf > 0.01 || dfin > 0.01) addEntry('Resultado Líquido', 0, 'subtotal')
+  addEntry('Investimentos',      inv,  'sub',  true)
+  addEntry('Resultado Final',    0,    'subtotal')
+
+  // Corrigir entradas do tipo total_step
+  return bars.map(b => b.type === 'total_step' ? { ...b, type:'subtotal', color: C.blue, range:[Math.min(0,b.value),Math.max(0,b.value)] } : b)
+}
+
+// ─── KPI Card ─────────────────────────────────────────────────────────────────
+function KPICard({ title, value, prev, accent, isExpense, loading, large }) {
+  const delta = prev != null && prev !== 0 ? ((value - prev) / Math.abs(prev) * 100) : null
+  const favorable = isExpense ? (value <= prev) : (value >= prev)
   return (
-    <div style={{
-      background: 'var(--fs-surface)',
-      border: '1px solid var(--fs-border)',
-      borderTop: `3px solid ${accent}`,
-      borderRadius: 12,
-      padding: large ? '24px 20px' : '16px 18px',
-      transition: 'box-shadow 0.2s',
-    }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>{title}</div>
+    <div style={{ background:'var(--fs-surface)', border:`1px solid var(--fs-border)`, borderRadius:12, padding: large?'20px 24px':'14px 18px', borderTop:`3px solid ${accent}`, position:'relative', overflow:'hidden' }}>
+      <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:8 }}>{title}</div>
       {loading ? (
-        <div style={{ height: large ? 36 : 28, width: '75%', borderRadius: 6, background: 'linear-gradient(90deg,var(--fs-surface) 25%,var(--fs-surface-2) 50%,var(--fs-surface) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+        <div style={{ height:32, background:'linear-gradient(90deg,var(--fs-surface) 25%,var(--fs-surface-2) 50%,var(--fs-surface) 75%)', backgroundSize:'200% 100%', animation:'shimmer 1.5s infinite', borderRadius:6 }} />
       ) : (
         <>
-          <div style={{
-            fontSize: large ? 30 : 22, fontWeight: 800, color: accent,
-            animation: animated ? 'countUp 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'none',
-            marginBottom: 6,
-          }}>
-            {fmtFull(rawValue)}
+          <div style={{ fontSize: large?28:22, fontWeight:900, color:accent, letterSpacing:'-0.5px', animation:'countUp 0.4s ease' }}>
+            {fmtFull(value)}
           </div>
           {delta !== null && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 13, color: favorable ? fColor : dColor }}>{delta >= 0 ? '▲' : '▼'}</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: favorable ? fColor : dColor }}>{fmtPct(delta)}</span>
-              <span style={{ fontSize: 10, color: 'var(--fs-text-4)' }}>vs anterior</span>
-              <span style={{
-                fontSize: 10, fontWeight: 700,
-                color: favorable ? fColor : dColor,
-                background: favorable ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
-                border: `1px solid ${favorable ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
-                padding: '1px 6px', borderRadius: 4,
-              }}>{favorable ? '✓ F' : '✗ D'}</span>
+            <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:6 }}>
+              <span style={{ fontSize:10, color:'var(--fs-text-4)' }}>vs anterior</span>
+              <span style={{ fontSize:10, fontWeight:700, color:favorable?C.green:C.red, background:favorable?'rgba(34,197,94,0.12)':'rgba(239,68,68,0.12)', border:`1px solid ${favorable?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'}`, padding:'1px 6px', borderRadius:4 }}>
+                {favorable?'✓ F':'✗ D'} {Math.abs(delta).toFixed(1)}%
+              </span>
             </div>
           )}
         </>
@@ -73,132 +134,67 @@ const KPICard = ({ title, rawValue, accent = CHART_PALETTE.receita, loading, pre
   )
 }
 
-// ─── Tooltip waterfall ──────────────────────────────────────────────────────────
-const CustomTooltip = ({ active, payload, data }) => {
+// ─── Tooltip Waterfall ────────────────────────────────────────────────────────
+const CustomTooltip = ({ active, payload, lancamentos }) => {
   if (!active || !payload?.[0]) return null
   const entry = payload[0].payload
-  const getTop = (tipo) => {
-    // 1. Agrupar por cliente (descricao), somando os valores
+
+  // Pareto por tipo
+  const pareto = (tipos) => {
     const grouped = {}
-    ;(data||[]).filter(d => d.tipo === tipo).forEach(d => {
-      const key = (d.descricao || d.categoria || 'Sem nome').trim()
-      grouped[key] = (grouped[key] || 0) + Number(d.valor)
+    ;(lancamentos||[]).filter(d=>tipos.includes(d.tipo)).forEach(d=>{
+      const k=(d.descricao||d.categoria||'—').trim()
+      grouped[k]=(grouped[k]||0)+Number(d.valor)
     })
-    // 2. Ordenar pelo total acumulado por cliente (desc)
-    const sorted = Object.entries(grouped)
-      .map(([nome, valor]) => ({ nome, valor }))
-      .sort((a, b) => b.valor - a.valor)
-    // 3. Aplicar regra de Pareto 80%
-    const total = sorted.reduce((acc, cur) => acc + cur.valor, 0)
-    let acc = 0
-    return sorted.filter(item => {
-      if (acc >= total * 0.8) return false
-      acc += item.valor
-      return true
-    })
+    const sorted=Object.entries(grouped).map(([nome,valor])=>({nome,valor})).sort((a,b)=>b.valor-a.valor)
+    const total=sorted.reduce((a,c)=>a+c.valor,0)
+    let acc=0
+    return sorted.filter(i=>{ if(acc>=total*0.8)return false; acc+=i.valor; return true })
   }
-  let details = []
-  if (entry.name==='Receita Bruta') details=getTop('receita')
-  else if (entry.name==='Custos')   details=getTop('custo')
-  else if (entry.name==='Despesas') details=getTop('despesa')
+
+  const tiposMap = { 'Receita Bruta':['receita'], 'Rec. Financeiras':['receita_financeira'], 'Deduções':['deducao'], 'Custos Variáveis':['custo'], 'Despesas Fixas':['despesa'], 'Desp. Financeiras':['despesa_financeira'], 'Investimentos':['investimento'] }
+  const details = tiposMap[entry.name] ? pareto(tiposMap[entry.name]) : []
+
   return (
-    <div style={{ background:'var(--fs-input-bg)', border:'1px solid var(--fs-border)', borderRadius:8, padding:10, fontSize:12, boxShadow:'0 8px 24px rgba(0,0,0,0.5)' }}>
-      <p style={{ margin:'0 0 6px', fontWeight:700, color:
-        entry.name==='Receita Bruta'||entry.name==='Lucro Bruto'||entry.name==='EBITDA'
-          ? CHART_PALETTE.receita
-          : CHART_PALETTE.custo
-      }}>{entry.name}</p>
-      <p style={{ margin:'3px 0', color:'var(--fs-text-4)' }}>Total: <span style={{ color:'var(--fs-text-1)', fontWeight:700 }}>{fmtFull(Math.abs(entry.value))}</span></p>
-      {details.length > 0 && <>
-        <p style={{ margin:'8px 0 3px', color:'var(--fs-text-4)', fontSize:11, borderTop:'1px solid var(--fs-border)', paddingTop:5 }}>Top 80% (Pareto):</p>
-        {details.map((d,i)=>(
-          <p key={i} style={{ margin:'1px 0 1px 8px', color:'var(--fs-text-2)', fontSize:11 }}>• {d.nome.substring(0,26)}: <strong>{fmtFull(d.valor)}</strong></p>
-        ))}
-      </>}
+    <div style={{ background:'var(--fs-input-bg)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 14px', fontSize:12, boxShadow:'0 8px 24px rgba(0,0,0,0.4)', maxWidth:280 }}>
+      <p style={{ margin:'0 0 6px', fontWeight:700, color:entry.color||'var(--fs-text-1)' }}>{entry.name}</p>
+      <p style={{ margin:'3px 0', color:'var(--fs-text-4)' }}>
+        {entry.type==='subtotal'?'Resultado:':'Total:'}{' '}
+        <strong style={{ color:'var(--fs-text-1)' }}>{fmtFull(Math.abs(entry.value))}</strong>
+      </p>
+      {details.length > 0 && (
+        <>
+          <p style={{ margin:'8px 0 3px', color:'var(--fs-text-4)', fontSize:11, borderTop:'1px solid var(--fs-border)', paddingTop:5 }}>Top 80% (Pareto):</p>
+          {details.slice(0,5).map((d,i)=>(
+            <p key={i} style={{ margin:'2px 0 2px 8px', color:'var(--fs-text-2)', fontSize:11 }}>• {d.nome.substring(0,28)}: <strong>{fmtFull(d.valor)}</strong></p>
+          ))}
+        </>
+      )}
     </div>
   )
 }
 
-// ─── Modo Apresentação ──────────────────────────────────────────────────────────
-const PresentationOverlay = ({ kpis, prevKpis, waterfallData, startDate, endDate, isConsolidado, loading, onExit, data }) => {
-  useEffect(() => {
-    const h = (e) => { if (e.key==='Escape') onExit() }
-    window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h)
-  }, [onExit])
-
-  const mB = kpis.receita > 0 ? ((kpis.receita-kpis.custo)/kpis.receita*100) : 0
-  const mE = kpis.receita > 0 ? (kpis.ebitda/kpis.receita*100) : 0
-  const mL = kpis.receita > 0 ? ((kpis.receita-kpis.custo-kpis.despesa)/kpis.receita*100) : 0
-
-  return (
-    <div style={{ position:'fixed', inset:0, zIndex:9999, background:'var(--fs-bg)', display:'flex', flexDirection:'column', padding:'36px 48px', overflowY:'auto' }}>
-      <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}} @keyframes countUp{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}`}</style>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:32 }}>
-        <div>
-          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:6 }}>
-            <div style={{ width:42, height:42, background:'linear-gradient(135deg,#1d4ed8,#3b82f6)', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, color:'#fff', fontSize:18, boxShadow:'0 6px 20px rgba(59,130,246,0.4)' }}>FS</div>
-            <span style={{ fontSize:20, fontWeight:900, color:'#fff', letterSpacing:'-0.5px' }}>Facesign</span>
-            {isConsolidado && <span style={{ background:'rgba(59,130,246,0.12)', color:'#93c5fd', border:'1px solid rgba(59,130,246,0.25)', padding:'3px 12px', borderRadius:20, fontSize:11, fontWeight:700 }}>Consolidado</span>}
-          </div>
-          <div style={{ color:'var(--fs-text-4)', fontSize:13 }}>Demonstrativos Executivos — {formatPeriod(startDate, endDate)}</div>
-        </div>
-        <button onClick={onExit} style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', color:'#f87171', padding:'9px 18px', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:700 }}>✕ Sair (ESC)</button>
-      </div>
-
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:20, marginBottom:24 }}>
-        <KPICard title="Receita Bruta"   rawValue={kpis.receita}  accent={CHART_PALETTE.receita}  loading={loading} prevRawValue={prevKpis?.receita}  isExpense={false} large />
-        <KPICard title="Custos Totais"   rawValue={kpis.custo}    accent={CHART_PALETTE.custo}    loading={loading} prevRawValue={prevKpis?.custo}    isExpense={true}  large />
-        <KPICard title="Despesas Totais" rawValue={kpis.despesa}  accent={CHART_PALETTE.despesa}  loading={loading} prevRawValue={prevKpis?.despesa}  isExpense={true}  large />
-        <KPICard title="EBITDA"          rawValue={kpis.ebitda}   accent={kpis.ebitda>=0?CHART_PALETTE.ebitda:CHART_PALETTE.custo} loading={loading} prevRawValue={prevKpis?.ebitda} isExpense={false} large />
-      </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14, marginBottom:28 }}>
-        {[{l:'Margem Bruta',v:mB,c:'#8b5cf6'},{l:'Margem EBITDA',v:mE,c:CHART_PALETTE.despesa},{l:'Margem Líquida',v:mL,c:CHART_PALETTE.ebitda}].map(m=>(
-          <div key={m.l} style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <span style={{ color:'var(--fs-text-4)', fontSize:13 }}>{m.l}</span>
-            <span style={{ color:m.v>=0?m.c:CHART_PALETTE.custo, fontSize:26, fontWeight:900 }}>{m.v.toFixed(1)}%</span>
-          </div>
-        ))}
-      </div>
-      <div style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'22px 28px', flex:1, minHeight:300 }}>
-        <h2 style={{ fontSize:15, fontWeight:700, color:'var(--fs-text-1)', marginBottom:20 }}>Fluxo do Resultado (Waterfall)</h2>
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={waterfallData} margin={{top:10,right:30,left:0,bottom:40}}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'#475569',fontSize:11}} interval={0} angle={-20} textAnchor="end" />
-            <YAxis axisLine={false} tickLine={false} tick={{fill:'#475569',fontSize:11}} tickFormatter={fmt} />
-            <Tooltip content={<CustomTooltip data={data} />} cursor={{fill:'transparent'}} />
-            <Bar dataKey="range" radius={[3,3,0,0]}>
-              {waterfallData.map((e,i)=><Cell key={i} fill={e.type==='total'?CHART_PALETTE.receita:CHART_PALETTE.custo} fillOpacity={e.type==='total'?0.85:1} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      <div style={{ textAlign:'center', marginTop:14, color:'var(--fs-text-4)', fontSize:11 }}>Facesign — Uso Interno Confidencial — {new Date().toLocaleDateString('pt-BR')}</div>
-    </div>
-  )
-}
-
-// ─── Página principal ───────────────────────────────────────────────────────────
+// ─── Página Principal ─────────────────────────────────────────────────────────
 export default function DREGeral() {
-  const [startDate, setStartDate] = useState(() => { const d=new Date(); return new Date(d.getFullYear(),0,1).toISOString().split('T')[0] })
-  const [endDate,   setEndDate]   = useState(new Date().toISOString().split('T')[0])
-  const [data,      setData]      = useState([])
-  const [prevData,  setPrevData]  = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState(null)
-  const [empresaId, setEmpresaId] = useState(null)
-  const [isConsolidado, setIsConsolidado] = useState(false)
-  const [presentation, setPresentation]  = useState(false)
+  const [startDate, setStartDate]  = useState(() => new Date(new Date().getFullYear(),0,1).toISOString().split('T')[0])
+  const [endDate,   setEndDate]    = useState(new Date().toISOString().split('T')[0])
+  const [data,      setData]       = useState([])
+  const [prevData,  setPrevData]   = useState([])
+  const [loading,   setLoading]    = useState(true)
+  const [error,     setError]      = useState(null)
+  const [empresaId, setEmpresaId]  = useState(null)
+  const [isConsol,  setIsConsol]   = useState(false)
+  const [showPres,  setShowPres]   = useState(false)
 
   useEffect(() => {
     const id = localStorage.getItem('empresa_id')
-    if (id) { setEmpresaId(id); setIsConsolidado(id==='todas') }
-    const h = () => { const nid=localStorage.getItem('empresa_id'); setEmpresaId(nid); setIsConsolidado(nid==='todas') }
+    if (id) { setEmpresaId(id); setIsConsol(id==='todas') }
+    const h = () => { const nid=localStorage.getItem('empresa_id'); setEmpresaId(nid); setIsConsol(nid==='todas') }
     window.addEventListener('storage', h); return () => window.removeEventListener('storage', h)
   }, [])
 
   const fetchPeriod = useCallback(async (s, e, consol, empId) => {
-    let q = supabase.from('lancamentos').select('*, empresas(nome)').gte('data',s).lte('data',e)
+    let q = supabase.from('lancamentos').select('*').gte('data',s).lte('data',e)
     if (consol) {
       const { data: ue } = await supabase.from('empresas').select('id').eq('user_id',(await supabase.auth.getSession()).data.session.user.id)
       if (ue?.length) q = q.in('empresa_id', ue.map(x=>x.id))
@@ -214,102 +210,145 @@ export default function DREGeral() {
       setLoading(true); setError(null)
       try {
         const [cur, prev] = await Promise.all([
-          fetchPeriod(startDate, endDate, isConsolidado, empresaId),
-          fetchPeriod(...Object.values(getPrevPeriod(startDate, endDate)), isConsolidado, empresaId),
+          fetchPeriod(startDate, endDate, isConsol, empresaId),
+          fetchPeriod(...Object.values(getPrevPeriod(startDate, endDate)), isConsol, empresaId),
         ])
         setData(cur); setPrevData(prev)
-      } catch (e) { setError('Erro ao carregar dados. Verifique a conexão.') }
+      } catch(e) { setError('Erro ao carregar dados.') }
       finally { setLoading(false) }
     }
     run()
-  }, [empresaId, startDate, endDate, isConsolidado, fetchPeriod])
+  }, [empresaId, startDate, endDate, isConsol, fetchPeriod])
 
-  const sum = (arr, tipo) => arr.filter(d=>d.tipo===tipo).reduce((a,c)=>a+Number(c.valor),0)
-  const R=sum(data,'receita'), C=sum(data,'custo'), D=sum(data,'despesa'), E=R-C-D
-  const pR=sum(prevData,'receita'), pC=sum(prevData,'custo'), pD=sum(prevData,'despesa'), pE=pR-pC-pD
+  const v  = calcDRE(data)
+  const pv = calcDRE(prevData)
+  const wf = buildWaterfall(v)
 
-  const kpis     = { receita:R, custo:C, despesa:D, ebitda:E }
-  const prevKpis = { receita:pR, custo:pC, despesa:pD, ebitda:pE }
-
-  const wfData = [
-    { name:'Receita Bruta', range:[0,R],       value:R,  type:'total'    },
-    { name:'Custos',        range:[R-C,R],      value:-C, type:'negative' },
-    { name:'Lucro Bruto',   range:[0,R-C],      value:R-C,type:'total'    },
-    { name:'Despesas',      range:[Math.max(0,E),R-C], value:-D,type:'negative' },
-    { name:'EBITDA',        range:[0,Math.max(0,E)],   value:E, type:'total'    },
-  ]
-
-  const mB = R>0?((R-C)/R*100):0, mE = R>0?(E/R*100):0, mL = R>0?((R-C-D)/R*100):0
+  const mB  = v.rl>0 ? (v.lb/v.rl*100) : 0
+  const mE  = v.rl>0 ? (v.ebt/v.rl*100) : 0
+  const mL  = v.rl>0 ? (v.resL/v.rl*100) : 0
 
   const badge = { display:'inline-block', background:'rgba(59,130,246,0.1)', color:'#93c5fd', padding:'3px 12px', borderRadius:20, fontSize:11, fontWeight:700, marginLeft:8, border:'1px solid rgba(59,130,246,0.2)' }
 
   return (
     <>
       <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}} @keyframes countUp{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}`}</style>
-      {presentation && <PresentationOverlay kpis={kpis} prevKpis={prevKpis} waterfallData={wfData} startDate={startDate} endDate={endDate} isConsolidado={isConsolidado} loading={loading} onExit={()=>setPresentation(false)} data={data} />}
+
+      {showPres && (
+        <div style={{ position:'fixed', inset:0, zIndex:9999, background:'var(--fs-bg)', display:'flex', flexDirection:'column', padding:'36px 48px', overflowY:'auto' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:28 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ width:40,height:40,background:'linear-gradient(135deg,#1d4ed8,#3b82f6)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,color:'#fff',fontSize:16 }}>FS</div>
+              <div>
+                <div style={{ fontWeight:800, fontSize:18, color:'var(--fs-text-1)' }}>Facesign {isConsol&&<span style={badge}>Consolidado</span>}</div>
+                <div style={{ fontSize:12, color:'var(--fs-text-4)' }}>DRE — {formatPeriod(startDate,endDate)}</div>
+              </div>
+            </div>
+            <button onClick={()=>setShowPres(false)} style={{ background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',color:'#f87171',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:700 }}>✕ ESC</button>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:20 }}>
+            <KPICard title="Receita Bruta"      value={v.rb}   prev={pv.rb}   accent={C.green}  loading={loading} large />
+            <KPICard title="Lucro Bruto"         value={v.lb}   prev={pv.lb}   accent={C.blue}   loading={loading} large />
+            <KPICard title="EBITDA"              value={v.ebt}  prev={pv.ebt}  accent={v.ebt>=0?C.teal:C.red} loading={loading} large />
+            <KPICard title="Resultado Final"     value={v.resF} prev={pv.resF} accent={v.resF>=0?C.purple:C.red} loading={loading} large />
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:24 }}>
+            {[{l:'Margem Bruta',v:mB,c:C.purple},{l:'Margem EBITDA',v:mE,c:C.teal},{l:'Margem Líquida',v:mL,c:C.blue}].map(m=>(
+              <div key={m.l} style={{ background:'var(--fs-surface-2)',border:'1px solid var(--fs-border)',borderRadius:10,padding:'14px 18px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+                <span style={{ color:'var(--fs-text-4)',fontSize:13 }}>{m.l}</span>
+                <span style={{ color:m.v>=0?m.c:C.red,fontSize:24,fontWeight:900 }}>{m.v.toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:12,padding:'20px 24px',flex:1 }}>
+            <h2 style={{ fontSize:14,fontWeight:700,color:'var(--fs-text-1)',marginBottom:16 }}>Da Receita ao Lucro</h2>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={wf} margin={{top:8,right:20,left:0,bottom:48}}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} interval={0} angle={-25} textAnchor="end" />
+                <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fmt} />
+                <Tooltip content={<CustomTooltip lancamentos={data} />} cursor={{fill:'transparent'}} />
+                <Bar dataKey="range" radius={[3,3,0,0]}>
+                  {wf.map((e,i)=><Cell key={i} fill={e.color} fillOpacity={e.type==='subtotal'?0.75:1} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div style={{ textAlign:'center',marginTop:12,color:'var(--fs-text-4)',fontSize:11 }}>Uso Interno Confidencial — {new Date().toLocaleDateString('pt-BR')}</div>
+        </div>
+      )}
 
       <div style={{ color:'var(--fs-text-1)', padding:24 }}>
         {/* Header */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexWrap:'wrap', gap:12 }}>
           <h1 style={{ fontSize:24, fontWeight:800, color:'var(--fs-text-1)', display:'flex', alignItems:'center' }}>
             Demonstrativos Executivos
-            {isConsolidado && <span style={badge}>📊 Consolidado</span>}
+            {isConsol && <span style={badge}>📊 Consolidado</span>}
           </h1>
           <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--fs-surface)', padding:'7px 14px', borderRadius:8, border:'1px solid var(--fs-border)' }}>
               <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>Período:</span>
-              <input type="date" style={{ background:'var(--fs-input-bg)', border:'1px solid var(--fs-border)', borderRadius:6, color:'var(--fs-text-1)', padding:'5px 8px', fontSize:12, outline:'none' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
+              <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
               <span style={{ color:'var(--fs-text-4)' }}>→</span>
-              <input type="date" style={{ background:'var(--fs-input-bg)', border:'1px solid var(--fs-border)', borderRadius:6, color:'var(--fs-text-1)', padding:'5px 8px', fontSize:12, outline:'none' }} value={endDate}   onChange={e=>setEndDate(e.target.value)} />
+              <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
             </div>
-            <button onClick={()=>setPresentation(true)} style={{ background:'linear-gradient(135deg,#1e3a5f,#1d4ed8)', border:'1px solid #2563eb', color:'#bfdbfe', padding:'8px 16px', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:700 }}>
+            <button onClick={()=>setShowPres(true)} style={{ background:'linear-gradient(135deg,#1e3a5f,#1d4ed8)',border:'1px solid #2563eb',color:'#bfdbfe',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:700 }}>
               🎯 Apresentação
             </button>
           </div>
         </div>
 
-        {error && <div style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'12px 16px', color:'#fca5a5', marginBottom:20 }}>⚠️ {error}</div>}
+        {error && <div style={{ background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:8,padding:'12px 16px',color:'#fca5a5',marginBottom:20 }}>⚠️ {error}</div>}
 
-        {/* KPIs — Item 5 e 8 */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:14 }}>
-          <KPICard title="Receita Bruta"   rawValue={R} accent={CHART_PALETTE.receita}                          loading={loading} prevRawValue={pR} isExpense={false} />
-          <KPICard title="Custos Totais"   rawValue={C} accent={CHART_PALETTE.custo}                            loading={loading} prevRawValue={pC} isExpense={true}  />
-          <KPICard title="Despesas Totais" rawValue={D} accent={CHART_PALETTE.despesa}                          loading={loading} prevRawValue={pD} isExpense={true}  />
-          <KPICard title="EBITDA"          rawValue={E} accent={E>=0?CHART_PALETTE.ebitda:CHART_PALETTE.custo}  loading={loading} prevRawValue={pE} isExpense={false} />
+        {/* KPI Cards — estrutura DRE completa */}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:14 }}>
+          <KPICard title="Receita Bruta"   value={v.rb}   prev={pv.rb}   accent={C.green}                    loading={loading} />
+          <KPICard title="Lucro Bruto"     value={v.lb}   prev={pv.lb}   accent={v.lb>=0?C.blue:C.red}       loading={loading} />
+          <KPICard title="EBITDA"          value={v.ebt}  prev={pv.ebt}  accent={v.ebt>=0?C.teal:C.red}      loading={loading} />
+          <KPICard title="Resultado Final" value={v.resF} prev={pv.resF} accent={v.resF>=0?C.purple:C.red}   loading={loading} />
         </div>
 
         {/* Margens */}
         {!loading && data.length > 0 && (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:22 }}>
-            {[{l:'Margem Bruta',v:mB,c:'#8b5cf6'},{l:'Margem EBITDA',v:mE,c:CHART_PALETTE.despesa},{l:'Margem Líquida',v:mL,c:CHART_PALETTE.ebitda}].map(m=>(
-              <div key={m.l} style={{ background:'var(--fs-input-bg)', border:'1px solid var(--fs-border)', borderRadius:8, padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>{m.l}</span>
-                <span style={{ color:m.v>=0?m.c:CHART_PALETTE.custo, fontSize:17, fontWeight:800 }}>{m.v.toFixed(1)}%</span>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:20 }}>
+            {[{l:'Margem Bruta',v:mB,c:C.purple},{l:'Margem EBITDA',v:mE,c:C.teal},{l:'Margem Líquida',v:mL,c:C.blue}].map(m=>(
+              <div key={m.l} style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-border)',borderRadius:8,padding:'10px 14px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+                <span style={{ color:'var(--fs-text-4)',fontSize:12 }}>{m.l}</span>
+                <span style={{ color:m.v>=0?m.c:C.red,fontSize:17,fontWeight:800 }}>{m.v.toFixed(1)}%</span>
               </div>
             ))}
           </div>
         )}
 
-        {/* Waterfall */}
-        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px', marginBottom:20, minHeight:400, display:'flex', flexDirection:'column' }}>
-          <h2 style={{ fontSize:15, fontWeight:700, color:'var(--fs-text-1)', marginBottom:20 }}>Fluxo do Resultado (Waterfall)</h2>
+        {/* Waterfall — Da Receita ao Lucro */}
+        <div style={{ background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:12,padding:'20px 24px',marginBottom:20 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+            <h2 style={{ fontSize:15,fontWeight:700,color:'var(--fs-text-1)',margin:0 }}>Da Receita ao Lucro</h2>
+            <div style={{ display:'flex', gap:14, fontSize:11 }}>
+              {[{c:C.green,l:'Positivo'},{c:C.red,l:'Redução'},{c:C.blue,l:'Resultado'},{c:C.teal,l:'EBITDA'},{c:C.purple,l:'Líquido'}].map(i=>(
+                <span key={i.l} style={{ display:'flex',alignItems:'center',gap:4,color:'var(--fs-text-4)' }}>
+                  <span style={{ width:10,height:10,borderRadius:2,background:i.c,display:'inline-block' }}/>
+                  {i.l}
+                </span>
+              ))}
+            </div>
+          </div>
           {loading ? (
-            <div style={{ flex:1, height:300, background:'linear-gradient(90deg,var(--fs-surface) 25%,var(--fs-surface-2) 50%,var(--fs-surface) 75%)', backgroundSize:'200% 100%', animation:'shimmer 1.5s infinite', borderRadius:8 }} />
+            <div style={{ height:360,background:'linear-gradient(90deg,var(--fs-surface) 25%,var(--fs-surface-2) 50%,var(--fs-surface) 75%)',backgroundSize:'200% 100%',animation:'shimmer 1.5s infinite',borderRadius:8 }}/>
           ) : data.length===0 ? (
-            <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--fs-text-4)', flexDirection:'column', gap:8 }}>
-              <span style={{ fontSize:32 }}>📊</span>
-              <span>Nenhum lançamento no período selecionado</span>
+            <div style={{ height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--fs-text-4)',flexDirection:'column',gap:8 }}>
+              <span style={{ fontSize:32 }}>📊</span><span>Nenhum lançamento no período</span>
             </div>
           ) : (
-            <div style={{ height:360 }}>
+            <div style={{ height:380 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={wfData} margin={{top:10,right:30,left:0,bottom:40}}>
+                <BarChart data={wf} margin={{top:10,right:20,left:0,bottom:54}}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'#475569',fontSize:11}} interval={0} angle={-25} textAnchor="end" />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill:'#475569',fontSize:11}} tickFormatter={fmt} />
-                  <Tooltip content={<CustomTooltip data={data} />} cursor={{fill:'transparent'}} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} interval={0} angle={-25} textAnchor="end" />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} tickFormatter={fmt} width={70} />
+                  <Tooltip content={<CustomTooltip lancamentos={data} />} cursor={{fill:'rgba(255,255,255,0.03)'}} />
                   <Bar dataKey="range" radius={[3,3,0,0]}>
-                    {wfData.map((e,i)=><Cell key={i} fill={e.type==='total'?CHART_PALETTE.receita:CHART_PALETTE.custo} fillOpacity={e.type==='total'?0.85:1} />)}
+                    {wf.map((e,i)=><Cell key={i} fill={e.color} fillOpacity={e.type==='subtotal'?0.80:1} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -317,9 +356,61 @@ export default function DREGeral() {
           )}
         </div>
 
+        {/* Tabela Resumo DRE */}
+        {!loading && data.length > 0 && (
+          <div style={{ background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:12,padding:'20px 24px' }}>
+            <h2 style={{ fontSize:15,fontWeight:700,color:'var(--fs-text-1)',marginBottom:16 }}>Resumo Executivo</h2>
+            <table style={{ width:'100%',borderCollapse:'collapse',fontSize:13 }}>
+              <thead>
+                <tr style={{ borderBottom:'2px solid var(--fs-border)' }}>
+                  <th style={{ padding:'8px 12px',textAlign:'left',color:'var(--fs-text-4)',fontSize:11,fontWeight:700,textTransform:'uppercase' }}>Linha DRE</th>
+                  <th style={{ padding:'8px 12px',textAlign:'right',color:'var(--fs-text-4)',fontSize:11,fontWeight:700,textTransform:'uppercase' }}>Período Atual</th>
+                  <th style={{ padding:'8px 12px',textAlign:'right',color:'var(--fs-text-4)',fontSize:11,fontWeight:700,textTransform:'uppercase' }}>Período Anterior</th>
+                  <th style={{ padding:'8px 12px',textAlign:'right',color:'var(--fs-text-4)',fontSize:11,fontWeight:700,textTransform:'uppercase' }}>Variação</th>
+                  <th style={{ padding:'8px 12px',textAlign:'right',color:'var(--fs-text-4)',fontSize:11,fontWeight:700,textTransform:'uppercase' }}>% Receita</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { l:'Receita Bruta',       cur:v.rb,   prev:pv.rb,   pct:v.rb/v.rb,   isTotal:false, isSub:false, indent:0 },
+                  { l:'(-) Deduções',         cur:-v.ded, prev:-pv.ded, pct:-v.ded/v.rb, isTotal:false, isSub:false, indent:1, hide: v.ded<0.01 },
+                  { l:'= Receita Líquida',    cur:v.rl,   prev:pv.rl,   pct:v.rl/v.rb,   isTotal:false, isSub:true,  indent:0, hide: v.ded<0.01 },
+                  { l:'(-) Custos Variáveis', cur:-v.cv,  prev:-pv.cv,  pct:-v.cv/v.rb,  isTotal:false, isSub:false, indent:1, hide: v.cv<0.01 },
+                  { l:'= Lucro Bruto',        cur:v.lb,   prev:pv.lb,   pct:v.lb/v.rb,   isTotal:false, isSub:true,  indent:0 },
+                  { l:'(-) Despesas Fixas',   cur:-v.df,  prev:-pv.df,  pct:-v.df/v.rb,  isTotal:false, isSub:false, indent:1, hide: v.df<0.01 },
+                  { l:'= EBITDA',             cur:v.ebt,  prev:pv.ebt,  pct:v.ebt/v.rb,  isTotal:true,  isSub:false, indent:0 },
+                  { l:'(+) Rec. Financeiras', cur:v.rf,   prev:pv.rf,   pct:v.rf/v.rb,   isTotal:false, isSub:false, indent:1, hide: v.rf<0.01 },
+                  { l:'(-) Desp. Financeiras',cur:-v.dfin,prev:-pv.dfin,pct:-v.dfin/v.rb,isTotal:false, isSub:false, indent:1, hide: v.dfin<0.01 },
+                  { l:'= Resultado Líquido',  cur:v.resL, prev:pv.resL, pct:v.resL/v.rb, isTotal:false, isSub:true,  indent:0, hide: (v.rf+v.dfin)<0.01 },
+                  { l:'(-) Investimentos',    cur:-v.inv, prev:-pv.inv, pct:-v.inv/v.rb,  isTotal:false, isSub:false, indent:1, hide: v.inv<0.01 },
+                  { l:'= Resultado Final',    cur:v.resF, prev:pv.resF, pct:v.resF/v.rb, isTotal:true,  isSub:false, indent:0 },
+                ].filter(r=>!r.hide).map((r,i)=>{
+                  const delta = pv.rb > 0 ? ((r.cur-r.prev)/Math.abs(r.prev||1)*100) : null
+                  const bg = r.isTotal ? 'var(--fs-surface-2)' : i%2===0 ? 'transparent' : 'rgba(255,255,255,0.01)'
+                  const color = r.isTotal ? (r.cur>=0?C.teal:C.red) : r.isSub ? C.blue : r.cur<0 ? C.red : 'var(--fs-text-1)'
+                  const fw = r.isTotal || r.isSub ? 800 : 400
+                  return (
+                    <tr key={r.l} style={{ borderBottom:'1px solid var(--fs-border)', background:bg }}>
+                      <td style={{ padding:'9px 12px', color:'var(--fs-text-2)', fontWeight:fw, paddingLeft: r.indent?24:12 }}>{r.l}</td>
+                      <td style={{ padding:'9px 12px', textAlign:'right', color, fontWeight:fw }}>{fmtFull(r.cur)}</td>
+                      <td style={{ padding:'9px 12px', textAlign:'right', color:'var(--fs-text-3)', fontWeight:400 }}>{fmtFull(r.prev)}</td>
+                      <td style={{ padding:'9px 12px', textAlign:'right' }}>
+                        {delta!==null&&<span style={{ color:delta>=0?C.green:C.red, fontSize:11, fontWeight:600 }}>{delta>=0?'+':''}{delta.toFixed(1)}%</span>}
+                      </td>
+                      <td style={{ padding:'9px 12px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>
+                        {v.rb>0&&!isNaN(r.pct) ? `${(r.pct*100).toFixed(1)}%` : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {!loading && prevData.length > 0 && (
-          <div style={{ textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>
-            ℹ️ Variações vs período anterior: {formatPeriod(...Object.values(getPrevPeriod(startDate,endDate)))}
+          <div style={{ textAlign:'right',color:'var(--fs-text-4)',fontSize:11,marginTop:12 }}>
+            ℹ️ Variações vs {formatPeriod(...Object.values(getPrevPeriod(startDate,endDate)))}
           </div>
         )}
       </div>

@@ -238,7 +238,7 @@ function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
 
   // Filtrar contas por módulo
   const contasFiltradas = (planoContas || []).filter(c => {
-    if (modulo === 'dre') return ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','investimento'].includes(c.tipo)
+    if (modulo === 'dre') return ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','imposto_lucro','investimento'].includes(c.tipo)
     if (modulo === 'fluxo') return ['entrada','saida','fluxo_entrada','fluxo_saida'].includes(c.tipo)
     return true
   })
@@ -330,7 +330,7 @@ export default function ImportacaoPage() {
     if (!id) return
     const { data } = await supabase.from('categoria_mappings').select('*').eq('empresa_id', id)
     const all = data || []
-    const DRE_TIPOS = ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','investimento','ignorar']
+    const DRE_TIPOS = ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','imposto_lucro','investimento','ignorar']
     const FC_TIPOS  = ['entrada','saida','fluxo_entrada','fluxo_saida']
     setMappingsDre(all.filter(m => DRE_TIPOS.includes(m.tipo_destino)))
     setMappingsFluxo(all.filter(m => FC_TIPOS.includes(m.tipo_destino)))
@@ -586,7 +586,7 @@ export default function ImportacaoPage() {
       .map(row => {
         const map = (mappingsDre || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
         let tipo = map?.tipo_destino || (row.tipoCsv.includes('pagar') ? 'despesa' : 'receita')
-        if (!['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','investimento'].includes(tipo)) tipo = 'receita'
+        if (!['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','imposto_lucro','investimento'].includes(tipo)) tipo = 'receita'
         return { empresa_id: empresaId, data: row.data, descricao: row.nome || row.__desc || '', valor: row.valor, tipo, conta_id: map?.conta_id || null, categoria: row.__desc || '' }
       })
       .filter(r => r.valor > 0)

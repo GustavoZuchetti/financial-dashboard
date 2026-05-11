@@ -12,6 +12,7 @@ const C = {
   purple:   '#8b5cf6',
   yellow:   '#f59e0b',
   teal:     '#14b8a6',
+  orange:   '#f97316',
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -56,13 +57,14 @@ function calcDRE(lancamentos) {
   const lb   = rl - cv
   const df   = sum(['despesa'])
   const ebt  = lb - df
+  const imp  = sum(['imposto_lucro'])
   const rf   = sum(['receita_financeira'])
   const dfin = sum(['despesa_financeira'])
-  const resL = ebt + rf - dfin
+  const resL = ebt - imp + rf - dfin
   const inv  = sum(['investimento'])
   const resF = resL - inv
 
-  return { rb, ded, rl, cv, lb, df, ebt, rf, dfin, resL, inv, resF }
+  return { rb, ded, rl, cv, lb, df, ebt, imp, rf, dfin, resL, inv, resF }
 }
 
 // ─── Montar dados do waterfall ────────────────────────────────────────────────
@@ -71,7 +73,7 @@ function calcDRE(lancamentos) {
 // barHeight = magnitude visível (sempre positivo)
 // Resultado: barra colorida flutua entre [spacer, spacer+barHeight]
 function buildWaterfall(v) {
-  const { rb, ded, rl, cv, lb, df, ebt, rf, dfin, resL, inv, resF } = v
+  const { rb, ded, rl, cv, lb, df, ebt, imp, rf, dfin, resL, inv, resF } = v
   let acc = 0
   const bars = []
 
@@ -117,9 +119,10 @@ function buildWaterfall(v) {
   total('Lucro Bruto')
   sub( 'Despesas Fixas',     df,   true)
   total('EBITDA')
+  sub( 'Impostos s/ Lucro',  imp,  true)
   add( 'Rec. Financeiras',   rf,   true)
   sub( 'Desp. Financeiras',  dfin, true)
-  if (rf > 0.01 || dfin > 0.01) total('Resultado Líquido')
+  if (rf > 0.01 || dfin > 0.01 || imp > 0.01) total('Resultado Líquido')
   sub( 'Investimentos',      inv,  true)
   total('Resultado Final')
 
@@ -172,7 +175,7 @@ const CustomTooltip = ({ active, payload, lancamentos }) => {
     return sorted.filter(i=>{ if(acc>=total*0.8)return false; acc+=i.valor; return true })
   }
 
-  const tiposMap = { 'Receita Bruta':['receita'], 'Rec. Financeiras':['receita_financeira'], 'Deduções':['deducao'], 'Custos Variáveis':['custo'], 'Despesas Fixas':['despesa'], 'Desp. Financeiras':['despesa_financeira'], 'Investimentos':['investimento'] }
+  const tiposMap = { 'Receita Bruta':['receita'], 'Rec. Financeiras':['receita_financeira'], 'Deduções':['deducao'], 'Custos Variáveis':['custo'], 'Despesas Fixas':['despesa'], 'Desp. Financeiras':['despesa_financeira'], 'Investimentos':['investimento'], 'Impostos s/ Lucro':['imposto_lucro'] }
   const details = tiposMap[entry.name] ? pareto(tiposMap[entry.name]) : []
 
   return (
@@ -433,10 +436,11 @@ export default function DREGeral() {
                   { l:'= Lucro Bruto',        cur:v.lb,   prev:pv.lb,   pct:v.lb/v.rb,   isTotal:false, isSub:true,  indent:0 },
                   { l:'(-) Despesas Fixas',   cur:-v.df,  prev:-pv.df,  pct:-v.df/v.rb,  isTotal:false, isSub:false, indent:1, hide: v.df<0.01 },
                   { l:'= EBITDA',             cur:v.ebt,  prev:pv.ebt,  pct:v.ebt/v.rb,  isTotal:true,  isSub:false, indent:0 },
+                  { l:'(-) Impostos s/ Lucro', cur:-v.imp, prev:-pv.imp, pct:-v.imp/v.rb, isTotal:false, isSub:false, indent:1, hide: v.imp<0.01 },
                   { l:'(+) Rec. Financeiras', cur:v.rf,   prev:pv.rf,   pct:v.rf/v.rb,   isTotal:false, isSub:false, indent:1, hide: v.rf<0.01 },
                   { l:'(-) Desp. Financeiras',cur:-v.dfin,prev:-pv.dfin,pct:-v.dfin/v.rb,isTotal:false, isSub:false, indent:1, hide: v.dfin<0.01 },
-                  { l:'= Resultado Líquido',  cur:v.resL, prev:pv.resL, pct:v.resL/v.rb, isTotal:false, isSub:true,  indent:0, hide: (v.rf+v.dfin)<0.01 },
-                  { l:'(-) Investimentos',    cur:-v.inv, prev:-pv.inv, pct:-v.inv/v.rb,  isTotal:false, isSub:false, indent:1, hide: v.inv<0.01 },
+                  { l:'= Resultado Líquido',  cur:v.resL, prev:pv.resL, pct:v.resL/v.rb, isTotal:false, isSub:true,  indent:0, hide: (v.rf+v.dfin+v.imp)<0.01 },
+                  { l:'(-) Investimentos',    cur:-v.inv, prev:-pv.inv, pct:-v.inv/v.rb,  isTotal:false, isSub:false, indent:1, hide: v.inv<0.01  },
                   { l:'= Resultado Final',    cur:v.resF, prev:pv.resF, pct:v.resF/v.rb, isTotal:true,  isSub:false, indent:0 },
                 ].filter(r=>!r.hide).map((r,i)=>{
                   const delta = pv.rb > 0 ? ((r.cur-r.prev)/Math.abs(r.prev||1)*100) : null

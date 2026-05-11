@@ -10,6 +10,7 @@ const DRE_GROUPS = [
   { key: 'despesa',             label: 'Despesas Fixas',         cor: '#f59e0b', icone: '📋', desc: 'Despesas operacionais fixas (salários, aluguel, etc.)' },
   { key: 'receita_financeira',  label: 'Receitas Financeiras',   cor: '#14b8a6', icone: '📈', desc: 'Juros recebidos, rendimentos financeiros' },
   { key: 'despesa_financeira',  label: 'Despesas Financeiras',   cor: '#8b5cf6', icone: '📉', desc: 'Juros pagos, IOF, tarifas bancárias' },
+  { key: 'imposto_lucro',       label: 'Impostos sobre Lucro',   cor: '#f97316', icone: '🏛️', desc: 'IR, CSLL e outros impostos sobre o lucro' },
   { key: 'investimento',        label: 'Investimentos (CAPEX)',  cor: '#64748b', icone: '🏗️', desc: 'Aquisição de ativos, investimentos de longo prazo' },
   { key: 'entrada',             label: 'Entradas — Fluxo de Caixa', cor: '#3b82f6', icone: '⬇️', desc: 'Entradas de caixa (módulo FC)' },
   { key: 'saida',               label: 'Saídas — Fluxo de Caixa',  cor: '#ec4899', icone: '⬆️', desc: 'Saídas de caixa (módulo FC)' },

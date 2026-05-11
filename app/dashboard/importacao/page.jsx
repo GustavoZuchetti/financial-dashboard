@@ -304,8 +304,10 @@ export default function ImportacaoPage() {
     if (!id) return
     const { data } = await supabase.from('categoria_mappings').select('*').eq('empresa_id', id)
     const all = data || []
-    setMappingsDre(all.filter(m => ['receita','custo','despesa'].includes(m.tipo_destino)))
-    setMappingsFluxo(all.filter(m => ['entrada','saida','fluxo_entrada','fluxo_saida'].includes(m.tipo_destino)))
+    const DRE_TIPOS = ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','investimento']
+    const FC_TIPOS  = ['entrada','saida','fluxo_entrada','fluxo_saida']
+    setMappingsDre(all.filter(m => DRE_TIPOS.includes(m.tipo_destino)))
+    setMappingsFluxo(all.filter(m => FC_TIPOS.includes(m.tipo_destino)))
   }, [])
 
   useEffect(() => {

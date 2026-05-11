@@ -102,7 +102,7 @@ function DropZone({ onFile, label, sublabel, fileRef }) {
     <div
       onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
       onDragLeave={() => setIsDragging(false)}
-      onDrop={e => { e.preventDefault(); setIsDragging(false); onFile(e.dataTransfer.files?.[0]) }}
+      onDrop={e => { e.preventDefault(); setIsDragging(false); Array.from(e.dataTransfer.files || []).forEach(f => onFile(f)) }}
       onClick={() => fileRef.current?.click()}
       style={{
         border: `2px dashed ${isDragging ? 'var(--fs-brand)' : 'var(--fs-border)'}`,
@@ -118,7 +118,7 @@ function DropZone({ onFile, label, sublabel, fileRef }) {
       </div>
       <p style={{ color: 'var(--fs-text-1)', fontWeight: 700, fontSize: 15, margin: '0 0 5px' }}>{label}</p>
       <p style={{ color: 'var(--fs-text-4)', fontSize: 13, margin: 0 }}>{sublabel}</p>
-      <input ref={fileRef} type="file" hidden accept=".csv,.xlsx,.xls" onChange={e => { onFile(e.target.files?.[0]); e.target.value = '' }} />
+      <input ref={fileRef} type="file" hidden accept=".csv,.xlsx,.xls" multiple onChange={e => { const files = Array.from(e.target.files || []); files.forEach(f => onFile(f)); e.target.value = '' }} />
     </div>
   )
 }
@@ -411,9 +411,26 @@ export default function ImportacaoPage() {
         sampleRows.map(r => ({ nome: r.nome.substring(0,20), data: r.data }))
       )
 
-      if (modulo === 'dre') setDataDre(processed)
-      else                  setDataFluxo(processed)
-      showToast(`${processed.length} registros carregados!`, 'success')
+      // Mesclar com dados já carregados (múltiplos arquivos)
+      if (modulo === 'dre') {
+        setDataDre(prev => {
+          const existing = (prev || [])
+          const existingDescs = new Set(existing.map(r => r.__desc?.toLowerCase()))
+          // Renumerar IDs para evitar conflitos
+          const offset = existing.length
+          const newRows = processed.map((r, i) => ({ ...r, __id: offset + i }))
+          return [...existing, ...newRows]
+        })
+      } else {
+        setDataFluxo(prev => {
+          const existing = (prev || [])
+          const offset = existing.length
+          const newRows = processed.map((r, i) => ({ ...r, __id: offset + i }))
+          return [...existing, ...newRows]
+        })
+      }
+      // Toast com info do arquivo processado
+      showToast(`✓ ${processed.length} registros de "${file.name.substring(0,30)}" carregados`, 'success')
     } catch (err) {
       showToast('Erro ao processar: ' + err.message, 'error')
     }
@@ -755,8 +772,8 @@ export default function ImportacaoPage() {
         dataDre.length === 0 ? (
           <DropZone
             onFile={f => processFile(f, 'dre')} fileRef={fileRefDre}
-            label="Arraste ou clique para selecionar — DRE"
-            sublabel="CSV (Bling) ou XLSX com Receitas, Custos e Despesas"
+            label="Arraste ou clique para selecionar — DRE (aceita múltiplos arquivos)"
+            sublabel="CSV ou XLSX do Bling — múltiplos arquivos suportados"
           />
         ) : (
           <>
@@ -774,8 +791,8 @@ export default function ImportacaoPage() {
         dataFluxo.length === 0 ? (
           <DropZone
             onFile={f => processFile(f, 'fluxo')} fileRef={fileRefFluxo}
-            label="Arraste ou clique para selecionar — Fluxo de Caixa"
-            sublabel="CSV (Bling) ou XLSX com Entradas e Saídas financeiras"
+            label="Arraste ou clique para selecionar — Fluxo de Caixa (aceita múltiplos arquivos)"
+            sublabel="CSV ou XLSX do Bling — múltiplos arquivos suportados"
           />
         ) : (
           <>

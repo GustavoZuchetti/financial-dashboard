@@ -1,192 +1,171 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { calcDRE, fmtBRL, fmtCompact } from '@/lib/dre-calc'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, ReferenceLine } from 'recharts'
 
-const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(v)
-const fmtFull = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
-
-const S = {
-  card: { backgroundColor: 'var(--fs-surface)', borderRadius: '8px', padding: '20px', border: '1px solid var(--fs-border)' },
-  sectionTitle: { fontSize: '16px', fontWeight: 'bold', marginBottom: '20px', color: 'var(--fs-text-1)' },
-  input: { background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '6px', color: 'var(--fs-text-1)', padding: '6px 10px', fontSize: '13px', outline: 'none' }
-}
-
-// Componente CustomTooltip para Top Receitas com Pareto
-const CustomTooltipClientes = ({ active, payload, data }) => {
-  if (!active || !payload || !payload[0]) return null;
-
-  const entry = payload[0].payload;
-  const clienteData = data.filter(d => d.descricao === entry.name).sort((a, b) => Number(b.valor) - Number(a.valor));
-  const total = clienteData.reduce((acc, curr) => acc + Number(curr.valor), 0);
-  const threshold = total * 0.8;
-  let accumulated = 0;
-  const topItems = clienteData.filter(item => {
-    accumulated += Number(item.valor);
-    return accumulated <= threshold;
-  }).slice(0, 3);
-
-  return (
-    <div style={{ backgroundColor: 'var(--fs-bg)', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: 'var(--fs-text-1)', fontSize: '12px' }}>
-      <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', color: '#3b82f6' }}>{entry.name}</p>
-      <p style={{ margin: '4px 0', color: 'var(--fs-text-2)' }}>Total: <span style={{ color: 'var(--fs-text-1)', fontWeight: 'bold' }}>{fmtFull(entry.valor)}</span></p>
-      {topItems.length > 0 && (
-        <>
-          <p style={{ margin: '8px 0 4px 0', color: 'var(--fs-text-2)', fontSize: '11px' }}>Top 80% (Pareto):</p>
-          {topItems.map((item, i) => (
-            <p key={i} style={{ margin: '2px 0 2px 8px', color: 'var(--fs-text-1)', fontSize: '11px' }}>
-              • {item.categoria?.substring(0, 20) || 'Item'}: {fmtFull(Number(item.valor))}
-            </p>
-          ))}
-        </>
-      )}
-    </div>
-  );
-};
+const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 export default function DREAnalise() {
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [historico, setHistorico] = useState([]);
-  const [clientes, setClientes] = useState([]);
-  const [allData, setAllData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [empresaId, setEmpresaId] = useState(null);
+  const [startDate,  setStartDate]  = useState(() => new Date(new Date().getFullYear(),0,1).toISOString().split('T')[0])
+  const [endDate,    setEndDate]    = useState(new Date().toISOString().split('T')[0])
+  const [empresaId,  setEmpresaId]  = useState(null)
+  const [isConsol,   setIsConsol]   = useState(false)
+  const [loading,    setLoading]    = useState(true)
+  const [data,       setData]       = useState([])
+  const [evolucao,   setEvolucao]   = useState([])
+  const [topClientes,setTopClientes]= useState([])
 
   useEffect(() => {
-    const savedId = localStorage.getItem('empresa_id');
-    if (savedId) setEmpresaId(savedId);
-  }, []);
+    const id = localStorage.getItem('empresa_id')
+    setEmpresaId(id); setIsConsol(id === 'todas')
+    const h = () => { const nid=localStorage.getItem('empresa_id'); setEmpresaId(nid); setIsConsol(nid==='todas') }
+    window.addEventListener('storage', h); return () => window.removeEventListener('storage', h)
+  }, [])
 
-  useEffect(() => {
-    if (!empresaId) return;
+  const fetchData = useCallback(async () => {
+    if (!empresaId) return
+    setLoading(true)
+    try {
+      let q = supabase.from('lancamentos').select('*').gte('data', startDate).lte('data', endDate)
+      if (isConsol) {
+        const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
+        if (ue?.length) q = q.in('empresa_id', ue.map(e => e.id))
+      } else { q = q.eq('empresa_id', empresaId) }
+      const { data: rows } = await q
+      const all = rows || []
+      setData(all)
 
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: lancamentos } = await supabase
-        .from('lancamentos')
-        .select('*')
-        .eq('empresa_id', empresaId)
-        .gte('data', startDate)
-        .lte('data', endDate);
+      // ── Evolução mensal usando calcDRE por mês ──────────────────
+      const porMes = {}
+      all.forEach(l => {
+        const d = new Date(l.data + 'T00:00:00')
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+        if (!porMes[key]) porMes[key] = []
+        porMes[key].push(l)
+      })
+      const evo = Object.entries(porMes).sort().map(([key, lns]) => {
+        const v = calcDRE(lns)
+        const [year, month] = key.split('-')
+        return {
+          name: MESES_PT[parseInt(month)-1] + '/' + year.slice(2),
+          receita:    v.rb,
+          lucroBruto: v.lb,
+          ebitda:     v.ebt,
+          resLiquido: v.resL,
+          resFinal:   v.resF,
+        }
+      })
+      setEvolucao(evo)
 
-      if (lancamentos) {
-        setAllData(lancamentos);
+      // ── Top clientes por Receita Bruta ──────────────────────────
+      const clienteMap = {}
+      all.filter(l => l.tipo === 'receita').forEach(l => {
+        const k = (l.descricao || l.categoria || 'Não identificado').trim()
+        clienteMap[k] = (clienteMap[k] || 0) + Number(l.valor)
+      })
+      setTopClientes(
+        Object.entries(clienteMap)
+          .map(([name, valor]) => ({ name: name.substring(0,28), valor }))
+          .sort((a,b) => b.valor - a.valor)
+          .slice(0, 8)
+      )
+    } finally { setLoading(false) }
+  }, [empresaId, startDate, endDate, isConsol])
 
-        // Agrupar por mês
-        const meses = {};
-        lancamentos.forEach(item => {
-          const date = new Date(item.data);
-          const month = date.toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
-          if (!meses[month]) {
-            meses[month] = { receita: 0, custos: 0, despesas: 0 };
-          }
-          if (item.tipo === 'receita') meses[month].receita += Number(item.valor);
-          else if (item.tipo === 'custo') meses[month].custos += Number(item.valor);
-          else meses[month].despesas += Number(item.valor);
-        });
+  useEffect(() => { fetchData() }, [fetchData])
 
-        const historicoData = Object.entries(meses).map(([name, values]) => ({
-          name,
-          receita: values.receita,
-          custos: values.custos,
-          ebitda: values.receita - values.custos,
-          resFinal: values.receita - values.custos - values.despesas
-        }));
-
-        setHistorico(historicoData);
-
-        // Agrupar por cliente (descrição)
-        const clientesMap = {};
-        lancamentos.filter(l => l.tipo === 'receita').forEach(item => {
-          const cliente = item.descricao || 'Não identificado';
-          if (!clientesMap[cliente]) clientesMap[cliente] = 0;
-          clientesMap[cliente] += Number(item.valor);
-        });
-
-        const clientesData = Object.entries(clientesMap)
-          .map(([name, valor]) => ({ name, valor }))
-          .sort((a, b) => b.valor - a.valor)
-          .slice(0, 5);
-
-        setClientes(clientesData);
-      }
-      setLoading(false);
-    };
-
-    fetchData();
-  }, [empresaId, startDate, endDate]);
+  const v = calcDRE(data)
+  const tt = { contentStyle:{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8 }, formatter:(val)=>fmtBRL(val) }
 
   return (
-    <div style={{ padding: '24px', color: 'var(--fs-text-1)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>DRE Análise</h1>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--fs-surface)', padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--fs-border)' }}>
-            <span style={{ fontSize: '13px', color: 'var(--fs-text-2)' }}>Período:</span>
-            <input type="date" style={S.input} value={startDate} onChange={e => setStartDate(e.target.value)} />
-            <span style={{ color: 'var(--fs-text-2)' }}>→</span>
-            <input type="date" style={S.input} value={endDate} onChange={e => setEndDate(e.target.value)} />
-          </div>
+    <div style={{ color:'var(--fs-text-1)' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexWrap:'wrap', gap:12 }}>
+        <div>
+          <h1 style={{ fontSize:22, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>DRE Análise</h1>
+          <p style={{ color:'var(--fs-text-4)', fontSize:13, margin:'3px 0 0' }}>Evolução mensal e distribuição de receitas</p>
+        </div>
+        <div style={{ display:'flex', gap:8, alignItems:'center', background:'var(--fs-surface)', padding:'7px 14px', borderRadius:8, border:'1px solid var(--fs-border)' }}>
+          <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>Período:</span>
+          <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
+          <span style={{ color:'var(--fs-text-4)' }}>→</span>
+          <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-        <div style={S.card}>
-          <h2 style={S.sectionTitle}>Evolução Mensal</h2>
-          <div style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={historico}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 11 }} tickFormatter={fmt} />
-                <Tooltip contentStyle={{ backgroundColor: 'var(--fs-bg)', border: '1px solid var(--fs-border)' }} formatter={(v) => fmt(v)} cursor={{ stroke: 'transparent' }} />
-                <Legend iconType="circle" />
-                <Line type="monotone" dataKey="receita" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} name="Receita" />
-                <Line type="monotone" dataKey="ebitda" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 4 }} name="EBITDA" />
-                <Line type="monotone" dataKey="resFinal" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} name="Resultado Final" />
-              </LineChart>
-            </ResponsiveContainer>
+      {/* KPIs — mesmos valores da Visão Geral */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
+        {[
+          { label:'Receita Bruta',    val:v.rb,   color:'#22c55e' },
+          { label:'EBITDA',           val:v.ebt,  color:'#14b8a6' },
+          { label:'Res. Líquido',     val:v.resL, color:'#8b5cf6' },
+          { label:'Resultado Final',  val:v.resF, color:'#3b82f6' },
+        ].map(k => (
+          <div key={k.label} style={{ background:'var(--fs-surface)', border:`1px solid var(--fs-border)`, borderRadius:10, padding:'14px 16px', borderTop:`3px solid ${k.color}` }}>
+            <div style={{ fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase', marginBottom:6 }}>{k.label}</div>
+            <div style={{ fontSize:18, fontWeight:900, color: k.val>=0 ? k.color : '#ef4444' }}>{fmtBRL(k.val)}</div>
+            {v.rb > 0 && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:4 }}>{(k.val/v.rb*100).toFixed(1)}% da receita</div>}
           </div>
-        </div>
-
-        <div style={S.card}>
-          <h2 style={S.sectionTitle}>Top Receitas</h2>
-          <div style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={clientes} layout="vertical" margin={{ left: 100 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--fs-border)" />
-                <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 10 }} width={100} />
-                <Tooltip content={<CustomTooltipClientes data={allData} />} cursor={{ fill: 'transparent' }} />
-                <Bar dataKey="valor" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        ))}
       </div>
 
-      <div style={S.card}>
-        <h2 style={S.sectionTitle}>Evolução Operacional</h2>
-        <div style={{ height: '250px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={historico}>
+      <div style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:16, marginBottom:16 }}>
+        {/* Evolução Mensal */}
+        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px' }}>
+          <h2 style={{ fontSize:14, fontWeight:700, color:'var(--fs-text-1)', marginBottom:16 }}>Evolução Mensal</h2>
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={evolucao} margin={{top:5,right:10,left:0,bottom:5}}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 12 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 11 }} />
-              <Tooltip contentStyle={{ backgroundColor: 'var(--fs-bg)', border: '1px solid var(--fs-border)' }} formatter={(v) => fmt(v)} cursor={{ stroke: 'transparent' }} />
-              <Legend />
-              <Line type="monotone" dataKey="ebitda" stroke="#8b5cf6" strokeWidth={2} name="EBITDA" />
-              <Line type="monotone" dataKey="receita" stroke="#3b82f6" strokeWidth={2} name="Receita" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} />
+              <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fmtCompact} width={65} />
+              <ReferenceLine y={0} stroke="var(--fs-border-2)" strokeWidth={1} />
+              <Tooltip {...tt} />
+              <Legend iconType="circle" wrapperStyle={{fontSize:11}} />
+              <Line type="monotone" dataKey="receita"    stroke="#22c55e" strokeWidth={2} dot={false} name="Receita Bruta" />
+              <Line type="monotone" dataKey="ebitda"     stroke="#14b8a6" strokeWidth={2} dot={false} name="EBITDA" />
+              <Line type="monotone" dataKey="resLiquido" stroke="#8b5cf6" strokeWidth={2} dot={false} name="Res. Líquido" />
+              <Line type="monotone" dataKey="resFinal"   stroke="#3b82f6" strokeWidth={2.5} dot={{r:3}} name="Res. Final" />
             </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Top Clientes */}
+        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px' }}>
+          <h2 style={{ fontSize:14, fontWeight:700, color:'var(--fs-text-1)', marginBottom:16 }}>Top Receitas por Cliente</h2>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={topClientes} layout="vertical" margin={{left:10,right:10}}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--fs-border)" />
+              <XAxis type="number" hide />
+              <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} width={110} />
+              <Tooltip {...tt} formatter={(v)=>fmtBRL(v)} />
+              <Bar dataKey="valor" fill="#22c55e" radius={[0,4,4,0]} barSize={16} name="Receita" />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {loading && <div style={{ textAlign: 'center', color: '#3b82f6', marginTop: '20px' }}>Carregando dados...</div>}
+      {/* Margens mensais */}
+      <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px' }}>
+        <h2 style={{ fontSize:14, fontWeight:700, color:'var(--fs-text-1)', marginBottom:16 }}>Margens Mensais (%)</h2>
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={evolucao.map(m => ({
+            ...m,
+            mEBITDA:   m.receita > 0 ? +(m.ebitda   / m.receita * 100).toFixed(1) : 0,
+            mLiquida:  m.receita > 0 ? +(m.resLiquido/ m.receita * 100).toFixed(1) : 0,
+          }))} margin={{top:5,right:10,left:0,bottom:5}}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} />
+            <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} unit="%" width={40} />
+            <ReferenceLine y={0} stroke="var(--fs-border-2)" strokeWidth={1} />
+            <Tooltip {...tt} formatter={(v)=>`${v}%`} />
+            <Legend iconType="circle" wrapperStyle={{fontSize:11}} />
+            <Line type="monotone" dataKey="mEBITDA"  stroke="#14b8a6" strokeWidth={2} dot={{r:3}} name="Margem EBITDA" />
+            <Line type="monotone" dataKey="mLiquida" stroke="#8b5cf6" strokeWidth={2} dot={{r:3}} name="Margem Líquida" />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {loading && <div style={{ textAlign:'center', padding:20, color:'var(--fs-brand)' }}>Carregando...</div>}
     </div>
   )
 }

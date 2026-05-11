@@ -1,300 +1,197 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-
-const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
-
-const S = {
-  container: { padding: '24px', color: 'var(--fs-text-1)' },
-  card: { backgroundColor: 'var(--fs-surface)', borderRadius: '8px', padding: '20px', border: '1px solid var(--fs-border)', marginBottom: '24px' },
-  title: { fontSize: '24px', fontWeight: 'bold', marginBottom: '24px' },
-  input: { background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '6px', color: 'var(--fs-text-1)', padding: '6px 10px', fontSize: '13px', outline: 'none' },
-  badge: { display: 'inline-block', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', marginLeft: '8px' },
-  row: (level, isTotal, isExpanded) => ({
-    display: 'flex',
-    alignItems: 'center',
-    padding: `${12 + level * 8}px 16px`,
-    borderBottom: '1px solid var(--fs-border)',
-    background: isTotal ? 'var(--fs-surface-2)' : isExpanded ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
-    fontWeight: isTotal ? '700' : level === 0 ? '600' : '400',
-    color: isTotal ? 'var(--fs-brand)' : 'var(--fs-text-1)',
-    cursor: 'pointer',
-    transition: 'all 0.2s'
-  }),
-  expandIcon: (isOpen) => ({
-    marginRight: '12px',
-    transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-    transition: 'transform 0.2s',
-    color: '#3b82f6',
-    fontWeight: 'bold'
-  }),
-  label: { flex: 1, marginRight: '16px' },
-  value: (isPositive) => ({
-    textAlign: 'right',
-    minWidth: '120px',
-    color: isPositive ? '#3b82f6' : '#ef4444',
-    fontWeight: '600'
-  })
-}
+import { calcDRE, calcDREMap, DRE_LINES, fmtBRL } from '@/lib/dre-calc'
 
 export default function DREDetalhado() {
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date()
-    return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0]
-  })
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
+  const [startDate, setStartDate] = useState(() => new Date(new Date().getFullYear(),0,1).toISOString().split('T')[0])
+  const [endDate,   setEndDate]   = useState(new Date().toISOString().split('T')[0])
   const [empresaId, setEmpresaId] = useState(null)
-  const [isConsolidado, setIsConsolidado] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [expanded, setExpanded] = useState({})
-  const [dreData, setDreData] = useState(null)
+  const [isConsol,  setIsConsol]  = useState(false)
+  const [loading,   setLoading]   = useState(true)
+  const [data,      setData]      = useState([])
+  const [contas,    setContas]    = useState([])
+  const [expanded,  setExpanded]  = useState({})
 
   useEffect(() => {
-    const savedId = localStorage.getItem('empresa_id')
-    if (savedId) {
-      setEmpresaId(savedId)
-      setIsConsolidado(savedId === 'todas')
-    }
+    const id = localStorage.getItem('empresa_id')
+    setEmpresaId(id); setIsConsol(id === 'todas')
+    const h = () => { const nid=localStorage.getItem('empresa_id'); setEmpresaId(nid); setIsConsol(nid==='todas') }
+    window.addEventListener('storage', h); return () => window.removeEventListener('storage', h)
   }, [])
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (!empresaId) return
+    setLoading(true)
+    try {
+      // Carregar plano_contas para exibição dos nomes
+      const { data: pc } = await supabase.from('plano_contas').select('id,codigo,nome,tipo')
+      setContas(pc || [])
 
-    const fetchData = async () => {
-      setLoading(true)
-      try {
-        let query = supabase
-          .from('lancamentos')
-          .select('*')
-          .gte('data', startDate)
-          .lte('data', endDate)
+      let q = supabase.from('lancamentos').select('*').gte('data', startDate).lte('data', endDate)
+      if (isConsol) {
+        const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
+        if (ue?.length) q = q.in('empresa_id', ue.map(e => e.id))
+      } else { q = q.eq('empresa_id', empresaId) }
+      const { data: rows } = await q
+      setData(rows || [])
+    } finally { setLoading(false) }
+  }, [empresaId, startDate, endDate, isConsol])
 
-        if (isConsolidado) {
-          const { data: userEmpresas } = await supabase
-            .from('empresas')
-            .select('id')
-            .eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
+  useEffect(() => { fetchData() }, [fetchData])
 
-          if (userEmpresas) {
-            const ids = (userEmpresas || []).map(e => e.id)
-            query = query.in('empresa_id', ids)
-          }
-        } else {
-          query = query.eq('empresa_id', empresaId)
+  const toggle = (k) => setExpanded(p => ({ ...p, [k]: !p[k] }))
+
+  // ─── Calcular valores DRE (idêntico à Visão Geral) ────────────────
+  const v    = calcDRE(data)
+  const vMap = calcDREMap(data)
+
+  // ─── Construir hierarquia de lançamentos por linha DRE ────────────
+  const buildHierarchy = (tipos) => {
+    const relevant = (data || []).filter(l => tipos.includes(l.tipo))
+    const byAccount = {}
+    relevant.forEach(l => {
+      const contaId = l.conta_id || '__sem_conta__'
+      if (!byAccount[contaId]) {
+        const conta = contas.find(c => c.id === contaId)
+        byAccount[contaId] = {
+          contaId, nome: conta ? `${conta.codigo} ${conta.nome}` : '— Sem conta mapeada',
+          items: [], total: 0
         }
-
-        const { data: lancamentos } = await query
-
-        // Agrupar por categoria
-        const grouped = {}
-        lancamentos?.forEach(l => {
-          if (!grouped[l.categoria]) {
-            grouped[l.categoria] = []
-          }
-          grouped[l.categoria].push(l)
-        })
-
-        setDreData(grouped)
-      } catch (e) {
-        console.error('Erro ao carregar DRE:', e)
-      } finally {
-        setLoading(false)
       }
-    }
-
-    fetchData()
-  }, [empresaId, startDate, endDate, isConsolidado])
-
-  const toggleExpand = (key) => {
-    setExpanded(prev => ({ ...prev, [key]: !prev[key] }))
+      byAccount[contaId].items.push(l)
+      byAccount[contaId].total += Number(l.valor)
+    })
+    return Object.values(byAccount)
+      .map(a => ({ ...a, items: Object.values(
+        a.items.reduce((acc, l) => {
+          const k = (l.descricao || l.categoria || '—').trim()
+          if (!acc[k]) acc[k] = { nome: k, total: 0, count: 0, data: l.data }
+          acc[k].total += Number(l.valor); acc[k].count++; return acc
+        }, {})
+      ).sort((a,b) => b.total - a.total)}))
+      .sort((a, b) => b.total - a.total)
   }
 
-  // Estrutura do DRE Gerencial
-  const dreStructure = [
-    {
-      codigo: '1.1',
-      nome: 'RECEITA BRUTA',
-      level: 0,
-      children: [
-        { codigo: '1.1.1', nome: 'Receita de Serviços', categoria: 'Receita de Serviços', level: 1 },
-        { codigo: '1.1.2', nome: 'Receita de Produtos', categoria: 'Receita de Produtos', level: 1 },
-      ]
-    },
-    {
-      codigo: '1.2',
-      nome: 'IMPOSTOS SOBRE RECEITA',
-      level: 0,
-      children: [
-        { codigo: '1.2.1', nome: 'ICMS', categoria: 'ICMS', level: 1 },
-        { codigo: '1.2.2', nome: 'ISS', categoria: 'ISS', level: 1 },
-      ]
-    },
-    {
-      codigo: '1.3',
-      nome: 'RECEITA LÍQUIDA',
-      level: 0,
-      isCalculated: true
-    },
-    {
-      codigo: '2.1',
-      nome: 'CUSTOS VARIÁVEIS',
-      level: 0,
-      children: [
-        { codigo: '2.1.1', nome: 'CAC', categoria: 'CAC', level: 1 },
-        { codigo: '2.1.2', nome: 'CSP', categoria: 'CSP', level: 1 },
-      ]
-    },
-    {
-      codigo: '2.2',
-      nome: 'LUCRO BRUTO',
-      level: 0,
-      isCalculated: true
-    },
-    {
-      codigo: '3.1',
-      nome: 'DESPESAS FIXAS',
-      level: 0,
-      children: [
-        { codigo: '3.1.1', nome: 'DESPESAS DE DESENVOLVIMENTO', categoria: 'Despesas Desenvolvimento', level: 1 },
-        { codigo: '3.1.2', nome: 'DESPESAS GERAIS E ADM', categoria: 'Despesas Gerais', level: 1 },
-        { codigo: '3.1.3', nome: 'SALÁRIOS E ENCARGOS ADM', categoria: 'Salários ADM', level: 1 },
-        { codigo: '3.1.4', nome: 'DESPESAS OPERACIONAIS', categoria: 'Despesas Operacionais', level: 1 },
-        { codigo: '3.1.5', nome: 'DESPESAS DE MKT E COMERCIAIS', categoria: 'Despesas MKT', level: 1 },
-        { codigo: '3.1.6', nome: 'SALÁRIOS E ENCARGOS MOB', categoria: 'Salários MOB', level: 1 },
-      ]
-    },
-    {
-      codigo: '3.2',
-      nome: 'EBITDA',
-      level: 0,
-      isCalculated: true
-    }
-  ]
+  // ─── Percentual sobre Receita Bruta ──────────────────────────────
+  const pct = (val) => v.rb > 0 ? (Math.abs(val) / v.rb * 100).toFixed(1) + '%' : '—'
 
-  const getValueForCategory = (categoria) => {
-    if (!dreData || !dreData[categoria]) return 0
-    return dreData[categoria].reduce((acc, l) => acc + Number(l.valor), 0)
-  }
-
-  const getValueForGroup = (group) => {
-    if (!group.children) return 0
-    return group.children.reduce((acc, child) => acc + getValueForCategory(child.categoria), 0)
-  }
-
-  const renderRow = (item, parentKey) => {
-    const key = `${parentKey}-${item.codigo}`
-    const isOpen = expanded[key]
-    const hasChildren = item.children && item.children.length > 0
-    const value = item.children ? getValueForGroup(item) : getValueForCategory(item.categoria)
-
-    return (
-      <div key={key}>
-        <div
-          style={S.row(item.level, item.isCalculated, isOpen)}
-          onClick={() => hasChildren && toggleExpand(key)}
-        >
-          <div style={S.label}>
-            {hasChildren && (
-              <span style={S.expandIcon(isOpen)}>{isOpen ? '▼' : '▶'}</span>
-            )}
-            <span style={{ marginLeft: hasChildren ? '0' : '24px' }}>{item.nome}</span>
-          </div>
-          <div style={S.value(value >= 0)}>
-            {fmt(Math.abs(value))}
-          </div>
-        </div>
-
-        {hasChildren && isOpen && (
-          <div>
-            {(item.children || []).map(child => (
-              <div key={`${key}-${child.codigo}`}>
-                <div style={S.row(child.level, false, false)}>
-                  <div style={S.label}>
-                    <span style={{ marginLeft: '24px' }}>{child.nome}</span>
-                  </div>
-                  <div style={S.value(true)}>
-                    {fmt(getValueForCategory(child.categoria))}
-                  </div>
-                </div>
-
-                {expanded[`${key}-${child.codigo}`] && dreData?.[child.categoria] && (
-                  <div>
-                    {dreData[child.categoria].map((lancamento, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          ...S.row(3, false, false),
-                          background: 'rgba(59, 130, 246, 0.02)',
-                          fontSize: '12px'
-                        }}
-                      >
-                        <div style={S.label}>
-                          <span style={{ marginLeft: '48px', color: 'var(--fs-text-2)' }}>
-                            {lancamento.descricao?.substring(0, 40) || 'Sem descrição'}
-                          </span>
-                        </div>
-                        <div style={S.value(true)}>
-                          {fmt(lancamento.valor)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {dreData?.[child.categoria] && (
-                  <div
-                    style={{
-                      ...S.row(child.level + 1, false, false),
-                      cursor: 'pointer',
-                      color: '#3b82f6'
-                    }}
-                    onClick={() => toggleExpand(`${key}-${child.codigo}`)}
-                  >
-                    <div style={S.label}>
-                      <span style={{ marginLeft: '40px', fontSize: '11px' }}>
-                        {expanded[`${key}-${child.codigo}`] ? '▼ Ocultar detalhes' : '▶ Ver detalhes'}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div style={S.container}>
-        <div style={{ textAlign: 'center', color: '#3b82f6' }}>Carregando...</div>
-      </div>
-    )
-  }
+  const TH = ({ children, right }) => (
+    <th style={{ padding:'8px 12px', textAlign: right?'right':'left', color:'var(--fs-text-4)', fontSize:11, fontWeight:700, textTransform:'uppercase', borderBottom:'1px solid var(--fs-border)', whiteSpace:'nowrap' }}>
+      {children}
+    </th>
+  )
 
   return (
-    <div style={S.container}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={S.title}>
-          DRE Detalhado
-          {isConsolidado && <span style={S.badge}>📊 Consolidado</span>}
-        </h1>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--fs-surface)', padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--fs-border)' }}>
-            <span style={{ fontSize: '13px', color: 'var(--fs-text-2)' }}>Período:</span>
-            <input type="date" style={S.input} value={startDate} onChange={e => setStartDate(e.target.value)} />
-            <span style={{ color: 'var(--fs-text-2)' }}>→</span>
-            <input type="date" style={S.input} value={endDate} onChange={e => setEndDate(e.target.value)} />
-          </div>
+    <div style={{ color:'var(--fs-text-1)' }}>
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexWrap:'wrap', gap:12 }}>
+        <div>
+          <h1 style={{ fontSize:22, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>DRE Detalhado</h1>
+          <p style={{ color:'var(--fs-text-4)', fontSize:13, margin:'3px 0 0' }}>Drill-down por conta contábil • Números idênticos à Visão Geral</p>
+        </div>
+        <div style={{ display:'flex', gap:8, alignItems:'center', background:'var(--fs-surface)', padding:'7px 14px', borderRadius:8, border:'1px solid var(--fs-border)' }}>
+          <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>Período:</span>
+          <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
+          <span style={{ color:'var(--fs-text-4)' }}>→</span>
+          <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
         </div>
       </div>
 
-      <div style={S.card}>
-        <div style={{ overflowX: 'auto' }}>
-          {(dreStructure || []).map(group => renderRow(group, 'root'))}
+      {loading ? (
+        <div style={{ textAlign:'center', padding:60, color:'var(--fs-text-4)' }}>Carregando...</div>
+      ) : (
+        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, overflow:'hidden' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+            <thead style={{ background:'var(--fs-bg)' }}>
+              <tr>
+                <TH>Linha / Conta / Cliente</TH>
+                <TH right>Valor</TH>
+                <TH right>% Receita</TH>
+                <TH right>Lançamentos</TH>
+              </tr>
+            </thead>
+            <tbody>
+              {DRE_LINES.map(line => {
+                const lineValue = vMap[line.key] ?? 0
+                const hierarchy = !line.isSubtotal ? buildHierarchy(line.tipos) : []
+                const isExpLine = expanded[line.key]
+                const hasData   = hierarchy.length > 0
+                const isVisible = !line.isSubtotal || Math.abs(lineValue) > 0.001
+                  || ['receita_liquida','lucro_bruto','ebitda','resultado_final'].includes(line.key)
+                if (!isVisible) return null
+
+                // Subtotais não tem filhos
+                if (line.isSubtotal) {
+                  return (
+                    <tr key={line.key} style={{ background:'var(--fs-surface-2)', borderTop:'2px solid var(--fs-border)', borderBottom:'2px solid var(--fs-border)' }}>
+                      <td style={{ padding:'12px 16px', fontWeight:800, color:line.color, fontSize:14 }}>{line.label}</td>
+                      <td style={{ padding:'12px 16px', textAlign:'right', fontWeight:900, color: lineValue>=0 ? line.color : '#ef4444', fontSize:15 }}>{fmtBRL(lineValue)}</td>
+                      <td style={{ padding:'12px 16px', textAlign:'right', color:'var(--fs-text-4)', fontWeight:600 }}>{pct(lineValue)}</td>
+                      <td />
+                    </tr>
+                  )
+                }
+
+                const totalItems = hierarchy.reduce((a,c) => a + c.items.length, 0)
+                return [
+                  // ── Linha DRE ───────────────────────────────────────
+                  <tr key={line.key} style={{ borderTop:'1px solid var(--fs-border)', cursor: hasData?'pointer':'default', background:'transparent' }}
+                    onClick={() => hasData && toggle(line.key)}>
+                    <td style={{ padding:'11px 16px', fontWeight:700, color:'var(--fs-text-1)' }}>
+                      <span style={{ marginRight:8, color: hasData ? line.color : 'var(--fs-text-4)', fontSize:12 }}>{hasData ? (isExpLine?'▼':'▶') : '  '}</span>
+                      {line.label}
+                    </td>
+                    <td style={{ padding:'11px 16px', textAlign:'right', fontWeight:700, color: lineValue>=0 ? line.color : '#ef4444' }}>{fmtBRL(lineValue)}</td>
+                    <td style={{ padding:'11px 16px', textAlign:'right', color:'var(--fs-text-4)' }}>{pct(lineValue)}</td>
+                    <td style={{ padding:'11px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{totalItems > 0 ? `${totalItems}` : '—'}</td>
+                  </tr>,
+
+                  // ── Contas filhas ─────────────────────────────────
+                  ...(isExpLine ? hierarchy.map(conta => {
+                    const isExpConta = expanded[`${line.key}-${conta.contaId}`]
+                    return [
+                      <tr key={`${line.key}-${conta.contaId}`}
+                        style={{ background:'var(--fs-surface-2)', borderTop:'1px solid var(--fs-border)', cursor:'pointer' }}
+                        onClick={() => toggle(`${line.key}-${conta.contaId}`)}>
+                        <td style={{ padding:'9px 16px 9px 36px', color: line.color, fontWeight:600 }}>
+                          <span style={{ marginRight:8, fontSize:11, color:'var(--fs-text-4)' }}>{isExpConta?'▼':'▶'}</span>
+                          {conta.nome}
+                        </td>
+                        <td style={{ padding:'9px 16px', textAlign:'right', fontWeight:700, color:'var(--fs-text-1)' }}>{fmtBRL(conta.total)}</td>
+                        <td style={{ padding:'9px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{pct(conta.total)}</td>
+                        <td style={{ padding:'9px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{conta.items.length}</td>
+                      </tr>,
+
+                      // ── Clientes/Categorias filhas ──────────────
+                      ...(isExpConta ? conta.items.map((item, i) => (
+                        <tr key={`${line.key}-${conta.contaId}-${i}`}
+                          style={{ background:'var(--fs-bg)', borderTop:'1px solid var(--fs-border)' }}>
+                          <td style={{ padding:'7px 16px 7px 56px', color:'var(--fs-text-2)' }}>
+                            {item.nome.substring(0, 50)}
+                            {item.count > 1 && <span style={{ marginLeft:8, color:'var(--fs-text-4)', fontSize:11 }}>({item.count}×)</span>}
+                          </td>
+                          <td style={{ padding:'7px 16px', textAlign:'right', color:'var(--fs-text-1)', fontWeight:500 }}>{fmtBRL(item.total)}</td>
+                          <td style={{ padding:'7px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{pct(item.total)}</td>
+                          <td style={{ padding:'7px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{item.count}</td>
+                        </tr>
+                      )) : [])
+                    ]
+                  }).flat() : [])
+                ]
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ background:'var(--fs-surface-3)', borderTop:'2px solid var(--fs-border)' }}>
+                <td style={{ padding:'10px 16px', color:'var(--fs-text-4)', fontSize:11 }}>
+                  {data.length} lançamentos • {contas.length} contas
+                </td>
+                <td colSpan={3} />
+              </tr>
+            </tfoot>
+          </table>
         </div>
-      </div>
+      )}
     </div>
   )
 }

@@ -125,8 +125,21 @@ function DropZone({ onFile, label, sublabel, fileRef }) {
 
 // ─── Tabela de Preview ────────────────────────────────────────────────────────
 function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
-  const pendentes = (data || []).filter(r => !(mappings || []).find(m => m.categoria_origem?.toLowerCase() === (r.__desc || '').toLowerCase()))
-  const mapeados  = (data || []).length - pendentes.length
+  // Agrupar por categoria (__desc) — mostra uma linha por categoria
+  const grouped = {}
+  ;(data || []).forEach(row => {
+    const key = (row.__desc || '').trim().toLowerCase()
+    if (!grouped[key]) grouped[key] = { ...row, count: 0, totalValor: 0 }
+    grouped[key].count++
+    grouped[key].totalValor += row.valor
+  })
+  const uniqueRows = Object.values(grouped).sort((a, b) => b.totalValor - a.totalValor)
+
+  const pendentes = uniqueRows.filter(r => {
+    const map = (mappings || []).find(m => m.categoria_origem?.toLowerCase() === (r.__desc || '').toLowerCase())
+    return !map
+  })
+  const mapeados = uniqueRows.length - pendentes.length
 
   return (
     <div style={{ background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 16, padding: 24, marginBottom: 20 }}>
@@ -175,7 +188,7 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
 
       {pendentes.length > 0 && (
         <div style={{ background: 'var(--fs-warning-bg)', border: '1px solid rgba(var(--fs-warning-rgb),0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: 'var(--fs-warning)' }}>
-          ⚠️ {pendentes.length} categoria(s) sem mapeamento — serão importadas com tipo padrão. Clique em "Configurar" para mapear.
+          ⚠️ {pendentes.length} categoria{pendentes.length !== 1 ? 's' : ''} sem mapeamento de {uniqueRows.length} únicas. Registros ignorados não entram no DRE.
         </div>
       )}
 
@@ -189,7 +202,7 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
             </tr>
           </thead>
           <tbody>
-            {(data || []).map(row => {
+            {uniqueRows.map(row => {
               const map = (mappings || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
               return (
                 <tr key={row.__id} style={{ borderBottom: '1px solid var(--fs-border)' }}>
@@ -243,7 +256,7 @@ function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
           <div style={{ background: 'var(--fs-surface-2)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '10px 14px', color: 'var(--fs-brand)', fontWeight: 700, fontSize: 14 }}>{row.__desc}</div>
         </div>
 
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block', fontSize: 11, color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>Conta de destino (Plano de Contas)</label>
           <select
             style={{ background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: 8, color: 'var(--fs-text-1)', padding: '10px 14px', fontSize: 14, width: '100%', outline: 'none' }}
@@ -260,6 +273,19 @@ function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
               ⚠️ Nenhuma conta encontrada para este módulo. Verifique o Plano de Contas.
             </p>
           )}
+        </div>
+
+        {/* Opção de ignorar */}
+        <div style={{ marginBottom: 20, borderTop: '1px solid var(--fs-border)', paddingTop: 14 }}>
+          <label style={{ display: 'block', fontSize: 11, color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Ou ignorar esta categoria</label>
+          <button onClick={() => onSave('__ignorar__')}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.05)', cursor: 'pointer' }}>
+            <span style={{ fontSize: 18 }}>⛔</span>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fs-danger)' }}>Não incluir no DRE</div>
+              <div style={{ fontSize: 11, color: 'var(--fs-text-4)' }}>Esta categoria será importada mas não aparecerá nos demonstrativos</div>
+            </div>
+          </button>
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
@@ -304,7 +330,7 @@ export default function ImportacaoPage() {
     if (!id) return
     const { data } = await supabase.from('categoria_mappings').select('*').eq('empresa_id', id)
     const all = data || []
-    const DRE_TIPOS = ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','investimento']
+    const DRE_TIPOS = ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','investimento','ignorar']
     const FC_TIPOS  = ['entrada','saida','fluxo_entrada','fluxo_saida']
     setMappingsDre(all.filter(m => DRE_TIPOS.includes(m.tipo_destino)))
     setMappingsFluxo(all.filter(m => FC_TIPOS.includes(m.tipo_destino)))
@@ -398,18 +424,23 @@ export default function ImportacaoPage() {
     if (!editingRow || !contaId) return
     setSavingMapping(true)
     try {
-      const conta = (planoContas || []).find(c => c.id === contaId)
-      const tipo  = conta?.tipo || (activeTab === 'fluxo' ? 'entrada' : 'receita')
+      const isIgnorar = contaId === '__ignorar__'
+      const conta = isIgnorar ? null : (planoContas || []).find(c => c.id === contaId)
+      const tipo  = isIgnorar ? 'ignorar' : (conta?.tipo || (activeTab === 'fluxo' ? 'entrada' : 'receita'))
+
       await supabase.from('categoria_mappings').delete()
         .eq('empresa_id', empresaId).eq('categoria_origem', editingRow.__desc)
+
       const { error } = await supabase.from('categoria_mappings').insert({
-        empresa_id: empresaId, categoria_origem: editingRow.__desc,
-        conta_id: contaId, tipo_destino: tipo,
+        empresa_id:       empresaId,
+        categoria_origem: editingRow.__desc,
+        conta_id:         isIgnorar ? null : contaId,
+        tipo_destino:     tipo,
       })
       if (error) throw error
       await loadMappings(empresaId)
       setEditingRow(null)
-      showToast('Mapeamento salvo!', 'success')
+      showToast(isIgnorar ? '⛔ Categoria marcada como ignorada.' : 'Mapeamento salvo!', isIgnorar ? 'info' : 'success')
     } catch (e) {
       showToast('Erro ao salvar: ' + e.message, 'error')
     } finally {
@@ -546,12 +577,19 @@ export default function ImportacaoPage() {
 
   // ─── Construir payload do DRE ──────────────────────────────────────────────
   const buildDrePayload = () =>
-    (dataDre || []).map(row => {
-      const map = (mappingsDre || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
-      let tipo = map?.tipo_destino || (row.tipoCsv.includes('pagar') ? 'despesa' : 'receita')
-      if (!['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','investimento'].includes(tipo)) tipo = 'receita'
-      return { empresa_id: empresaId, data: row.data, descricao: row.nome || row.__desc || '', valor: row.valor, tipo, conta_id: map?.conta_id || null, categoria: row.__desc || '' }
-    }).filter(r => r.valor > 0)
+    (dataDre || [])
+      .filter(row => {
+        // Excluir categorias marcadas como "ignorar"
+        const map = (mappingsDre || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
+        return map?.tipo_destino !== 'ignorar'
+      })
+      .map(row => {
+        const map = (mappingsDre || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
+        let tipo = map?.tipo_destino || (row.tipoCsv.includes('pagar') ? 'despesa' : 'receita')
+        if (!['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','investimento'].includes(tipo)) tipo = 'receita'
+        return { empresa_id: empresaId, data: row.data, descricao: row.nome || row.__desc || '', valor: row.valor, tipo, conta_id: map?.conta_id || null, categoria: row.__desc || '' }
+      })
+      .filter(r => r.valor > 0)
 
   // ─── Construir payload do Fluxo de Caixa ──────────────────────────────────
   const buildFluxoPayload = () =>

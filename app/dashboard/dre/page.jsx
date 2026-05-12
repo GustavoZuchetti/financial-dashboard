@@ -201,6 +201,11 @@ const CustomTooltip = ({ active, payload, lancamentos }) => {
 export default function DREGeral() {
   const [startDate, setStartDate]  = useState(() => new Date(new Date().getFullYear(),0,1).toISOString().split('T')[0])
   const [endDate,   setEndDate]    = useState(new Date().toISOString().split('T')[0])
+  // Datas com debounce — evita query a cada keystroke
+  const [debouncedStart, setDebouncedStart] = useState(startDate)
+  const [debouncedEnd,   setDebouncedEnd]   = useState(endDate)
+  useEffect(() => { const t = setTimeout(() => setDebouncedStart(startDate), 400); return () => clearTimeout(t) }, [startDate])
+  useEffect(() => { const t = setTimeout(() => setDebouncedEnd(endDate), 400);   return () => clearTimeout(t) }, [endDate])
   const [data,      setData]       = useState([])
   const [prevData,  setPrevData]   = useState([])
   const [loading,   setLoading]    = useState(true)
@@ -216,11 +221,18 @@ export default function DREGeral() {
     window.addEventListener('storage', h); return () => window.removeEventListener('storage', h)
   }, [])
 
+  // Cache de IDs das empresas para consolidado — busca só uma vez por sessão
+  const empIdsRef = useRef(null)
+
   const fetchPeriod = useCallback(async (s, e, consol, empId) => {
-    let q = supabase.from('lancamentos').select('*').gte('data',s).lte('data',e)
+    let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,conta_id,empresa_id').gte('data',s).lte('data',e)
     if (consol) {
-      const { data: ue } = await supabase.from('empresas').select('id').eq('user_id',(await supabase.auth.getSession()).data.session.user.id)
-      if (ue?.length) q = q.in('empresa_id', ue.map(x=>x.id))
+      if (!empIdsRef.current) {
+        const { data: { session } } = await supabase.auth.getSession()
+        const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', session.user.id)
+        empIdsRef.current = (ue || []).map(x => x.id)
+      }
+      if (empIdsRef.current.length) q = q.in('empresa_id', empIdsRef.current)
     } else { q = q.eq('empresa_id', empId) }
     const { data: r, error: err } = await q
     if (err) throw err
@@ -233,15 +245,15 @@ export default function DREGeral() {
       setLoading(true); setError(null)
       try {
         const [cur, prev] = await Promise.all([
-          fetchPeriod(startDate, endDate, isConsol, empresaId),
-          fetchPeriod(...Object.values(getPrevPeriod(startDate, endDate)), isConsol, empresaId),
+          fetchPeriod(debouncedStart, debouncedEnd, isConsol, empresaId),
+          fetchPeriod(...Object.values(getPrevPeriod(debouncedStart, debouncedEnd)), isConsol, empresaId),
         ])
         setData(cur); setPrevData(prev)
       } catch(e) { setError('Erro ao carregar dados.') }
       finally { setLoading(false) }
     }
     run()
-  }, [empresaId, startDate, endDate, isConsol, fetchPeriod])
+  }, [empresaId, debouncedStart, debouncedEnd, isConsol, fetchPeriod])
 
   const v  = calcDRE(data)
   const pv = calcDRE(prevData)

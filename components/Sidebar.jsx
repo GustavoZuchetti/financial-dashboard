@@ -58,11 +58,10 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
   const [hoveredItem, setHoveredItem] = useState(null)
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user?.email) setUserEmail(session.user.email)
-    }
-    getUser()
+    // Usar cache do Supabase em vez de nova requisição
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email) setUserEmail(user.email)
+    })
   }, [])
 
   const toggleMenu = (href) => setOpenMenus(prev => ({ ...prev, [href]: !prev[href] }))

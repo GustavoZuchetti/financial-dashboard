@@ -37,7 +37,7 @@ export default function ConfiguracoesPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) setPerfil({ nome: user.user_metadata?.nome || user.email?.split('@')[0] || '', email: user.email || '' })
       
-      const { data: list } = await supabase.from('empresas').select('*').order('nome')
+      const { data: list } = await supabase.from('empresas').select('id,nome').order('nome')
       if (list) setEmpresas(list)
     }
     loadData()

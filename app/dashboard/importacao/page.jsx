@@ -328,7 +328,7 @@ export default function ImportacaoPage() {
 
   const loadMappings = useCallback(async (id) => {
     if (!id) return
-    const { data } = await supabase.from('categoria_mappings').select('*').eq('empresa_id', id)
+    const { data } = await supabase.from('categoria_mappings').select('id,categoria_origem,tipo_destino,conta_id,empresa_id').eq('empresa_id', id)
     const all = data || []
     const DRE_TIPOS = ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','imposto_lucro','investimento','ignorar']
     const FC_TIPOS  = ['entrada','saida','fluxo_entrada','fluxo_saida']
@@ -340,8 +340,8 @@ export default function ImportacaoPage() {
     const init = async () => {
       try {
         const [{ data: emps }, { data: plano }] = await Promise.all([
-          supabase.from('empresas').select('*').order('nome'),
-          supabase.from('plano_contas').select('*').order('nome'),
+          supabase.from('empresas').select('id,nome').order('nome'),
+          supabase.from('plano_contas').select('id,nome,tipo,codigo,empresa_id').order('nome'),
         ])
         setEmpresas(emps || [])
         setPlanoContas(plano || [])

@@ -113,8 +113,8 @@ export default function PlanoContasPage() {
     setLoading(true)
     try {
       const [{ data: emps }, { data: pcs }, { data: maps }] = await Promise.all([
-        supabase.from('empresas').select('*').order('nome'),
-        supabase.from('plano_contas').select('*').order('codigo'),
+        supabase.from('empresas').select('id,nome').order('nome'),
+        supabase.from('plano_contas').select('id,nome,tipo,codigo,empresa_id').order('codigo'),
         supabase.from('categoria_mappings').select('conta_id, categoria_origem'),
       ])
       setEmpresas(emps || [])

@@ -9,6 +9,10 @@ const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','N
 export default function DREAnalise() {
   const [startDate,  setStartDate]  = useState(() => new Date(new Date().getFullYear(),0,1).toISOString().split('T')[0])
   const [endDate,    setEndDate]    = useState(new Date().toISOString().split('T')[0])
+  const [debouncedStart, setDebouncedStart] = useState(startDate)
+  const [debouncedEnd,   setDebouncedEnd]   = useState(endDate)
+  useEffect(() => { const t = setTimeout(() => setDebouncedStart(startDate), 400); return () => clearTimeout(t) }, [startDate])
+  useEffect(() => { const t = setTimeout(() => setDebouncedEnd(endDate),   400); return () => clearTimeout(t) }, [endDate])
   const [empresaId,  setEmpresaId]  = useState(null)
   const [isConsol,   setIsConsol]   = useState(false)
   const [loading,    setLoading]    = useState(true)
@@ -27,7 +31,7 @@ export default function DREAnalise() {
     if (!empresaId) return
     setLoading(true)
     try {
-      let q = supabase.from('lancamentos').select('*').gte('data', startDate).lte('data', endDate)
+      let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria').gte('data', debouncedStart).lte('data', debouncedEnd)
       if (isConsol) {
         const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
         if (ue?.length) q = q.in('empresa_id', ue.map(e => e.id))
@@ -71,7 +75,7 @@ export default function DREAnalise() {
           .slice(0, 8)
       )
     } finally { setLoading(false) }
-  }, [empresaId, startDate, endDate, isConsol])
+  }, [empresaId, debouncedStart, debouncedEnd, isConsol])
 
   useEffect(() => { fetchData() }, [fetchData])
 

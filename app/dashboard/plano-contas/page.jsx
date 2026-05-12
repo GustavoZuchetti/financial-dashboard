@@ -269,8 +269,11 @@ export default function PlanoContasPage() {
                                   <td style={{ padding:'10px 16px', textAlign:'center' }}>
                                     {mCount > 0 ? (
                                       <button onClick={() => toggleMappingDetail(conta.id)}
-                                        style={{ background:'rgba(59,130,246,0.1)', color:'var(--fs-brand)', border:'1px solid rgba(59,130,246,0.25)', padding:'3px 10px', borderRadius:20, fontSize:12, fontWeight:700, cursor:'pointer', transition:'all 0.2s' }}>
-                                        {mCount} ✓ {expandedMappings[conta.id] ? '▲' : '▼'}
+                                        title={expandedMappings[conta.id] ? 'Ocultar categorias' : 'Ver categorias mapeadas'}
+                                        onMouseEnter={(e) => { e.target.style.background = 'rgba(59,130,246,0.1)'; e.target.style.color = 'var(--fs-brand)' }}
+                                        onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--fs-text-3)' }}
+                                        style={{ background:'transparent', color:'var(--fs-text-3)', border:'none', padding:'4px 8px', borderRadius:6, fontSize:16, cursor:'pointer', transition:'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', minWidth:32, minHeight:32 }}>
+                                        👁️
                                       </button>
                                     ) : (
                                       <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>—</span>
@@ -339,8 +342,11 @@ export default function PlanoContasPage() {
                     <td style={{ padding:'12px 16px', textAlign:'center' }}>
                       {mCount > 0 ? (
                         <button onClick={() => toggleMappingDetail(conta.id)}
-                          style={{ background:'rgba(59,130,246,0.1)', color:'var(--fs-brand)', border:'1px solid rgba(59,130,246,0.25)', padding:'3px 10px', borderRadius:20, fontSize:12, fontWeight:700, cursor:'pointer', transition:'all 0.2s' }}>
-                          {mCount} ✓ {expandedMappings[conta.id] ? '▲' : '▼'}
+                          title={expandedMappings[conta.id] ? 'Ocultar categorias' : 'Ver categorias mapeadas'}
+                          onMouseEnter={(e) => { e.target.style.background = 'rgba(59,130,246,0.1)'; e.target.style.color = 'var(--fs-brand)' }}
+                          onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--fs-text-3)' }}
+                          style={{ background:'transparent', color:'var(--fs-text-3)', border:'none', padding:'4px 8px', borderRadius:6, fontSize:16, cursor:'pointer', transition:'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', minWidth:32, minHeight:32 }}>
+                          👁️
                         </button>
                       ) : (
                         <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>—</span>

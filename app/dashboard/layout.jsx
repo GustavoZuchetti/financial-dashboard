@@ -3,57 +3,57 @@ import { useState, useEffect, createContext, useContext } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Sidebar from '@/components/Sidebar'
+import ViewAsBanner from '@/components/ViewAsBanner'
 
-// Contexto para gerenciar a empresa selecionada globalmente sem recarregar a página
 const DashboardContext = createContext()
-
 export const useDashboard = () => useContext(DashboardContext)
 
 export default function DashboardLayout({ children }) {
-  const router = useRouter()
-  const [empresa, setEmpresa] = useState(null)
+  const router   = useRouter()
+  const [empresa,  setEmpresa]  = useState(null)
   const [empresas, setEmpresas] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState(null)
+  const [loading,  setLoading]  = useState(true)
+  const [user,     setUser]     = useState(null)
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) {
-        router.push('/')
-        return
-      }
-
+      if (!session) { router.push('/'); return }
       setUser(session.user)
 
       try {
-        // Busca apenas empresas que pertencem ao usuário autenticado (Segurança Multi-tenant)
-        const { data, error } = await supabase
-          .from('empresas')
-          .select('id, nome')
-          .eq('user_id', session.user.id)
-          .order('nome')
+        let query = supabase.from('empresas').select('id, nome').order('nome')
 
+        // ── Estratégia de filtro ──────────────────────────────────────────
+        // 1ª opção: filtrar por organization_id via profile (multi-tenant)
+        // 2ª opção (fallback): filtrar por user_id (usuário legado sem org)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('organization_id, role')
+          .eq('id', session.user.id)
+          .single()
+
+        if (profile?.organization_id) {
+          // Usuário pertence a uma organização — vê TODAS as empresas da org
+          query = query.eq('organization_id', profile.organization_id)
+        } else {
+          // Fallback para usuários legados (sem profile/org)
+          query = query.eq('user_id', session.user.id)
+        }
+
+        const { data, error } = await query
         if (error) throw error
 
         if (data && data.length > 0) {
           setEmpresas(data)
           const saved = localStorage.getItem('empresa_id')
-          
-          // Validar se o valor salvo é válido (pode ser um ID de empresa ou "todas")
-          let initialEmpresa = data[0].id
+          let initial = data[0].id
           if (saved === 'todas' || (saved && data.find(e => e.id === saved))) {
-            initialEmpresa = saved
+            initial = saved
           }
-          
-          setEmpresa(initialEmpresa)
-          
-          if (saved !== initialEmpresa) {
-            localStorage.setItem('empresa_id', initialEmpresa)
-          }
+          setEmpresa(initial)
+          if (saved !== initial) localStorage.setItem('empresa_id', initial)
         } else {
-          // Se o usuário não tem empresas, redireciona para criar a primeira
           setEmpresas([])
         }
       } catch (e) {
@@ -65,56 +65,46 @@ export default function DashboardLayout({ children }) {
 
     checkAuth()
 
-    // Listener para mudanças na autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) router.push('/')
     })
-
     return () => subscription.unsubscribe()
   }, [router])
 
   const handleEmpresaChange = (id) => {
     setEmpresa(id)
     localStorage.setItem('empresa_id', id)
-    // Removido window.location.reload() para melhor performance
-    // As páginas que consomem o contexto ou o localStorage via useEffect irão reagir
   }
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'var(--fs-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: 40, height: 40, border: '3px solid #1a1a2e', borderTop: '3px solid #3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-          <span style={{ color: 'var(--fs-text-2)', fontSize: '14px', fontWeight: '500' }}>Carregando ambiente seguro...</span>
-        </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  if (loading) return (
+    <div style={{ minHeight:'100vh', background:'var(--fs-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16 }}>
+        <div style={{ width:40, height:40, border:'3px solid #1a1a2e', borderTop:'3px solid #3b82f6', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+        <span style={{ color:'var(--fs-text-2)', fontSize:14, fontWeight:500 }}>Carregando ambiente...</span>
       </div>
-    )
-  }
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
 
   return (
     <DashboardContext.Provider value={{ empresa, empresas, user, setEmpresa: handleEmpresaChange }}>
-      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--fs-bg)' }}>
-        <Sidebar
-          empresa={empresa}
-          empresas={empresas}
-          onEmpresaChange={handleEmpresaChange}
-        />
-        <main style={{ flex: 1, overflowY: 'auto', padding: '24px', position: 'relative' }}>
+      <ViewAsBanner />
+      <div style={{ display:'flex', minHeight:'100vh', background:'var(--fs-bg)' }}>
+        <Sidebar empresa={empresa} empresas={empresas} onEmpresaChange={handleEmpresaChange} />
+        <main style={{ flex:1, overflowY:'auto', padding:'24px', position:'relative' }}>
           {empresas.length === 0 && !loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '80vh', color: 'var(--fs-text-1)', textAlign: 'center' }}>
-              <h2 style={{ fontSize: '24px', marginBottom: '12px' }}>Bem-vindo ao Financial Dashboard</h2>
-              <p style={{ color: 'var(--fs-text-2)', marginBottom: '24px' }}>Você ainda não tem nenhuma empresa cadastrada.</p>
-              <button 
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'80vh', color:'var(--fs-text-1)', textAlign:'center' }}>
+              <h2 style={{ fontSize:24, marginBottom:12 }}>Bem-vindo ao Financial Dashboard</h2>
+              <p style={{ color:'var(--fs-text-2)', marginBottom:24 }}>
+                Nenhuma empresa encontrada para a sua organização.
+              </p>
+              <button
                 onClick={() => router.push('/dashboard/configuracoes')}
-                style={{ background: '#3b82f6', color: '#000', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                Cadastrar Minha Primeira Empresa
+                style={{ background:'#3b82f6', color:'#fff', border:'none', padding:'12px 24px', borderRadius:8, fontWeight:700, cursor:'pointer' }}>
+                Ir para Configurações
               </button>
             </div>
-          ) : (
-            children
-          )}
+          ) : children}
         </main>
       </div>
     </DashboardContext.Provider>

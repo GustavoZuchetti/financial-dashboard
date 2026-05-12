@@ -22,27 +22,13 @@ export default function DashboardLayout({ children }) {
       setUser(session.user)
 
       try {
-        let query = supabase.from('empresas').select('id, nome').order('nome')
-
-        // ── Estratégia de filtro ──────────────────────────────────────────
-        // 1ª opção: filtrar por organization_id via profile (multi-tenant)
-        // 2ª opção (fallback): filtrar por user_id (usuário legado sem org)
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('organization_id, role')
-          .eq('id', session.user.id)
-          .single()
-
-        if (profile?.organization_id) {
-          // Usuário pertence a uma organização — vê TODAS as empresas da org
-          query = query.eq('organization_id', profile.organization_id)
-        } else {
-          // Fallback para usuários legados (sem profile/org)
-          query = query.eq('user_id', session.user.id)
-        }
-
-        const { data, error } = await query
-        if (error) throw error
+        // Usar API route server-side com service role key
+        // Isso bypassa qualquer política RLS na tabela de empresas
+        const { data: { session: sess } } = await supabase.auth.getSession()
+        const res = await fetch('/api/my-empresas', {
+          headers: { Authorization: `Bearer ${sess?.access_token}` }
+        })
+        const { empresas: data, error } = await res.json()
 
         if (data && data.length > 0) {
           setEmpresas(data)

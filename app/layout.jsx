@@ -1,6 +1,7 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
 import { ToastProvider } from '@/components/Toast'
+import { OrgProvider } from '@/lib/org-context'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -26,9 +27,11 @@ export default function RootLayout({ children }) {
             }
           })();
         `}} />
-        <ToastProvider>
-          {children}
-        </ToastProvider>
+        <OrgProvider>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </OrgProvider>
       </body>
     </html>
   )

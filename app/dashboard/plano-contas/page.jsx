@@ -50,52 +50,45 @@ function ContaModal({ conta, empresas, onSave, onClose }) {
   }
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:16 }}>
-      <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:16, padding:28, width:'100%', maxWidth:480, boxShadow:'var(--fs-shadow-lg)' }}>
-        <h2 style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)', marginBottom:20 }}>
-          {conta?.id ? 'Editar Conta' : 'Nova Conta'}
+    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}>
+      <div style={{ background:'var(--fs-surface)', borderRadius:12, padding:24, maxWidth:500, width:'90%', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+        <h2 style={{ fontSize:18, fontWeight:700, margin:'0 0 16px', color:'var(--fs-text-1)' }}>
+          {conta ? 'Editar Conta' : 'Nova Conta'}
         </h2>
-
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:12, marginBottom:16 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:20 }}>
           <div>
-            <label style={{ display:'block', fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase', marginBottom:6 }}>Código</label>
-            <input value={form.codigo} onChange={e=>setForm({...form,codigo:e.target.value})} placeholder="Ex: 1.1" style={{ width:'100%', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'9px 12px', fontSize:13, outline:'none' }} />
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--fs-text-4)', marginBottom:6 }}>Código</label>
+            <input value={form.codigo} onChange={e => setForm({...form, codigo: e.target.value})}
+              style={{ width:'100%', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'10px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }} />
           </div>
           <div>
-            <label style={{ display:'block', fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase', marginBottom:6 }}>Nome da Conta</label>
-            <input value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Ex: RECEITA DE SERVIÇOS" style={{ width:'100%', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'9px 12px', fontSize:13, outline:'none' }} />
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--fs-text-4)', marginBottom:6 }}>Nome da Conta</label>
+            <input value={form.nome} onChange={e => setForm({...form, nome: e.target.value})}
+              style={{ width:'100%', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'10px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }} />
           </div>
-        </div>
-
-        <div style={{ marginBottom:16 }}>
-          <label style={{ display:'block', fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase', marginBottom:6 }}>Linha do DRE / Classificação</label>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-            {DRE_GROUPS.map(g => (
-              <button key={g.key} onClick={() => setForm({...form, tipo: g.key})}
-                style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 12px', borderRadius:8, border:`2px solid ${form.tipo===g.key ? g.cor : 'var(--fs-border)'}`, background: form.tipo===g.key ? g.cor+'18' : 'var(--fs-surface-2)', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
-                <span style={{ fontSize:16 }}>{g.icone}</span>
-                <div>
-                  <div style={{ fontSize:12, fontWeight:700, color: form.tipo===g.key ? g.cor : 'var(--fs-text-1)' }}>{g.label}</div>
-                  <div style={{ fontSize:10, color:'var(--fs-text-4)' }}>{g.desc.substring(0,30)}</div>
-                </div>
-              </button>
-            ))}
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--fs-text-4)', marginBottom:6 }}>Tipo DRE</label>
+            <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}
+              style={{ width:'100%', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'10px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}>
+              {DRE_GROUPS.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
+            </select>
           </div>
-        </div>
-
-        {empresas.length > 1 && (
-          <div style={{ marginBottom:20 }}>
-            <label style={{ display:'block', fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase', marginBottom:6 }}>Empresa</label>
-            <select value={form.empresa_id} onChange={e=>setForm({...form,empresa_id:e.target.value})} style={{ width:'100%', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'9px 12px', fontSize:13, outline:'none' }}>
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--fs-text-4)', marginBottom:6 }}>Empresa</label>
+            <select value={form.empresa_id} onChange={e => setForm({...form, empresa_id: e.target.value})}
+              style={{ width:'100%', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'10px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}>
               {empresas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
             </select>
           </div>
-        )}
-
-        <div style={{ display:'flex', gap:12 }}>
-          <button onClick={onClose} style={{ flex:1, background:'var(--fs-surface-2)', color:'var(--fs-text-1)', border:'1px solid var(--fs-border)', borderRadius:8, padding:'11px', fontSize:14, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
-          <button onClick={handleSave} disabled={saving||!form.nome.trim()} style={{ flex:2, background:saving||!form.nome.trim()?'var(--fs-surface-3)':'var(--fs-brand)', color:saving||!form.nome.trim()?'var(--fs-text-4)':'#fff', border:'none', borderRadius:8, padding:'11px', fontSize:14, fontWeight:700, cursor:saving||!form.nome.trim()?'not-allowed':'pointer' }}>
-            {saving ? '⏳ Salvando...' : conta?.id ? 'Salvar Alterações' : 'Criar Conta'}
+        </div>
+        <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+          <button onClick={onClose}
+            style={{ background:'var(--fs-surface-2)', border:'1px solid var(--fs-border)', color:'var(--fs-text-2)', padding:'10px 18px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+            Cancelar
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            style={{ background:'var(--fs-brand)', color:'#fff', border:'none', padding:'10px 18px', borderRadius:8, fontSize:13, fontWeight:600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
+            {saving ? 'Salvando...' : 'Salvar'}
           </button>
         </div>
       </div>
@@ -114,6 +107,7 @@ export default function PlanoContasPage() {
   const [busca,        setBusca]        = useState('')
   const [viewMode,     setViewMode]     = useState('dre') // 'dre' | 'lista'
   const [expandedGroups, setExpandedGroups] = useState({})
+  const [expandedMappings, setExpandedMappings] = useState({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -139,6 +133,7 @@ export default function PlanoContasPage() {
   }
 
   const toggleGroup = (key) => setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }))
+  const toggleMappingDetail = (contaId) => setExpandedMappings(prev => ({ ...prev, [contaId]: !prev[contaId] }))
 
   // Filtrar contas pela empresa selecionada e busca
   const contasFiltradas = contas.filter(c =>
@@ -257,41 +252,58 @@ export default function PlanoContasPage() {
                           {items.map((conta, i) => {
                             const mCount = mapCount[conta.id] || 0
                             return (
-                              <tr key={conta.id} style={{ borderTop:'1px solid var(--fs-border)', background: i%2===0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                                <td style={{ padding:'10px 16px', color:'var(--fs-text-4)', fontSize:13, fontFamily:'monospace' }}>{conta.codigo || '—'}</td>
-                                <td style={{ padding:'10px 16px' }}>
-                                  <div style={{ fontSize:13, fontWeight:600, color:'var(--fs-text-1)' }}>{conta.nome}</div>
-                                  {mCount > 0 && (
-                                    <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:2 }}>
-                                      {(() => {
-                                        const cats = mappings.filter(m => m.conta_id === conta.id).map(m => m.categoria_origem)
-                                        return cats.slice(0,3).join(', ') + (cats.length > 3 ? ` +${cats.length-3}` : '')
-                                      })()}
+                              <React.Fragment key={conta.id}>
+                                <tr style={{ borderTop:'1px solid var(--fs-border)', background: i%2===0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+                                  <td style={{ padding:'10px 16px', color:'var(--fs-text-4)', fontSize:13, fontFamily:'monospace' }}>{conta.codigo || '—'}</td>
+                                  <td style={{ padding:'10px 16px' }}>
+                                    <div style={{ fontSize:13, fontWeight:600, color:'var(--fs-text-1)' }}>{conta.nome}</div>
+                                    {mCount > 0 && (
+                                      <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:2 }}>
+                                        {(() => {
+                                          const cats = mappings.filter(m => m.conta_id === conta.id).map(m => m.categoria_origem)
+                                          return cats.slice(0,3).join(', ') + (cats.length > 3 ? ` +${cats.length-3}` : '')
+                                        })()}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td style={{ padding:'10px 16px', textAlign:'center' }}>
+                                    {mCount > 0 ? (
+                                      <button onClick={() => toggleMappingDetail(conta.id)}
+                                        style={{ background:'rgba(59,130,246,0.1)', color:'var(--fs-brand)', border:'1px solid rgba(59,130,246,0.25)', padding:'3px 10px', borderRadius:20, fontSize:12, fontWeight:700, cursor:'pointer', transition:'all 0.2s' }}>
+                                        {mCount} ✓ {expandedMappings[conta.id] ? '▲' : '▼'}
+                                      </button>
+                                    ) : (
+                                      <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>—</span>
+                                    )}
+                                  </td>
+                                  <td style={{ padding:'10px 16px', textAlign:'center' }}>
+                                    <div style={{ display:'flex', gap:6, justifyContent:'center' }}>
+                                      <button onClick={() => setModal(conta)}
+                                        style={{ background:'var(--fs-surface-2)', border:'1px solid var(--fs-border)', color:'var(--fs-text-2)', padding:'5px 12px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                                        Editar
+                                      </button>
+                                      <button onClick={() => handleDelete(conta.id)}
+                                        style={{ background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.2)', color:'var(--fs-danger)', padding:'5px 10px', borderRadius:6, fontSize:12, cursor:'pointer' }}>
+                                        ✕
+                                      </button>
                                     </div>
-                                  )}
-                                </td>
-                                <td style={{ padding:'10px 16px', textAlign:'center' }}>
-                                  {mCount > 0 ? (
-                                    <span style={{ background:'rgba(59,130,246,0.1)', color:'var(--fs-brand)', border:'1px solid rgba(59,130,246,0.25)', padding:'3px 10px', borderRadius:20, fontSize:12, fontWeight:700 }}>
-                                      {mCount} ✓
-                                    </span>
-                                  ) : (
-                                    <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>—</span>
-                                  )}
-                                </td>
-                                <td style={{ padding:'10px 16px', textAlign:'center' }}>
-                                  <div style={{ display:'flex', gap:6, justifyContent:'center' }}>
-                                    <button onClick={() => setModal(conta)}
-                                      style={{ background:'var(--fs-surface-2)', border:'1px solid var(--fs-border)', color:'var(--fs-text-2)', padding:'5px 12px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                                      Editar
-                                    </button>
-                                    <button onClick={() => handleDelete(conta.id)}
-                                      style={{ background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.2)', color:'var(--fs-danger)', padding:'5px 10px', borderRadius:6, fontSize:12, cursor:'pointer' }}>
-                                      ✕
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
+                                  </td>
+                                </tr>
+                                {expandedMappings[conta.id] && mCount > 0 && (
+                                  <tr style={{ borderTop:'1px solid var(--fs-border)', background:'rgba(59,130,246,0.05)' }}>
+                                    <td colSpan="4" style={{ padding:'12px 16px' }}>
+                                      <div style={{ fontSize:12, fontWeight:600, color:'var(--fs-text-4)', marginBottom:8 }}>Categorias mapeadas para esta conta:</div>
+                                      <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                                        {mappings.filter(m => m.conta_id === conta.id).map((m, idx) => (
+                                          <span key={idx} style={{ background:'var(--fs-surface-2)', border:'1px solid var(--fs-border)', color:'var(--fs-text-1)', padding:'4px 10px', borderRadius:6, fontSize:12, fontWeight:500 }}>
+                                            {m.categoria_origem}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
                             )
                           })}
                         </tbody>
@@ -304,49 +316,68 @@ export default function PlanoContasPage() {
           })}
         </div>
       ) : (
-        // ── VISÃO LISTA PLANA ────────────────────────────────────────────────
-        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, overflow:'hidden' }}>
-          <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead style={{ background:'var(--fs-bg)' }}>
-              <tr>
-                <th style={{ padding:'10px 16px', textAlign:'left', color:'var(--fs-text-4)', fontSize:11, fontWeight:700, textTransform:'uppercase', width:80 }}>Código</th>
-                <th style={{ padding:'10px 16px', textAlign:'left', color:'var(--fs-text-4)', fontSize:11, fontWeight:700, textTransform:'uppercase' }}>Nome</th>
-                <th style={{ padding:'10px 16px', textAlign:'left', color:'var(--fs-text-4)', fontSize:11, fontWeight:700, textTransform:'uppercase' }}>Classificação DRE</th>
-                <th style={{ padding:'10px 16px', textAlign:'center', color:'var(--fs-text-4)', fontSize:11, fontWeight:700, textTransform:'uppercase', width:100 }}>De-Para</th>
-                <th style={{ padding:'10px 16px', textAlign:'center', color:'var(--fs-text-4)', fontSize:11, fontWeight:700, textTransform:'uppercase', width:120 }}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contasFiltradas.map((conta, i) => (
-                <tr key={conta.id} style={{ borderTop:'1px solid var(--fs-border)', background: i%2===0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                  <td style={{ padding:'10px 16px', color:'var(--fs-text-4)', fontSize:13, fontFamily:'monospace' }}>{conta.codigo || '—'}</td>
-                  <td style={{ padding:'10px 16px', color:'var(--fs-text-1)', fontSize:13, fontWeight:600 }}>{conta.nome}</td>
-                  <td style={{ padding:'10px 16px' }}><TipoBadge tipo={conta.tipo} /></td>
-                  <td style={{ padding:'10px 16px', textAlign:'center', color:'var(--fs-text-4)', fontSize:12 }}>{mapCount[conta.id] || '—'}</td>
-                  <td style={{ padding:'10px 16px', textAlign:'center' }}>
-                    <div style={{ display:'flex', gap:6, justifyContent:'center' }}>
-                      <button onClick={() => setModal(conta)} style={{ background:'var(--fs-surface-2)', border:'1px solid var(--fs-border)', color:'var(--fs-text-2)', padding:'5px 12px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>Editar</button>
-                      <button onClick={() => handleDelete(conta.id)} style={{ background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.2)', color:'var(--fs-danger)', padding:'5px 10px', borderRadius:6, fontSize:12, cursor:'pointer' }}>✕</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Resumo */}
-      {!loading && (
-        <div style={{ marginTop:20, display:'flex', gap:10, flexWrap:'wrap' }}>
-          {DRE_GROUPS.filter(g => (grouped[g.key]||[]).length > 0).map(g => (
-            <div key={g.key} style={{ display:'flex', alignItems:'center', gap:6, background:`${g.cor}12`, border:`1px solid ${g.cor}30`, borderRadius:8, padding:'5px 12px', fontSize:12 }}>
-              <span>{g.icone}</span>
-              <span style={{ color:g.cor, fontWeight:700 }}>{g.label}:</span>
-              <span style={{ color:'var(--fs-text-2)' }}>{(grouped[g.key]||[]).length}</span>
-            </div>
-          ))}
-        </div>
+        // ── VISÃO LISTA SIMPLES ────────────────────────────────────────────────
+        <table style={{ width:'100%', borderCollapse:'collapse', background:'var(--fs-surface)', borderRadius:12, overflow:'hidden', border:'1px solid var(--fs-border)' }}>
+          <thead>
+            <tr style={{ background:'var(--fs-surface-2)', borderBottom:'1px solid var(--fs-border)' }}>
+              <th style={{ padding:'12px 16px', textAlign:'left', fontSize:12, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase' }}>Código</th>
+              <th style={{ padding:'12px 16px', textAlign:'left', fontSize:12, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase' }}>Nome</th>
+              <th style={{ padding:'12px 16px', textAlign:'left', fontSize:12, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase' }}>Tipo</th>
+              <th style={{ padding:'12px 16px', textAlign:'center', fontSize:12, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase' }}>De-Para</th>
+              <th style={{ padding:'12px 16px', textAlign:'center', fontSize:12, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase' }}>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {contasFiltradas.map((conta, i) => {
+              const mCount = mapCount[conta.id] || 0
+              return (
+                <React.Fragment key={conta.id}>
+                  <tr style={{ borderTop:'1px solid var(--fs-border)', background: i%2===0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+                    <td style={{ padding:'12px 16px', color:'var(--fs-text-4)', fontSize:13, fontFamily:'monospace' }}>{conta.codigo || '—'}</td>
+                    <td style={{ padding:'12px 16px', color:'var(--fs-text-1)', fontSize:13, fontWeight:600 }}>{conta.nome}</td>
+                    <td style={{ padding:'12px 16px' }}><TipoBadge tipo={conta.tipo} /></td>
+                    <td style={{ padding:'12px 16px', textAlign:'center' }}>
+                      {mCount > 0 ? (
+                        <button onClick={() => toggleMappingDetail(conta.id)}
+                          style={{ background:'rgba(59,130,246,0.1)', color:'var(--fs-brand)', border:'1px solid rgba(59,130,246,0.25)', padding:'3px 10px', borderRadius:20, fontSize:12, fontWeight:700, cursor:'pointer', transition:'all 0.2s' }}>
+                          {mCount} ✓ {expandedMappings[conta.id] ? '▲' : '▼'}
+                        </button>
+                      ) : (
+                        <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ padding:'12px 16px', textAlign:'center' }}>
+                      <div style={{ display:'flex', gap:6, justifyContent:'center' }}>
+                        <button onClick={() => setModal(conta)}
+                          style={{ background:'var(--fs-surface-2)', border:'1px solid var(--fs-border)', color:'var(--fs-text-2)', padding:'5px 12px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                          Editar
+                        </button>
+                        <button onClick={() => handleDelete(conta.id)}
+                          style={{ background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.2)', color:'var(--fs-danger)', padding:'5px 10px', borderRadius:6, fontSize:12, cursor:'pointer' }}>
+                          ✕
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {expandedMappings[conta.id] && mCount > 0 && (
+                    <tr style={{ borderTop:'1px solid var(--fs-border)', background:'rgba(59,130,246,0.05)' }}>
+                      <td colSpan="5" style={{ padding:'12px 16px' }}>
+                        <div style={{ fontSize:12, fontWeight:600, color:'var(--fs-text-4)', marginBottom:8 }}>Categorias mapeadas para esta conta:</div>
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+                          {mappings.filter(m => m.conta_id === conta.id).map((m, idx) => (
+                            <span key={idx} style={{ background:'var(--fs-surface-2)', border:'1px solid var(--fs-border)', color:'var(--fs-text-1)', padding:'4px 10px', borderRadius:6, fontSize:12, fontWeight:500 }}>
+                              {m.categoria_origem}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              )
+            })}
+          </tbody>
+        </table>
       )}
     </div>
   )

@@ -45,7 +45,7 @@ function AceitarConviteForm() {
     const { error: loginErr } = await supabase.auth.signInWithPassword({ email: invite.email, password: form.senha })
     setLoading(false)
     if (loginErr) { setStep('sucesso'); return } // conta criada mas login falhou — redireciona para login
-    router.replace('/dashboard')
+    router.replace('/dashboard/dre')
   }
 
   const inp = {

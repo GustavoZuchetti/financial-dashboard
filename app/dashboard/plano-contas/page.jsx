@@ -2,388 +2,368 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 
-// ─── Estrutura DRE para agrupamento visual ────────────────────────────────────
-const DRE_GROUPS = [
-  { key: 'receita',             label: 'Receita Bruta',          cor: '#22c55e', icone: '💰', desc: 'Receitas operacionais de serviços/produtos' },
-  { key: 'deducao',             label: 'Deduções',               cor: '#f97316', icone: '➖', desc: 'Impostos sobre receita, devoluções, descontos' },
-  { key: 'custo',               label: 'Custos Variáveis',       cor: '#ef4444', icone: '🏭', desc: 'CMV, CPV — custos diretamente ligados à receita' },
-  { key: 'despesa',             label: 'Despesas Fixas',         cor: '#f59e0b', icone: '📋', desc: 'Despesas operacionais fixas (salários, aluguel, etc.)' },
-  { key: 'receita_financeira',  label: 'Receitas Financeiras',   cor: '#14b8a6', icone: '📈', desc: 'Juros recebidos, rendimentos financeiros' },
-  { key: 'despesa_financeira',  label: 'Despesas Financeiras',   cor: '#8b5cf6', icone: '📉', desc: 'Juros pagos, IOF, tarifas bancárias' },
-  { key: 'imposto_lucro',       label: 'Impostos sobre Lucro',   cor: '#f97316', icone: '🏛️', desc: 'IR, CSLL e outros impostos sobre o lucro' },
-  { key: 'investimento',        label: 'Investimentos (CAPEX)',  cor: '#64748b', icone: '🏗️', desc: 'Aquisição de ativos, investimentos de longo prazo' },
-  { key: 'entrada',             label: 'Entradas — Fluxo de Caixa', cor: '#3b82f6', icone: '⬇️', desc: 'Entradas de caixa (módulo FC)' },
-  { key: 'saida',               label: 'Saídas — Fluxo de Caixa',  cor: '#ec4899', icone: '⬆️', desc: 'Saídas de caixa (módulo FC)' },
-]
+// ─── Ícones SVG profissionais (sem emojis) ────────────────────────────────────
+const Icon = ({ d, color, size = 15 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color || 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+)
+const ICONS = {
+  receita:            'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
+  deducao:            'M5 12h14',
+  custo:              'M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z',
+  despesa:            'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
+  receita_financeira: 'M23 6l-9.5 9.5-5-5L1 18M17 6h6v6',
+  despesa_financeira: 'M23 18l-9.5-9.5-5 5L1 6M17 18h6v-6',
+  imposto_lucro:      'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10',
+  investimento:       'M2 20h20M6 20V10M12 20V4M18 20v-6',
+  entrada:            'M12 5v14M5 12l7 7 7-7',
+  saida:              'M12 19V5M5 12l7-7 7 7',
+  edit:               'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
+  trash:              'M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2',
+  eye:                'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+  plus:               'M12 5v14M5 12h14',
+  list:               'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 0 2-2h2a2 2 0 0 0 2 2M9 12h6M9 16h4',
+  chart:              'M18 20V10M12 20V4M6 20v-6',
+  map:                'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0zM12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+}
 
+const DRE_GROUPS = [
+  { key: 'receita',            label: 'Receita Bruta',             cor: '#22c55e', desc: 'Receitas operacionais de serviços/produtos' },
+  { key: 'deducao',            label: 'Deduções',                  cor: '#f97316', desc: 'Impostos sobre receita, devoluções, descontos' },
+  { key: 'custo',              label: 'Custos Variáveis',          cor: '#ef4444', desc: 'CMV, CPV — custos diretamente ligados à receita' },
+  { key: 'despesa',            label: 'Despesas Fixas',            cor: '#f59e0b', desc: 'Despesas operacionais fixas (salários, aluguel, etc.)' },
+  { key: 'receita_financeira', label: 'Receitas Financeiras',      cor: '#14b8a6', desc: 'Juros recebidos, rendimentos financeiros' },
+  { key: 'despesa_financeira', label: 'Despesas Financeiras',      cor: '#8b5cf6', desc: 'Juros pagos, IOF, tarifas bancárias' },
+  { key: 'imposto_lucro',      label: 'Impostos sobre Lucro',      cor: '#f97316', desc: 'IR, CSLL e outros impostos sobre o lucro' },
+  { key: 'investimento',       label: 'Investimentos (CAPEX)',     cor: '#64748b', desc: 'Aquisição de ativos, investimentos de longo prazo' },
+  { key: 'entrada',            label: 'Entradas — Fluxo de Caixa', cor: '#3b82f6', desc: 'Entradas de caixa (módulo FC)' },
+  { key: 'saida',              label: 'Saídas — Fluxo de Caixa',   cor: '#ec4899', desc: 'Saídas de caixa (módulo FC)' },
+]
 const TIPO_LABELS = Object.fromEntries(DRE_GROUPS.map(g => [g.key, g.label]))
 const TIPO_CORES  = Object.fromEntries(DRE_GROUPS.map(g => [g.key, g.cor]))
 
-const fmtTipo = (t) => TIPO_LABELS[t] || t
-
-// ─── Badge de tipo ────────────────────────────────────────────────────────────
-function TipoBadge({ tipo }) {
-  const cor = TIPO_CORES[tipo] || '#64748b'
-  return (
-    <span style={{ background: cor + '18', color: cor, border: `1px solid ${cor}40`, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
-      {fmtTipo(tipo)}
-    </span>
-  )
-}
-
-// ─── Modal de edição/criação ───────────────────────────────────────────────────
-function ContaModal({ conta, empresas, onSave, onClose }) {
-  const [form, setForm] = useState({ codigo: conta?.codigo || '', nome: conta?.nome || '', tipo: conta?.tipo || 'receita', empresa_id: conta?.empresa_id || empresas[0]?.id || '' })
-  const [saving, setSaving] = useState(false)
-
-  const handleSave = async () => {
-    if (!form.nome.trim() || !form.tipo || !form.empresa_id) return
-    setSaving(true)
-    try {
-      if (conta?.id) {
-        await supabase.from('plano_contas').update({ codigo: form.codigo, nome: form.nome.toUpperCase(), tipo: form.tipo }).eq('id', conta.id)
-      } else {
-        await supabase.from('plano_contas').insert({ ...form, nome: form.nome.toUpperCase() })
-      }
-      onSave()
-    } finally { setSaving(false) }
-  }
-
-  return (
-    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}>
-      <div style={{ background:'var(--fs-surface)', borderRadius:12, padding:24, maxWidth:500, width:'90%', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
-        <h2 style={{ fontSize:18, fontWeight:700, margin:'0 0 16px', color:'var(--fs-text-1)' }}>
-          {conta ? 'Editar Conta' : 'Nova Conta'}
-        </h2>
-        <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:20 }}>
-          <div>
-            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--fs-text-4)', marginBottom:6 }}>Código</label>
-            <input value={form.codigo} onChange={e => setForm({...form, codigo: e.target.value})}
-              style={{ width:'100%', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'10px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }} />
-          </div>
-          <div>
-            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--fs-text-4)', marginBottom:6 }}>Nome da Conta</label>
-            <input value={form.nome} onChange={e => setForm({...form, nome: e.target.value})}
-              style={{ width:'100%', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'10px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }} />
-          </div>
-          <div>
-            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--fs-text-4)', marginBottom:6 }}>Tipo DRE</label>
-            <select value={form.tipo} onChange={e => setForm({...form, tipo: e.target.value})}
-              style={{ width:'100%', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'10px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}>
-              {DRE_GROUPS.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'var(--fs-text-4)', marginBottom:6 }}>Empresa</label>
-            <select value={form.empresa_id} onChange={e => setForm({...form, empresa_id: e.target.value})}
-              style={{ width:'100%', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'10px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}>
-              {empresas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
-            </select>
-          </div>
-        </div>
-        <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
-          <button onClick={onClose}
-            style={{ background:'var(--fs-surface-2)', border:'1px solid var(--fs-border)', color:'var(--fs-text-2)', padding:'10px 18px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-            Cancelar
-          </button>
-          <button onClick={handleSave} disabled={saving}
-            style={{ background:'var(--fs-brand)', color:'#fff', border:'none', padding:'10px 18px', borderRadius:8, fontSize:13, fontWeight:600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
-            {saving ? 'Salvando...' : 'Salvar'}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Página Principal ──────────────────────────────────────────────────────────
 export default function PlanoContasPage() {
-  const [contas,       setContas]       = useState([])
-  const [mappings,     setMappings]     = useState([])
-  const [empresas,     setEmpresas]     = useState([])
-  const [empresaFiltro,setEmpresaFiltro]= useState('')
-  const [loading,      setLoading]      = useState(true)
-  const [modal,        setModal]        = useState(null) // null | 'new' | conta
-  const [busca,        setBusca]        = useState('')
-  const [viewMode,     setViewMode]     = useState('dre') // 'dre' | 'lista'
-  const [expandedGroups, setExpandedGroups] = useState({})
-  const [expandedMappings, setExpandedMappings] = useState({})
+  const [empresaId,   setEmpresaId]   = useState(null)
+  const [empresas,    setEmpresas]    = useState([])
+  const [contas,      setContas]      = useState([])
+  const [mappings,    setMappings]    = useState([])
+  const [view,        setView]        = useState('dre')
+  const [editando,    setEditando]    = useState(null)
+  const [nova,        setNova]        = useState({ codigo:'', nome:'', tipo:'receita', descricao:'' })
+  const [loading,     setLoading]     = useState(false)
+  const [msg,         setMsg]         = useState('')
+  const [showAdd,     setShowAdd]     = useState(false)
+  const [contaDetalhes, setContaDetalhes] = useState(null)
+
+  const toast = (t, ok=true) => { setMsg(t); setTimeout(() => setMsg(''), 3500) }
+
+  useEffect(() => {
+    const id = localStorage.getItem('empresa_id') || ''
+    setEmpresaId(id === 'todas' ? null : id)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {})
+    return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    const id = localStorage.getItem('empresa_id') || ''
+    setEmpresaId(id === 'todas' ? null : id)
+    supabase.from('empresas').select('id,nome').order('nome').then(({ data }) => setEmpresas(data || []))
+    const h = () => {
+      const nid = localStorage.getItem('empresa_id') || ''
+      setEmpresaId(nid === 'todas' ? null : nid)
+    }
+    window.addEventListener('storage', h)
+    return () => window.removeEventListener('storage', h)
+  }, [])
 
   const load = useCallback(async () => {
+    if (!empresaId) return
     setLoading(true)
-    try {
-      const [{ data: emps }, { data: pcs }, { data: maps }] = await Promise.all([
-        supabase.from('empresas').select('id,nome').order('nome'),
-        supabase.from('plano_contas').select('id,nome,tipo,codigo,empresa_id').order('codigo'),
-        supabase.from('categoria_mappings').select('conta_id, categoria_origem'),
-      ])
-      setEmpresas(emps || [])
-      setContas(pcs || [])
-      setMappings(maps || [])
-      if (emps?.length && !empresaFiltro) setEmpresaFiltro(emps[0].id)
-    } finally { setLoading(false) }
-  }, [empresaFiltro])
+    const [{ data: c }, { data: m }] = await Promise.all([
+      supabase.from('plano_contas').select('id,codigo,nome,tipo,descricao').eq('empresa_id', empresaId).order('codigo'),
+      supabase.from('categoria_mappings').select('id,categoria_origem,tipo_destino,conta_id').eq('empresa_id', empresaId),
+    ])
+    setContas(c || [])
+    setMappings(m || [])
+    setLoading(false)
+  }, [empresaId])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Remover esta conta?')) return
-    await supabase.from('plano_contas').delete().eq('id', id)
+  const salvar = async () => {
+    if (!nova.codigo || !nova.nome || !empresaId) return
+    setLoading(true)
+    if (editando) {
+      await supabase.from('plano_contas').update({ codigo: nova.codigo, nome: nova.nome, tipo: nova.tipo, descricao: nova.descricao }).eq('id', editando)
+      toast('Conta atualizada')
+    } else {
+      const { data: { user } } = await supabase.auth.getUser()
+      await supabase.from('plano_contas').insert([{ ...nova, empresa_id: empresaId, user_id: user.id }])
+      toast('Conta adicionada')
+    }
+    setNova({ codigo:'', nome:'', tipo:'receita', descricao:'' }); setEditando(null); setShowAdd(false)
     load()
   }
 
-  const toggleGroup = (key) => setExpandedGroups(prev => ({ ...prev, [key]: !prev[key] }))
-  const toggleMappingDetail = (contaId) => setExpandedMappings(prev => ({ ...prev, [contaId]: !prev[contaId] }))
+  const excluir = async (id) => {
+    if (!confirm('Excluir esta conta? Os De-Para vinculados também serão removidos.')) return
+    await supabase.from('categoria_mappings').delete().eq('conta_id', id)
+    await supabase.from('plano_contas').delete().eq('id', id)
+    toast('Conta excluída'); load()
+  }
 
-  // Filtrar contas pela empresa selecionada e busca
-  const contasFiltradas = contas.filter(c =>
-    (!empresaFiltro || c.empresa_id === empresaFiltro) &&
-    (!busca || c.nome.toLowerCase().includes(busca.toLowerCase()) || c.codigo?.includes(busca))
+  const iniciarEdicao = (c) => {
+    setNova({ codigo: c.codigo, nome: c.nome, tipo: c.tipo, descricao: c.descricao || '' })
+    setEditando(c.id); setShowAdd(true)
+  }
+
+  const cancelar = () => { setNova({ codigo:'', nome:'', tipo:'receita', descricao:'' }); setEditando(null); setShowAdd(false) }
+
+  const inp = { background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:7, color:'var(--fs-text-1)', padding:'9px 12px', fontSize:13, outline:'none', width:'100%', boxSizing:'border-box' }
+
+  // ─── Modal de detalhes da conta ───────────────────────────────────
+  const ContaModal = () => {
+    if (!contaDetalhes) return null
+    const mps = mappings.filter(m => m.conta_id === contaDetalhes.id)
+    return (
+      <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center' }}
+           onClick={() => setContaDetalhes(null)}>
+        <div style={{ background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:12,padding:28,maxWidth:500,width:'90%' }}
+             onClick={e => e.stopPropagation()}>
+          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20 }}>
+            <div>
+              <div style={{ fontSize:11,color:'var(--fs-text-4)',fontWeight:700,textTransform:'uppercase',marginBottom:4 }}>Código {contaDetalhes.codigo}</div>
+              <div style={{ fontSize:17,fontWeight:800,color:'var(--fs-text-1)' }}>{contaDetalhes.nome}</div>
+              <span style={{ display:'inline-block',marginTop:6,background:`${TIPO_CORES[contaDetalhes.tipo]}20`,color:TIPO_CORES[contaDetalhes.tipo],border:`1px solid ${TIPO_CORES[contaDetalhes.tipo]}40`,padding:'2px 10px',borderRadius:20,fontSize:11,fontWeight:700 }}>
+                {TIPO_LABELS[contaDetalhes.tipo]}
+              </span>
+            </div>
+            <button onClick={() => setContaDetalhes(null)} style={{ background:'transparent',border:'none',color:'var(--fs-text-4)',fontSize:18,cursor:'pointer',lineHeight:1 }}>✕</button>
+          </div>
+          {contaDetalhes.descricao && <p style={{ color:'var(--fs-text-2)',fontSize:13,marginBottom:16 }}>{contaDetalhes.descricao}</p>}
+          <div style={{ fontSize:12,fontWeight:700,color:'var(--fs-text-4)',textTransform:'uppercase',marginBottom:8 }}>De-Para vinculados ({mps.length})</div>
+          {mps.length === 0
+            ? <p style={{ color:'var(--fs-text-4)',fontSize:13 }}>Nenhum De-Para configurado para esta conta.</p>
+            : mps.map(m => (
+              <div key={m.id} style={{ background:'var(--fs-bg)',borderRadius:7,padding:'8px 12px',marginBottom:6,fontSize:12,color:'var(--fs-text-2)' }}>
+                {m.categoria_origem}
+              </div>
+            ))}
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Formulário de nova/editar conta ─────────────────────────────
+  const FormConta = () => (
+    <div style={{ background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:12,padding:24,marginBottom:20 }}>
+      <div style={{ fontSize:15,fontWeight:700,color:'var(--fs-text-1)',marginBottom:16 }}>
+        {editando ? 'Editar Conta' : 'Nova Conta'}
+      </div>
+      <div style={{ display:'grid',gridTemplateColumns:'1fr 2fr 1fr',gap:12,marginBottom:12 }}>
+        <div>
+          <label style={{ display:'block',fontSize:11,color:'var(--fs-text-4)',fontWeight:700,textTransform:'uppercase',marginBottom:5 }}>Código</label>
+          <input style={inp} value={nova.codigo} onChange={e=>setNova({...nova,codigo:e.target.value})} placeholder="1.1" />
+        </div>
+        <div>
+          <label style={{ display:'block',fontSize:11,color:'var(--fs-text-4)',fontWeight:700,textTransform:'uppercase',marginBottom:5 }}>Nome da Conta</label>
+          <input style={inp} value={nova.nome} onChange={e=>setNova({...nova,nome:e.target.value})} placeholder="Ex: Receita de Serviços" />
+        </div>
+        <div>
+          <label style={{ display:'block',fontSize:11,color:'var(--fs-text-4)',fontWeight:700,textTransform:'uppercase',marginBottom:5 }}>Tipo</label>
+          <select style={inp} value={nova.tipo} onChange={e=>setNova({...nova,tipo:e.target.value})}>
+            {DRE_GROUPS.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{ marginBottom:16 }}>
+        <label style={{ display:'block',fontSize:11,color:'var(--fs-text-4)',fontWeight:700,textTransform:'uppercase',marginBottom:5 }}>Descrição (opcional)</label>
+        <input style={inp} value={nova.descricao} onChange={e=>setNova({...nova,descricao:e.target.value})} placeholder="Descrição da conta..." />
+      </div>
+      <div style={{ display:'flex',gap:8 }}>
+        <button onClick={salvar} disabled={!nova.codigo||!nova.nome||loading}
+          style={{ background:'var(--fs-brand)',color:'#fff',border:'none',borderRadius:8,padding:'9px 20px',fontSize:13,fontWeight:700,cursor:'pointer' }}>
+          {editando ? 'Salvar Alterações' : 'Adicionar Conta'}
+        </button>
+        <button onClick={cancelar}
+          style={{ background:'transparent',color:'var(--fs-text-2)',border:'1px solid var(--fs-border)',borderRadius:8,padding:'9px 16px',fontSize:13,cursor:'pointer' }}>
+          Cancelar
+        </button>
+      </div>
+    </div>
   )
 
-  // Agrupar por tipo DRE
-  const grouped = {}
-  DRE_GROUPS.forEach(g => { grouped[g.key] = [] })
-  contasFiltradas.forEach(c => {
-    if (grouped[c.tipo]) grouped[c.tipo].push(c)
-    else grouped['receita'] = [...(grouped['receita']||[]), c]
-  })
-
-  // Contagem de De-Para por conta
-  const mapCount = {}
-  mappings.forEach(m => { mapCount[m.conta_id] = (mapCount[m.conta_id] || 0) + 1 })
-
   return (
-    <div style={{ color:'var(--fs-text-1)', padding:4 }}>
-      {modal && (
-        <ContaModal
-          conta={modal === 'new' ? null : modal}
-          empresas={empresas.filter(e => !empresaFiltro || e.id === empresaFiltro)}
-          onSave={() => { setModal(null); load() }}
-          onClose={() => setModal(null)}
-        />
-      )}
+    <div style={{ color:'var(--fs-text-1)', width:'100%' }}>
+      <ContaModal />
 
       {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:12 }}>
+      <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:24,flexWrap:'wrap',gap:12 }}>
         <div>
-          <h1 style={{ fontSize:22, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>Plano de Contas</h1>
-          <p style={{ color:'var(--fs-text-4)', fontSize:13, margin:'3px 0 0' }}>Estrutura de contas vinculada ao DRE</p>
+          <h1 style={{ fontSize:22,fontWeight:800,color:'var(--fs-text-1)',margin:0 }}>Plano de Contas</h1>
+          <p style={{ color:'var(--fs-text-4)',fontSize:13,margin:'4px 0 0' }}>
+            {contas.length} conta{contas.length !== 1?'s':''} cadastrada{contas.length !== 1?'s':''}
+            {mappings.length > 0 && ` · ${mappings.length} De-Para`}
+          </p>
         </div>
-        <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
-          {/* Filtro empresa */}
-          <select value={empresaFiltro} onChange={e => setEmpresaFiltro(e.target.value)}
-            style={{ background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'7px 12px', fontSize:13, outline:'none' }}>
-            {empresas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
-          </select>
-          {/* Toggle view */}
-          <div style={{ display:'flex', background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, overflow:'hidden' }}>
-            {[{k:'dre',l:'📊 DRE'},{k:'lista',l:'📋 Lista'}].map(v => (
-              <button key={v.k} onClick={() => setViewMode(v.k)}
-                style={{ padding:'7px 14px', border:'none', cursor:'pointer', fontSize:12, fontWeight:600, background: viewMode===v.k ? 'var(--fs-brand)' : 'transparent', color: viewMode===v.k ? '#fff' : 'var(--fs-text-4)' }}>
-                {v.l}
+        <div style={{ display:'flex',gap:8,alignItems:'center' }}>
+          {/* Toggle de visualização */}
+          <div style={{ display:'flex',background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:8,padding:3,gap:2 }}>
+            {[{v:'dre',l:'Visão DRE',i:ICONS.chart},{v:'lista',l:'Lista',i:ICONS.list}].map(({v,l,i}) => (
+              <button key={v} onClick={() => setView(v)}
+                style={{ display:'flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:6,fontSize:12,fontWeight:view===v?700:400,background:view===v?'var(--fs-surface-2)':'transparent',color:view===v?'var(--fs-text-1)':'var(--fs-text-4)',border:view===v?'1px solid var(--fs-border)':'1px solid transparent',cursor:'pointer' }}>
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d={i} />
+                </svg>
+                {l}
               </button>
             ))}
           </div>
-          <button onClick={() => setModal('new')} style={{ background:'var(--fs-brand)', color:'#fff', border:'none', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-            + Nova Conta
-          </button>
+          {!showAdd && (
+            <button onClick={() => setShowAdd(true)}
+              style={{ display:'flex',alignItems:'center',gap:6,background:'var(--fs-brand)',color:'#fff',border:'none',borderRadius:8,padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer' }}>
+              <Icon d={ICONS.plus} color="#fff" size={14} /> Nova Conta
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Busca */}
-      <div style={{ marginBottom:20 }}>
-        <input value={busca} onChange={e=>setBusca(e.target.value)} placeholder="Buscar conta por nome ou código..."
-          style={{ width:'100%', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'10px 14px', fontSize:13, outline:'none' }} />
-      </div>
+      {msg && (
+        <div style={{ background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:8,padding:'9px 14px',color:'var(--fs-success)',fontSize:13,marginBottom:16 }}>
+          {msg}
+        </div>
+      )}
 
-      {loading ? (
-        <div style={{ color:'var(--fs-text-4)', padding:40, textAlign:'center' }}>Carregando...</div>
-      ) : viewMode === 'dre' ? (
-        // ── VISÃO DRE AGRUPADA ────────────────────────────────────────────────
-        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-          {DRE_GROUPS.map((grupo, gi) => {
-            const items = grouped[grupo.key] || []
-            if (items.length === 0 && !busca) return null
-            const isExpanded = expandedGroups[grupo.key] !== false // default aberto
-            const totalMaps = items.reduce((a, c) => a + (mapCount[c.id] || 0), 0)
+      {showAdd && <FormConta />}
 
+      {!empresaId ? (
+        <div style={{ textAlign:'center',padding:60,color:'var(--fs-text-4)' }}>Selecione uma empresa no menu lateral.</div>
+      ) : loading ? (
+        <div style={{ textAlign:'center',padding:60,color:'var(--fs-text-4)' }}>Carregando...</div>
+      ) : contas.length === 0 ? (
+        <div style={{ textAlign:'center',padding:60,color:'var(--fs-text-4)' }}>
+          <p style={{ marginBottom:16 }}>Nenhuma conta cadastrada para esta empresa.</p>
+          <button onClick={() => setShowAdd(true)} style={{ background:'var(--fs-brand)',color:'#fff',border:'none',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer' }}>
+            Adicionar primeira conta
+          </button>
+        </div>
+      ) : view === 'dre' ? (
+        // ── Visão DRE: agrupado por tipo ─────────────────────────────
+        <div style={{ display:'flex',flexDirection:'column',gap:12 }}>
+          {DRE_GROUPS.map(grupo => {
+            const gc = contas.filter(c => c.tipo === grupo.key)
+            if (gc.length === 0) return null
+            const mCount = mappings.filter(m => gc.some(c => c.id === m.conta_id)).length
+            const [open, setOpen] = React.useState(true) // eslint-disable-line
             return (
-              <div key={grupo.key} style={{ background:'var(--fs-surface)', border:`1px solid var(--fs-border)`, borderRadius:12, overflow:'hidden', borderLeft:`4px solid ${grupo.cor}` }}>
+              <div key={grupo.key} style={{ background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:12,overflow:'hidden' }}>
                 {/* Header do grupo */}
-                <div onClick={() => toggleGroup(grupo.key)}
-                  style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', cursor:'pointer', background: isExpanded ? `${grupo.cor}08` : 'transparent', userSelect:'none' }}>
-                  <span style={{ fontSize:20 }}>{grupo.icone}</span>
+                <div onClick={() => setOpen(!open)}
+                  style={{ display:'flex',alignItems:'center',gap:12,padding:'14px 20px',cursor:'pointer',borderLeft:`4px solid ${grupo.cor}`,background:'var(--fs-surface)' }}>
+                  <div style={{ display:'flex',alignItems:'center',justifyContent:'center',width:32,height:32,background:`${grupo.cor}18`,borderRadius:8,flexShrink:0 }}>
+                    <Icon d={ICONS[grupo.key] || ICONS.receita} color={grupo.cor} size={15} />
+                  </div>
                   <div style={{ flex:1 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                      <span style={{ fontSize:14, fontWeight:700, color:grupo.cor }}>{grupo.label}</span>
-                      <span style={{ background:grupo.cor+'20', color:grupo.cor, border:`1px solid ${grupo.cor}40`, padding:'1px 8px', borderRadius:20, fontSize:11, fontWeight:700 }}>
-                        {items.length} conta{items.length!==1?'s':''}
-                      </span>
-                      {totalMaps > 0 && (
-                        <span style={{ background:'rgba(59,130,246,0.1)', color:'var(--fs-brand)', border:'1px solid rgba(59,130,246,0.2)', padding:'1px 8px', borderRadius:20, fontSize:11, fontWeight:600 }}>
-                          {totalMaps} De-Para
-                        </span>
-                      )}
+                    <div style={{ display:'flex',alignItems:'center',gap:8 }}>
+                      <span style={{ fontWeight:700,color:'var(--fs-text-1)',fontSize:14 }}>{grupo.label}</span>
+                      <span style={{ background:`${grupo.cor}18`,color:grupo.cor,border:`1px solid ${grupo.cor}30`,padding:'1px 8px',borderRadius:20,fontSize:11,fontWeight:700 }}>{gc.length} conta{gc.length!==1?'s':''}</span>
+                      {mCount > 0 && <span style={{ background:'rgba(59,130,246,0.1)',color:'var(--fs-brand)',border:'1px solid rgba(59,130,246,0.2)',padding:'1px 8px',borderRadius:20,fontSize:11,fontWeight:700 }}>{mCount} De-Para</span>}
                     </div>
-                    <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:2 }}>{grupo.desc}</div>
+                    <div style={{ fontSize:12,color:'var(--fs-text-4)',marginTop:2 }}>{grupo.desc}</div>
                   </div>
-                  <div style={{ fontSize:16, color:'var(--fs-text-4)', transition:'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</div>
+                  <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="var(--fs-text-4)" strokeWidth="2" style={{ transform:open?'rotate(180deg)':'none',transition:'transform 0.2s',flexShrink:0 }}>
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
                 </div>
-
                 {/* Contas do grupo */}
-                {isExpanded && (
-                  <div>
-                    {items.length === 0 ? (
-                      <div style={{ padding:'12px 20px', color:'var(--fs-text-4)', fontSize:13, fontStyle:'italic', borderTop:'1px solid var(--fs-border)' }}>
-                        Nenhuma conta nesta categoria — clique em "+ Nova Conta" para adicionar
-                      </div>
-                    ) : (
-                      <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                        <thead>
-                          <tr style={{ borderTop:'1px solid var(--fs-border)' }}>
-                            <th style={{ padding:'8px 16px', textAlign:'left', fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase', width:80 }}>Código</th>
-                            <th style={{ padding:'8px 16px', textAlign:'left', fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase' }}>Nome da Conta</th>
-                            <th style={{ padding:'8px 16px', textAlign:'center', fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase', width:100 }}>De-Para</th>
-                            <th style={{ padding:'8px 16px', textAlign:'center', fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase', width:120 }}>Ações</th>
+                {open && (
+                  <table style={{ width:'100%',borderCollapse:'collapse',fontSize:13 }}>
+                    <thead style={{ background:'var(--fs-bg)' }}>
+                      <tr style={{ borderTop:'1px solid var(--fs-border)' }}>
+                        {['Código','Nome da Conta','Descrição','De-Para','Ações'].map((h,i) => (
+                          <th key={h} style={{ padding:'8px 16px',textAlign:i>=3?'center':'left',color:'var(--fs-text-4)',fontSize:11,fontWeight:700,textTransform:'uppercase' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gc.map((conta, idx) => {
+                        const mps = mappings.filter(m => m.conta_id === conta.id)
+                        return (
+                          <tr key={conta.id} style={{ borderTop:'1px solid var(--fs-border)',background:idx%2===0?'transparent':'var(--fs-bg)' }}>
+                            <td style={{ padding:'11px 16px',fontWeight:700,color:grupo.cor,fontSize:12,whiteSpace:'nowrap' }}>{conta.codigo}</td>
+                            <td style={{ padding:'11px 16px',fontWeight:600,color:'var(--fs-text-1)' }}>{conta.nome}</td>
+                            <td style={{ padding:'11px 16px',color:'var(--fs-text-4)',fontSize:12 }}>{conta.descricao || '—'}</td>
+                            <td style={{ padding:'11px 16px',textAlign:'center' }}>
+                              {mps.length > 0 ? (
+                                <button onClick={() => setContaDetalhes(conta)}
+                                  style={{ background:'rgba(59,130,246,0.1)',color:'var(--fs-brand)',border:'1px solid rgba(59,130,246,0.2)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:4 }}>
+                                  <Icon d={ICONS.eye} color="var(--fs-brand)" size={12} />
+                                  {mps.length}
+                                </button>
+                              ) : <span style={{ color:'var(--fs-text-4)',fontSize:11 }}>—</span>}
+                            </td>
+                            <td style={{ padding:'11px 16px',textAlign:'center' }}>
+                              <div style={{ display:'inline-flex',gap:6 }}>
+                                <button onClick={() => iniciarEdicao(conta)}
+                                  style={{ display:'inline-flex',alignItems:'center',gap:5,background:'transparent',border:'1px solid var(--fs-border)',borderRadius:7,padding:'5px 10px',fontSize:12,color:'var(--fs-text-2)',cursor:'pointer',fontWeight:600 }}>
+                                  <Icon d={ICONS.edit} color="var(--fs-text-2)" size={12} /> Editar
+                                </button>
+                                <button onClick={() => excluir(conta.id)}
+                                  style={{ display:'inline-flex',alignItems:'center',background:'transparent',border:'1px solid rgba(239,68,68,0.2)',borderRadius:7,padding:'5px 8px',fontSize:12,color:'var(--fs-danger)',cursor:'pointer' }}>
+                                  <Icon d={ICONS.trash} color="var(--fs-danger)" size={13} />
+                                </button>
+                              </div>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {items.map((conta, i) => {
-                            const mCount = mapCount[conta.id] || 0
-                            return (
-                              <React.Fragment key={conta.id}>
-                                <tr style={{ borderTop:'1px solid var(--fs-border)', background: i%2===0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                                  <td style={{ padding:'10px 16px', color:'var(--fs-text-4)', fontSize:13, fontFamily:'monospace' }}>{conta.codigo || '—'}</td>
-                                  <td style={{ padding:'10px 16px' }}>
-                                    <div style={{ fontSize:13, fontWeight:600, color:'var(--fs-text-1)' }}>{conta.nome}</div>
-                                    {mCount > 0 && (
-                                      <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:2 }}>
-                                        {(() => {
-                                          const cats = mappings.filter(m => m.conta_id === conta.id).map(m => m.categoria_origem)
-                                          return cats.slice(0,3).join(', ') + (cats.length > 3 ? ` +${cats.length-3}` : '')
-                                        })()}
-                                      </div>
-                                    )}
-                                  </td>
-                                  <td style={{ padding:'10px 16px', textAlign:'center' }}>
-                                    {mCount > 0 ? (
-                                      <button onClick={() => toggleMappingDetail(conta.id)}
-                                        title={expandedMappings[conta.id] ? 'Ocultar categorias' : 'Ver categorias mapeadas'}
-                                        onMouseEnter={(e) => { e.target.style.background = 'rgba(59,130,246,0.1)'; e.target.style.color = 'var(--fs-brand)' }}
-                                        onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--fs-text-3)' }}
-                                        style={{ background:'transparent', color:'var(--fs-text-3)', border:'none', padding:'4px 8px', borderRadius:6, fontSize:16, cursor:'pointer', transition:'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', minWidth:32, minHeight:32 }}>
-                                        👁️
-                                      </button>
-                                    ) : (
-                                      <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>—</span>
-                                    )}
-                                  </td>
-                                  <td style={{ padding:'10px 16px', textAlign:'center' }}>
-                                    <div style={{ display:'flex', gap:6, justifyContent:'center' }}>
-                                      <button onClick={() => setModal(conta)}
-                                        style={{ background:'var(--fs-surface-2)', border:'1px solid var(--fs-border)', color:'var(--fs-text-2)', padding:'5px 12px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                                        Editar
-                                      </button>
-                                      <button onClick={() => handleDelete(conta.id)}
-                                        style={{ background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.2)', color:'var(--fs-danger)', padding:'5px 10px', borderRadius:6, fontSize:12, cursor:'pointer' }}>
-                                        ✕
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                                {expandedMappings[conta.id] && mCount > 0 && (
-                                  <tr style={{ borderTop:'1px solid var(--fs-border)', background:'rgba(59,130,246,0.05)' }}>
-                                    <td colSpan="4" style={{ padding:'12px 16px' }}>
-                                      <div style={{ fontSize:12, fontWeight:600, color:'var(--fs-text-4)', marginBottom:8 }}>Categorias mapeadas para esta conta:</div>
-                                      <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-                                        {mappings.filter(m => m.conta_id === conta.id).map((m, idx) => (
-                                          <span key={idx} style={{ background:'var(--fs-surface-2)', border:'1px solid var(--fs-border)', color:'var(--fs-text-1)', padding:'4px 10px', borderRadius:6, fontSize:12, fontWeight:500 }}>
-                                            {m.categoria_origem}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                )}
-                              </React.Fragment>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
+                        )
+                      })}
+                    </tbody>
+                  </table>
                 )}
               </div>
             )
           })}
         </div>
       ) : (
-        // ── VISÃO LISTA SIMPLES ────────────────────────────────────────────────
-        <table style={{ width:'100%', borderCollapse:'collapse', background:'var(--fs-surface)', borderRadius:12, overflow:'hidden', border:'1px solid var(--fs-border)' }}>
-          <thead>
-            <tr style={{ background:'var(--fs-surface-2)', borderBottom:'1px solid var(--fs-border)' }}>
-              <th style={{ padding:'12px 16px', textAlign:'left', fontSize:12, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase' }}>Código</th>
-              <th style={{ padding:'12px 16px', textAlign:'left', fontSize:12, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase' }}>Nome</th>
-              <th style={{ padding:'12px 16px', textAlign:'left', fontSize:12, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase' }}>Tipo</th>
-              <th style={{ padding:'12px 16px', textAlign:'center', fontSize:12, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase' }}>De-Para</th>
-              <th style={{ padding:'12px 16px', textAlign:'center', fontSize:12, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase' }}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contasFiltradas.map((conta, i) => {
-              const mCount = mapCount[conta.id] || 0
-              return (
-                <React.Fragment key={conta.id}>
-                  <tr style={{ borderTop:'1px solid var(--fs-border)', background: i%2===0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                    <td style={{ padding:'12px 16px', color:'var(--fs-text-4)', fontSize:13, fontFamily:'monospace' }}>{conta.codigo || '—'}</td>
-                    <td style={{ padding:'12px 16px', color:'var(--fs-text-1)', fontSize:13, fontWeight:600 }}>{conta.nome}</td>
-                    <td style={{ padding:'12px 16px' }}><TipoBadge tipo={conta.tipo} /></td>
-                    <td style={{ padding:'12px 16px', textAlign:'center' }}>
-                      {mCount > 0 ? (
-                        <button onClick={() => toggleMappingDetail(conta.id)}
-                          title={expandedMappings[conta.id] ? 'Ocultar categorias' : 'Ver categorias mapeadas'}
-                          onMouseEnter={(e) => { e.target.style.background = 'rgba(59,130,246,0.1)'; e.target.style.color = 'var(--fs-brand)' }}
-                          onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.color = 'var(--fs-text-3)' }}
-                          style={{ background:'transparent', color:'var(--fs-text-3)', border:'none', padding:'4px 8px', borderRadius:6, fontSize:16, cursor:'pointer', transition:'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', minWidth:32, minHeight:32 }}>
-                          👁️
-                        </button>
-                      ) : (
-                        <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>—</span>
-                      )}
-                    </td>
-                    <td style={{ padding:'12px 16px', textAlign:'center' }}>
-                      <div style={{ display:'flex', gap:6, justifyContent:'center' }}>
-                        <button onClick={() => setModal(conta)}
-                          style={{ background:'var(--fs-surface-2)', border:'1px solid var(--fs-border)', color:'var(--fs-text-2)', padding:'5px 12px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                          Editar
-                        </button>
-                        <button onClick={() => handleDelete(conta.id)}
-                          style={{ background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.2)', color:'var(--fs-danger)', padding:'5px 10px', borderRadius:6, fontSize:12, cursor:'pointer' }}>
-                          ✕
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  {expandedMappings[conta.id] && mCount > 0 && (
-                    <tr style={{ borderTop:'1px solid var(--fs-border)', background:'rgba(59,130,246,0.05)' }}>
-                      <td colSpan="5" style={{ padding:'12px 16px' }}>
-                        <div style={{ fontSize:12, fontWeight:600, color:'var(--fs-text-4)', marginBottom:8 }}>Categorias mapeadas para esta conta:</div>
-                        <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-                          {mappings.filter(m => m.conta_id === conta.id).map((m, idx) => (
-                            <span key={idx} style={{ background:'var(--fs-surface-2)', border:'1px solid var(--fs-border)', color:'var(--fs-text-1)', padding:'4px 10px', borderRadius:6, fontSize:12, fontWeight:500 }}>
-                              {m.categoria_origem}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              )
-            })}
-          </tbody>
-        </table>
+        // ── Visão Lista: tabela flat ──────────────────────────────────
+        <div style={{ background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:12,overflow:'hidden' }}>
+          <table style={{ width:'100%',borderCollapse:'collapse',fontSize:13 }}>
+            <thead style={{ background:'var(--fs-bg)' }}>
+              <tr style={{ borderBottom:'1px solid var(--fs-border)' }}>
+                {['Código','Nome','Tipo','Descrição','Ações'].map((h,i) => (
+                  <th key={h} style={{ padding:'10px 16px',textAlign:i>=4?'center':'left',color:'var(--fs-text-4)',fontSize:11,fontWeight:700,textTransform:'uppercase' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {contas.map((conta, idx) => (
+                <tr key={conta.id} style={{ borderBottom:'1px solid var(--fs-border)',background:idx%2===0?'transparent':'var(--fs-bg)' }}>
+                  <td style={{ padding:'10px 16px',fontWeight:700,color:TIPO_CORES[conta.tipo],fontSize:12 }}>{conta.codigo}</td>
+                  <td style={{ padding:'10px 16px',fontWeight:600,color:'var(--fs-text-1)' }}>{conta.nome}</td>
+                  <td style={{ padding:'10px 16px' }}>
+                    <span style={{ background:`${TIPO_CORES[conta.tipo]}18`,color:TIPO_CORES[conta.tipo],border:`1px solid ${TIPO_CORES[conta.tipo]}30`,padding:'2px 9px',borderRadius:20,fontSize:11,fontWeight:700 }}>
+                      {TIPO_LABELS[conta.tipo]}
+                    </span>
+                  </td>
+                  <td style={{ padding:'10px 16px',color:'var(--fs-text-4)',fontSize:12 }}>{conta.descricao || '—'}</td>
+                  <td style={{ padding:'10px 16px',textAlign:'center' }}>
+                    <div style={{ display:'inline-flex',gap:6 }}>
+                      <button onClick={() => iniciarEdicao(conta)}
+                        style={{ display:'inline-flex',alignItems:'center',gap:5,background:'transparent',border:'1px solid var(--fs-border)',borderRadius:7,padding:'5px 10px',fontSize:12,color:'var(--fs-text-2)',cursor:'pointer',fontWeight:600 }}>
+                        <Icon d={ICONS.edit} color="var(--fs-text-2)" size={12} /> Editar
+                      </button>
+                      <button onClick={() => excluir(conta.id)}
+                        style={{ display:'inline-flex',alignItems:'center',background:'transparent',border:'1px solid rgba(239,68,68,0.2)',borderRadius:7,padding:'5px 8px',fontSize:12,color:'var(--fs-danger)',cursor:'pointer' }}>
+                        <Icon d={ICONS.trash} color="var(--fs-danger)" size={13} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

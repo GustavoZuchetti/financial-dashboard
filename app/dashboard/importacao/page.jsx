@@ -697,7 +697,7 @@ export default function ImportacaoPage() {
   }
 
   return (
-    <div style={{ color: 'var(--fs-text-1)', maxWidth: 960 }}>
+    <div style={{ color: 'var(--fs-text-1)', width: '100%' }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <ConfirmReplaceModal />
       {editingRow && (

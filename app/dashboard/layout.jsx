@@ -77,7 +77,7 @@ export default function DashboardLayout({ children }) {
       <ViewAsBanner />
       <div style={{ display:'flex', minHeight:'100vh', background:'var(--fs-bg)' }}>
         <Sidebar empresa={empresa} empresas={empresas} onEmpresaChange={handleEmpresaChange} />
-        <main style={{ flex:1, overflowY:'auto', padding:'24px', position:'relative' }}>
+        <main style={{ flex:1, overflowY:'auto', padding:'28px 32px', position:'relative', minWidth:0 }}>
           {empresas.length === 0 && !loading ? (
             <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'80vh', color:'var(--fs-text-1)', textAlign:'center' }}>
               <h2 style={{ fontSize:24, marginBottom:12 }}>Bem-vindo ao Financial Dashboard</h2>

@@ -55,6 +55,9 @@ export default function PlanoContasPage() {
   const [msg,         setMsg]         = useState('')
   const [showAdd,     setShowAdd]     = useState(false)
   const [contaDetalhes, setContaDetalhes] = useState(null)
+  const [expandedGroups, setExpandedGroups] = useState({})
+  const toggleGroup = (key) => setExpandedGroups(p => ({...p, [key]: p[key] === false ? true : false}))
+  const isOpen = (key) => expandedGroups[key] !== false
 
   const toast = (t, ok=true) => { setMsg(t); setTimeout(() => setMsg(''), 3500) }
 
@@ -255,11 +258,11 @@ export default function PlanoContasPage() {
             const gc = contas.filter(c => c.tipo === grupo.key)
             if (gc.length === 0) return null
             const mCount = mappings.filter(m => gc.some(c => c.id === m.conta_id)).length
-            const [open, setOpen] = React.useState(true) // eslint-disable-line
+            const open = isOpen(grupo.key)
             return (
               <div key={grupo.key} style={{ background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:12,overflow:'hidden' }}>
                 {/* Header do grupo */}
-                <div onClick={() => setOpen(!open)}
+                <div onClick={() => toggleGroup(grupo.key)}
                   style={{ display:'flex',alignItems:'center',gap:12,padding:'14px 20px',cursor:'pointer',borderLeft:`4px solid ${grupo.cor}`,background:'var(--fs-surface)' }}>
                   <div style={{ display:'flex',alignItems:'center',justifyContent:'center',width:32,height:32,background:`${grupo.cor}18`,borderRadius:8,flexShrink:0 }}>
                     <Icon d={ICONS[grupo.key] || ICONS.receita} color={grupo.cor} size={15} />

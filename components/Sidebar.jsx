@@ -38,6 +38,7 @@ const navItems = [
   ]},
   { label: 'Orçamento',       href: '/dashboard/orcamento',       icon: 'orcamento' },
   { label: 'Fluxo de Caixa',  href: '/dashboard/fluxo-caixa',     icon: 'fluxo', children: [
+    { label: 'Gestão',        href: '/dashboard/fluxo-caixa/gestao', adminOnly: true },
     { label: 'Visão Geral',   href: '/dashboard/fluxo-caixa' },
     { label: 'Análise',       href: '/dashboard/fluxo-caixa/analise' },
     { label: 'Comparativo',   href: '/dashboard/fluxo-caixa/comparativo' },
@@ -57,12 +58,17 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
   const router = useRouter()
   const [openMenus, setOpenMenus] = useState({ '/dashboard/dre': true })
   const [userEmail, setUserEmail] = useState('')
+  const [userRole,  setUserRole]  = useState('')
   const [hoveredItem, setHoveredItem] = useState(null)
 
   useEffect(() => {
     // Usar cache do Supabase em vez de nova requisição
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (user?.email) setUserEmail(user.email)
+      if (user?.id) {
+        const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+        if (p?.role) setUserRole(p.role)
+      }
     })
   }, [])
 
@@ -202,7 +208,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
               {/* Sub-itens */}
               {item.children && open && (
                 <div style={{ paddingBottom: 4 }}>
-                  {(item.children || []).map(child => (
+                  {(item.children || []).filter(child => !child.adminOnly || userRole === 'super_admin' || userRole === 'org_admin').map(child => (
                     <Link
                       key={child.href}
                       href={child.href}
@@ -218,6 +224,9 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
                     >
                       <span style={{ width: 4, height: 4, borderRadius: '50%', background: pathname === child.href ? '#3b82f6' : '#475569', flexShrink: 0 }} />
                       {child.label}
+                      {child.adminOnly && (
+                        <span style={{ fontSize:9, background:'rgba(239,68,68,0.12)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.2)', padding:'1px 5px', borderRadius:4, marginLeft:'auto', fontWeight:700, letterSpacing:'0.3px' }}>ADM</span>
+                      )}
                     </Link>
                   ))}
                 </div>

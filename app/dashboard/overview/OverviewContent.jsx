@@ -7,9 +7,11 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Legend
 } from 'recharts'
 
-// ─── Utilitários ─────────────────────────────────────────────────────────────
+// ─── Constantes ───────────────────────────────────────────────────────────────
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#14b8a6', '#f59e0b', '#ec4899', '#22c55e']
 
+// ─── Utilitários ──────────────────────────────────────────────────────────────
 const fC = (v) => {
   if (v === undefined || v === null || isNaN(Number(v))) return '—'
   const n = Number(v), a = Math.abs(n), s = n < 0 ? '-' : ''
@@ -17,12 +19,6 @@ const fC = (v) => {
   if (a >= 1e3) return `${s}R$\u00a0${(a/1e3).toFixed(1)}k`
   return `${s}R$\u00a0${a.toFixed(0)}`
 }
-const fPct = (v) => {
-  if (v === undefined || v === null) return null
-  return `${v >= 0 ? '+' : ''}${Number(v).toFixed(1)}%`
-}
-
-const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#14b8a6', '#f59e0b', '#ec4899', '#22c55e']
 
 // ─── Sparkline inline ─────────────────────────────────────────────────────────
 const Spark = ({ data, dataKey, color }) => (
@@ -86,22 +82,74 @@ const TT = ({ active, payload, label }) => {
   )
 }
 
+// ─── Botão de período ─────────────────────────────────────────────────────────
+const PeriodBtn = ({ label, active, onClick, color }) => {
+  const activeStyle = color === 'blue'
+    ? { background:'rgba(59,130,246,0.20)', color:'#60a5fa', border:'1px solid rgba(59,130,246,0.45)' }
+    : { background:'rgba(139,92,246,0.20)', color:'#a78bfa', border:'1px solid rgba(139,92,246,0.45)' }
+  const inactiveStyle = color === 'blue'
+    ? { background:'rgba(59,130,246,0.06)', color:'var(--fs-text-4)', border:'1px solid rgba(59,130,246,0.15)' }
+    : { background:'rgba(139,92,246,0.06)', color:'var(--fs-text-4)', border:'1px solid rgba(139,92,246,0.15)' }
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        ...(active ? activeStyle : inactiveStyle),
+        padding:'3px 12px', borderRadius:20, fontSize:12, fontWeight:700,
+        cursor:'pointer', transition:'all 0.15s ease', outline:'none',
+        lineHeight:'20px',
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function OverviewPage() {
+  const now        = new Date()
+  const curYear    = now.getFullYear()
+  const curMonth   = now.getMonth()
+  const today      = now.toISOString().split('T')[0]
+
+  // 'mes' = mês corrente | 'ytd' = Jan → hoje
+  const [periodo,   setPeriodo]   = useState('ytd')
   const [loading,   setLoading]   = useState(true)
   const [empresaId, setEmpresaId] = useState(null)
   const [isConsol,  setIsConsol]  = useState(false)
   const [empNome,   setEmpNome]   = useState('')
 
-  const [kpis,        setKpis]        = useState(null)
-  const [monthly,     setMonthly]     = useState([])
-  const [fcMensal,    setFcMensal]    = useState([])
-  const [recComp,     setRecComp]     = useState([])
-  const [recentes,    setRecentes]    = useState([])
+  const [kpis,     setKpis]     = useState(null)
+  const [monthly,  setMonthly]  = useState([])
+  const [fcMensal, setFcMensal] = useState([])
+  const [recComp,  setRecComp]  = useState([])
+  const [recentes, setRecentes] = useState([])
 
-  const curYear  = new Date().getFullYear()
-  const curMonth = new Date().getMonth()
-  const today    = new Date().toISOString().split('T')[0]
+  // ─── Intervalo de datas conforme período selecionado ──────────────────────
+  const dateRange = useCallback(() => {
+    if (periodo === 'mes') {
+      const mm = String(curMonth + 1).padStart(2, '0')
+      return {
+        start:    `${curYear}-${mm}-01`,
+        end:      today,
+        label:    `01 ${MESES[curMonth]} → ${now.getDate()} ${MESES[curMonth]}, ${curYear}`,
+        subLabel: `${MESES[curMonth]} ${curYear}`,
+        prevStart:`${curYear - 1}-${mm}-01`,
+        prevEnd:  `${curYear - 1}-${mm}-${String(new Date(curYear-1, curMonth+1, 0).getDate()).padStart(2,'0')}`,
+        nMonths:  1,
+      }
+    }
+    // ytd
+    return {
+      start:    `${curYear}-01-01`,
+      end:      today,
+      label:    `01 Jan → ${now.getDate()} ${MESES[curMonth]}, ${curYear} · vs ano anterior`,
+      subLabel: `YTD ${curYear}`,
+      prevStart:`${curYear - 1}-01-01`,
+      prevEnd:  `${curYear - 1}-12-31`,
+      nMonths:  curMonth + 1,
+    }
+  }, [periodo, curYear, curMonth, today])
 
   useEffect(() => {
     const id = localStorage.getItem('empresa_id') || ''
@@ -115,6 +163,8 @@ export default function OverviewPage() {
     if (!empresaId) { setLoading(false); return }
     setLoading(true)
     try {
+      const dr = dateRange()
+
       // Obter IDs das empresas
       let empIds = []
       if (isConsol) {
@@ -128,46 +178,54 @@ export default function OverviewPage() {
       }
       if (!empIds.length) { setLoading(false); return }
 
-      const startYTD  = `${curYear}-01-01`
-      const startPrev = `${curYear-1}-01-01`
-      const endPrev   = `${curYear-1}-12-31`
       const next30    = new Date(); next30.setDate(next30.getDate() + 30)
       const next30str = next30.toISOString().split('T')[0]
 
-      // ── Queries paralelas ─────────────────────────────────────────────────
       const buildQ = (table, cols) => {
         let q = supabase.from(table).select(cols)
-        if (isConsol) q = q.in('empresa_id', empIds)
-        else q = q.eq('empresa_id', empresaId)
-        return q
+        return isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empresaId)
       }
 
       const [
-        { data: ytdLanc = [] },
+        { data: curLanc  = [] },
         { data: prevLanc = [] },
-        { data: fcAll = [] },
+        { data: fcAll    = [] },
         { data: planoContas = [] },
       ] = await Promise.all([
-        buildQ('lancamentos', 'id,tipo,valor,data,descricao,categoria,conta_id').gte('data', startYTD).lte('data', today),
-        buildQ('lancamentos', 'tipo,valor,data').gte('data', startPrev).lte('data', endPrev),
-        buildQ('fluxo_caixa', 'id,tipo,valor,data,descricao').gte('data', startYTD).order('data'),
-        supabase.from('plano_contas').select('id,nome,tipo,codigo').eq('empresa_id', isConsol ? empIds[0] : empresaId),
+        buildQ('lancamentos', 'id,tipo,valor,data,descricao,categoria,conta_id')
+          .gte('data', dr.start).lte('data', dr.end),
+        buildQ('lancamentos', 'tipo,valor,data')
+          .gte('data', dr.prevStart).lte('data', dr.prevEnd),
+        buildQ('fluxo_caixa', 'id,tipo,valor,data,descricao')
+          .gte('data', dr.start).order('data'),
+        supabase.from('plano_contas').select('id,nome,tipo,codigo')
+          .eq('empresa_id', isConsol ? empIds[0] : empresaId),
       ])
 
       const planMap = Object.fromEntries((planoContas || []).map(p => [p.id, p.nome]))
 
-      // ── DRE YTD ───────────────────────────────────────────────────────────
-      const vYTD  = calcDRE(ytdLanc  || [])
+      // ── DRE período ───────────────────────────────────────────────────────
+      const vCur  = calcDRE(curLanc  || [])
       const vPrev = calcDRE(prevLanc || [])
 
-      // ── Evolução mensal (sparklines + gráfico) ────────────────────────────
+      // ── Evolução mensal ───────────────────────────────────────────────────
+      // Para YTD: todos os meses; para Mês: só o mês corrente
+      const refLanc = periodo === 'ytd'
+        ? curLanc
+        : (curLanc || []) // já filtrado pelo período
+
       const byMonth = {}
-      ;(ytdLanc || []).forEach(l => {
+      ;(refLanc || []).forEach(l => {
         const m = new Date(l.data + 'T00:00:00').getMonth()
         if (!byMonth[m]) byMonth[m] = []
         byMonth[m].push(l)
       })
-      const monthData = Array.from({ length: curMonth + 1 }, (_, i) => {
+
+      const monthRange = periodo === 'ytd'
+        ? Array.from({ length: curMonth + 1 }, (_, i) => i)
+        : [curMonth]
+
+      const monthData = monthRange.map(i => {
         const v = calcDRE(byMonth[i] || [])
         return { name: MESES[i], receita: v.rb, rl: v.rl, ebitda: v.ebt, resLiq: v.resL }
       })
@@ -176,19 +234,17 @@ export default function OverviewPage() {
       // ── Fluxo de Caixa mensal ─────────────────────────────────────────────
       const fcByMonth = {}
       ;(fcAll || []).forEach(f => {
-        const d = new Date(f.data + 'T00:00:00')
-        const m = d.getMonth()
+        const m = new Date(f.data + 'T00:00:00').getMonth()
         if (!fcByMonth[m]) fcByMonth[m] = { entradas: 0, saidas: 0 }
         const v = Math.abs(Number(f.valor) || 0)
         if (['entrada','fluxo_entrada','receita','receita_financeira'].includes(f.tipo)) fcByMonth[m].entradas += v
         else fcByMonth[m].saidas += v
       })
 
-      // Fallback: usar lancamentos como proxy do fluxo
       let fcChart = []
       if (Object.keys(fcByMonth).length > 0) {
         let saldo = 0
-        fcChart = Array.from({ length: curMonth + 1 }, (_, i) => {
+        fcChart = monthRange.map(i => {
           const fc = fcByMonth[i] || { entradas: 0, saidas: 0 }
           saldo += fc.entradas - fc.saidas
           return { name: MESES[i], entradas: fc.entradas, saidas: fc.saidas, saldo: Math.max(0, saldo) }
@@ -204,53 +260,49 @@ export default function OverviewPage() {
       }
       setFcMensal(fcChart)
 
-      // ── Composição da Receita por conta/categoria ──────────────────────────
+      // ── Composição da Receita ─────────────────────────────────────────────
       const recMap = {}
-      ;(ytdLanc || []).filter(l => l.tipo === 'receita').forEach(l => {
+      ;(curLanc || []).filter(l => l.tipo === 'receita').forEach(l => {
         const cat = planMap[l.conta_id] || l.categoria || l.descricao?.substring(0,25) || 'Receita Geral'
         recMap[cat] = (recMap[cat] || 0) + Number(l.valor)
       })
       const sortedRec = Object.entries(recMap).sort((a,b) => b[1]-a[1])
-      const top3Rec = sortedRec.slice(0, 3)
+      const top3Rec   = sortedRec.slice(0, 3)
       const outrosRec = sortedRec.slice(3).reduce((a,[,v])=>a+v, 0)
-      const totalRec = sortedRec.reduce((a,[,v])=>a+v, 0)
-      const recComp = [
+      const totalRec  = sortedRec.reduce((a,[,v])=>a+v, 0)
+      const recCompData = [
         ...top3Rec.map(([name, value]) => ({ name: name.substring(0,22), value, pct: totalRec > 0 ? Math.round(value/totalRec*100) : 0 })),
         ...(outrosRec > 0 ? [{ name: 'Outros', value: outrosRec, pct: Math.round(outrosRec/totalRec*100) }] : [])
       ]
-      setRecComp(recComp)
+      setRecComp(recCompData)
 
-      // ── Variações YoY (proporcionais ao período) ──────────────────────────
-      const diasYTD  = Math.max(1, (new Date() - new Date(`${curYear}-01-01`)) / 86400000)
-      const diasPrev = 365
-      const scale    = diasYTD / diasPrev
+      // ── Variações YoY ─────────────────────────────────────────────────────
+      const diasCur  = Math.max(1, (new Date(dr.end) - new Date(dr.start)) / 86400000 + 1)
+      const diasPrev = Math.max(1, (new Date(dr.prevEnd) - new Date(dr.prevStart)) / 86400000 + 1)
+      const scale    = diasCur / diasPrev
 
-      const rlPrev_p   = vPrev.rl  * scale
-      const ebtPrev_p  = vPrev.ebt * scale
-      const margPrev   = rlPrev_p  > 0 ? (vPrev.resL * scale) / rlPrev_p * 100 : 0
+      const rlPrev_p  = vPrev.rl  * scale
+      const ebtPrev_p = vPrev.ebt * scale
+      const margPrev  = rlPrev_p > 0 ? (vPrev.resL * scale) / rlPrev_p * 100 : 0
 
-      const rlPct  = rlPrev_p  > 0.01 ? (vYTD.rl  - rlPrev_p)  / rlPrev_p  * 100 : null
-      const ebtPct = ebtPrev_p > 0.01 ? (vYTD.ebt - ebtPrev_p) / ebtPrev_p * 100 : null
-      const margCur = vYTD.rb > 0 ? vYTD.resL / vYTD.rb * 100 : 0
+      const rlPct  = rlPrev_p  > 0.01 ? (vCur.rl  - rlPrev_p)  / rlPrev_p  * 100 : null
+      const ebtPct = ebtPrev_p > 0.01 ? (vCur.ebt - ebtPrev_p) / ebtPrev_p * 100 : null
+      const margCur  = vCur.rb > 0 ? vCur.resL / vCur.rb * 100 : 0
       const margDiff = margPrev !== 0 ? margCur - margPrev : null
 
       // ── Métricas auxiliares ───────────────────────────────────────────────
-      const meses = curMonth + 1 || 1
-      const burnRate = (vYTD.cv + vYTD.df) / meses
+      const burnRate = (vCur.cv + vCur.df) / dr.nMonths
+      const caixa    = fcChart.length > 0 ? fcChart[fcChart.length-1].saldo : Math.max(0, vCur.rb - vCur.cv - vCur.df)
+      const runway   = burnRate > 0 ? caixa / burnRate : null
 
-      // Caixa: último saldo do FC ou estimativa
-      const caixa = fcChart.length > 0 ? fcChart[fcChart.length-1].saldo : Math.max(0, vYTD.rb - vYTD.cv - vYTD.df)
-      const runway = burnRate > 0 ? caixa / burnRate : null
+      const fc30      = (fcAll || []).filter(f => f.data > today && f.data <= next30str)
+      const aReceber  = fc30.filter(f => ['entrada','fluxo_entrada','receita'].includes(f.tipo)).reduce((a,f)=>a+Math.abs(Number(f.valor)||0), 0)
+      const aPagar    = fc30.filter(f => ['saida','fluxo_saida','despesa','custo'].includes(f.tipo)).reduce((a,f)=>a+Math.abs(Number(f.valor)||0), 0)
 
-      // A Receber / A Pagar (próximos 30 dias via fluxo_caixa)
-      const fc30 = (fcAll || []).filter(f => f.data > today && f.data <= next30str)
-      const aReceber = fc30.filter(f => ['entrada','fluxo_entrada','receita'].includes(f.tipo)).reduce((a,f)=>a+Math.abs(Number(f.valor)||0), 0)
-      const aPagar   = fc30.filter(f => ['saida','fluxo_saida','despesa','custo'].includes(f.tipo)).reduce((a,f)=>a+Math.abs(Number(f.valor)||0), 0)
+      setKpis({ rl: vCur.rl, rlPct, ebt: vCur.ebt, ebtPct, marg: margCur, margDiff, caixa, aReceber, aPagar, burnRate, runway })
 
-      setKpis({ rl: vYTD.rl, rlPct, ebt: vYTD.ebt, ebtPct, marg: margCur, margDiff, caixa, aReceber, aPagar, burnRate, runway })
-
-      // ── Lançamentos recentes ───────────────────────────────────────────────
-      const rec = [...(ytdLanc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,6)
+      // ── Lançamentos recentes ──────────────────────────────────────────────
+      const rec = [...(curLanc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,6)
       setRecentes(rec.map(l => ({
         desc: (l.descricao || l.categoria || 'Lançamento').substring(0,28),
         tipo: l.tipo, valor: Number(l.valor), data: l.data
@@ -258,12 +310,12 @@ export default function OverviewPage() {
 
     } catch (e) { console.error('Overview:', e) }
     finally { setLoading(false) }
-  }, [empresaId, isConsol, curYear, curMonth, today])
+  }, [empresaId, isConsol, periodo, dateRange])
 
-  useEffect(() => { if (empresaId !== null) load() }, [load, empresaId])
+  useEffect(() => { if (empresaId !== null) load() }, [load, empresaId, periodo])
 
-  // ─── Colors ─────────────────────────────────────────────────────────────────
   const tipoColor = { receita:'#22c55e', custo:'#ef4444', despesa:'#f59e0b', deducao:'#f97316', receita_financeira:'#14b8a6', despesa_financeira:'#8b5cf6', investimento:'#64748b' }
+  const dr = dateRange()
 
   if (!empresaId) return (
     <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)' }}>Selecione uma empresa no menu lateral.</div>
@@ -271,20 +323,31 @@ export default function OverviewPage() {
 
   return (
     <div style={{ color:'var(--fs-text-1)', width:'100%' }}>
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ marginBottom:24 }}>
         <div style={{ fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:6 }}>
-          {empNome || 'Consolidado'} · {isConsol ? 'Consolidado' : MESES[curMonth] + ' ' + curYear}
+          {empNome || 'Consolidado'} · {dr.subLabel}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
           <h1 style={{ fontSize:30, fontWeight:900, color:'var(--fs-text-1)', margin:0 }}>Overview</h1>
-          <span style={{ background:'rgba(59,130,246,0.12)', color:'#60a5fa', border:'1px solid rgba(59,130,246,0.25)', padding:'3px 12px', borderRadius:20, fontSize:12, fontWeight:700 }}>
-            {MESES[curMonth]} {String(curYear).slice(2)}
-          </span>
-          <span style={{ background:'rgba(139,92,246,0.12)', color:'#a78bfa', border:'1px solid rgba(139,92,246,0.25)', padding:'3px 12px', borderRadius:20, fontSize:12, fontWeight:700 }}>YTD</span>
+
+          {/* ── Botões de período funcionais ─────────────────────────────── */}
+          <PeriodBtn
+            label={`${MESES[curMonth]} ${String(curYear).slice(2)}`}
+            active={periodo === 'mes'}
+            color="blue"
+            onClick={() => setPeriodo('mes')}
+          />
+          <PeriodBtn
+            label="YTD"
+            active={periodo === 'ytd'}
+            color="purple"
+            onClick={() => setPeriodo('ytd')}
+          />
         </div>
         <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:5 }}>
-          01 Jan → {new Date().getDate()} {MESES[curMonth]}, {curYear} · vs ano anterior
+          {dr.label}
         </div>
       </div>
 
@@ -296,18 +359,18 @@ export default function OverviewPage() {
         <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)' }}>Sem dados para exibir.</div>
       ) : (
         <>
-          {/* ── Linha 1: KPIs principais ─────────────────────────────────────── */}
+          {/* ── Linha 1: KPIs principais ────────────────────────────────────── */}
           <div style={{ display:'flex', gap:12, marginBottom:12, flexWrap:'wrap' }}>
             <KCard
-              label="Receita Líquida · YTD"
+              label={`Receita Líquida · ${periodo === 'mes' ? MESES[curMonth] : 'YTD'}`}
               value={fC(kpis.rl)}
-              pct={kpis.rlPct} pctLabel="vs ano anterior"
+              pct={kpis.rlPct} pctLabel="vs período anterior"
               sparkData={monthly} sparkKey="rl" sparkColor="#14b8a6"
             />
             <KCard
               label="EBITDA"
               value={fC(kpis.ebt)}
-              pct={kpis.ebtPct} pctLabel="vs ano anterior"
+              pct={kpis.ebtPct} pctLabel="vs período anterior"
               sparkData={monthly} sparkKey="ebitda" sparkColor="#3b82f6"
             />
             <KCard
@@ -324,7 +387,7 @@ export default function OverviewPage() {
             />
           </div>
 
-          {/* ── Linha 2: KPIs secundários ─────────────────────────────────────── */}
+          {/* ── Linha 2: KPIs secundários ────────────────────────────────────── */}
           <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
             <SCard label="A Receber · 30 Dias" value={kpis.aReceber > 0 ? fC(kpis.aReceber) : '—'} color="#22c55e" />
             <SCard label="A Pagar · 30 Dias"   value={kpis.aPagar   > 0 ? fC(kpis.aPagar)   : '—'} color="#ef4444" />
@@ -332,7 +395,7 @@ export default function OverviewPage() {
             <SCard label="Runway"               value={kpis.runway ? `${kpis.runway.toFixed(1)} meses` : '—'} sub="caixa ÷ burn rate" />
           </div>
 
-          {/* ── Linha 3: Gráficos ─────────────────────────────────────────────── */}
+          {/* ── Linha 3: Gráficos ───────────────────────────────────────────── */}
           <div style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:12, marginBottom:12 }}>
             {/* Fluxo de Caixa */}
             <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px' }}>
@@ -390,12 +453,14 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          {/* ── Linha 4: Evolução + Recentes ─────────────────────────────────── */}
+          {/* ── Linha 4: Evolução + Recentes ────────────────────────────────── */}
           <div style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:12 }}>
             {/* Evolução Receita vs EBITDA */}
             <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px' }}>
               <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:2 }}>Demonstrativo Mensal</div>
-              <div style={{ fontSize:14, fontWeight:700, color:'var(--fs-text-1)', marginBottom:16 }}>Receita vs EBITDA · {curYear}</div>
+              <div style={{ fontSize:14, fontWeight:700, color:'var(--fs-text-1)', marginBottom:16 }}>
+                Receita vs EBITDA · {periodo === 'mes' ? MESES[curMonth] : curYear}
+              </div>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={monthly} margin={{top:4,right:8,left:0,bottom:4}}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />

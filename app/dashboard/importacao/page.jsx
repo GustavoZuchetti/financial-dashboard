@@ -515,25 +515,48 @@ export default function ImportacaoPage() {
   }
 
   // ─── Executar importação (único ponto de insert/delete) ──────────────────────
-  const executeImport = async ({ toInsert, tabela, modulo, replace, minDt, maxDt }) => {
+  const executeImport = async ({ toInsert: _toInsert, tabela, modulo, replace, minDt, maxDt, smartReimport = false, today = null }) => {
+    let toInsert = [...(_toInsert || [])] // cópia mutável para smart reimport
     setIsImporting(true)
     try {
-      // PASSO 1: se substituição, deletar registros existentes no período
+      // PASSO 1: deletar registros conforme a estratégia de importação
       if (replace) {
-        // DELETE por ANO INTEIRO — evita problema de Competência vs Liquidação
-        // Registros do mesmo ano são removidos independente do campo de data usado
-        const anos = [...new Set(toInsert.map(r => r.data?.substring(0,4)).filter(Boolean))]
-        console.log(`DELETE [${tabela}]: substituindo anos ${anos.join(', ')} para empresa ${empresaId}`)
-        for (const ano of anos) {
-          const { error: delError } = await supabase
-            .from(tabela)
-            .delete()
-            .eq('empresa_id', empresaId)
-            .gte('data', `${ano}-01-01`)
-            .lte('data', `${ano}-12-31`)
-          if (delError) throw new Error(`Erro ao remover dados de ${ano}: ${delError.message}`)
+        if (smartReimport && today) {
+          // REIMPORTAÇÃO INTELIGENTE: deleta apenas registros a partir de hoje
+          // Preserva histórico realizado (até ontem) — só substitui previsões futuras
+          const anos = [...new Set(toInsert.map(r => r.data?.substring(0,4)).filter(Boolean))]
+          console.log(`SMART DELETE [${tabela}]: deletando a partir de ${today} para empresa ${empresaId}`)
+          for (const ano of anos) {
+            const anoMax = `${ano}-12-31`
+            const deleteFrom = today > `${ano}-01-01` ? today : `${ano}-01-01`
+            const { error: delError } = await supabase
+              .from(tabela)
+              .delete()
+              .eq('empresa_id', empresaId)
+              .gte('data', deleteFrom)
+              .lte('data', anoMax)
+            if (delError) throw new Error(`Erro ao remover dados futuros de ${ano}: ${delError.message}`)
+          }
+          // Filtrar toInsert para incluir apenas registros a partir de hoje
+          // (os anteriores já estão corretos no banco — não duplicar)
+          const beforeInsert = toInsert.length
+          toInsert = toInsert.filter(r => r.data >= today)
+          console.log(`SMART INSERT: ${toInsert.length}/${beforeInsert} registros (apenas >= ${today})`)
+        } else {
+          // DELETE COMPLETO por ANO — substitui tudo (comportamento original)
+          const anos = [...new Set(toInsert.map(r => r.data?.substring(0,4)).filter(Boolean))]
+          console.log(`DELETE [${tabela}]: substituindo anos ${anos.join(', ')} para empresa ${empresaId}`)
+          for (const ano of anos) {
+            const { error: delError } = await supabase
+              .from(tabela)
+              .delete()
+              .eq('empresa_id', empresaId)
+              .gte('data', `${ano}-01-01`)
+              .lte('data', `${ano}-12-31`)
+            if (delError) throw new Error(`Erro ao remover dados de ${ano}: ${delError.message}`)
+          }
+          console.log(`DELETE concluído para anos: ${anos.join(', ')}`)
         }
-        console.log(`DELETE concluído para anos: ${anos.join(', ')}`)
       }
 
       // PASSO 2: inserir novos registros em lotes de 100
@@ -634,17 +657,60 @@ export default function ImportacaoPage() {
     }
   }
 
-  // ─── Importar Fluxo de Caixa ──────────────────────────────────────────────
+  // ─── Importar Fluxo de Caixa (reimportação inteligente) ─────────────────────
+  // Regra: novo arquivo para o mesmo período só é aceito se cobrir d-1 até hoje
+  // Isso preserva dados históricos já realizados e só substitui o futuro
   const importFluxo = async () => {
     if (!empresaId) { showToast('Selecione uma empresa.', 'error'); return }
     const toInsert = buildFluxoPayload()
     if (!toInsert.length) { showToast('Nenhum registro válido para importar.', 'error'); return }
+
+    // Calcular intervalo do novo arquivo
+    const datas    = toInsert.map(r => r.data).filter(Boolean).sort()
+    const fileMin  = datas[0]
+    const fileMax  = datas[datas.length - 1]
+    const today    = new Date().toISOString().split('T')[0]
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+
     const dupe = await checkDuplicates(toInsert, 'fluxo_caixa')
-    if (dupe.hasDupe) {
-      showToast(`⚠️ Já existem ${dupe.count} registros em ${dupe.periodo}`, 'error')
-      setConfirmModal({ toInsert, tabela: 'fluxo_caixa', modulo: 'fluxo', ...dupe })
-    } else {
+
+    if (!dupe.hasDupe) {
+      // Sem conflito — importar direto
       await executeImport({ toInsert, tabela: 'fluxo_caixa', modulo: 'fluxo', replace: false })
+      return
+    }
+
+    // Há dados existentes — verificar se o novo arquivo cobre d-1 → hoje
+    // Isso valida que é uma atualização legítima (inclui o passado recente e o futuro)
+    const cobreDiaAnterior = fileMin <= yesterday
+    const cobreHoje        = fileMax >= today
+
+    if (cobreDiaAnterior && cobreHoje) {
+      // Arquivo válido para reimportação — mostra modal de substituição parcial
+      // Só deleta registros FUTUROS (a partir de hoje) para preservar histórico
+      setConfirmModal({
+        toInsert,
+        tabela: 'fluxo_caixa',
+        modulo: 'fluxo',
+        smartReimport: true,   // flag para executeImport usar lógica parcial
+        today,
+        ...dupe
+      })
+    } else {
+      // Arquivo não atende à regra — avisar o usuário
+      const motivo = !cobreDiaAnterior
+        ? `O arquivo começa em ${fileMin} mas precisa incluir dados a partir de ontem (${yesterday}) ou antes.`
+        : `O arquivo vai até ${fileMax} mas precisa incluir dados até hoje (${today}) ou além.`
+      showToast(`⚠️ Já existem ${dupe.count} registros em ${dupe.periodo}`, 'error')
+      setConfirmModal({
+        toInsert,
+        tabela: 'fluxo_caixa',
+        modulo: 'fluxo',
+        smartReimport: false,
+        reimportBlocked: true,
+        reimportMotivo: motivo,
+        ...dupe
+      })
     }
   }
 
@@ -677,19 +743,64 @@ export default function ImportacaoPage() {
           </p>
 
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            <button
-              onClick={() => executeImport({ ...confirmModal, replace: true })}
-              disabled={isImporting}
-              style={{ background: isImporting ? 'var(--fs-surface-3)' : 'var(--fs-danger)', color: isImporting ? 'var(--fs-text-4)' : '#fff', border:'none', borderRadius:9, padding:'12px', fontSize:14, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
-            >
-              {isImporting ? '⏳ Substituindo dados...' : `🔄 Substituir — apagar os ${confirmModal.count} existentes e importar novos`}
-            </button>
-            <button
-              onClick={() => setConfirmModal(null)}
-              style={{ background:'var(--fs-surface-2)', color:'var(--fs-text-1)', border:'1px solid var(--fs-border)', borderRadius:9, padding:'12px', fontSize:14, fontWeight:600, cursor:'pointer' }}
-            >
-              Cancelar — manter os dados existentes
-            </button>
+            {confirmModal.reimportBlocked ? (
+              // Arquivo não atende à regra de reimportação
+              <>
+                <div style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'12px 14px', fontSize:13, color:'var(--fs-text-2)', marginBottom:4 }}>
+                  <strong style={{ color:'#ef4444' }}>⛔ Reimportação não permitida</strong>
+                  <div style={{ marginTop:6, color:'var(--fs-text-3)' }}>{confirmModal.reimportMotivo}</div>
+                  <div style={{ marginTop:8, fontSize:12, color:'var(--fs-text-4)' }}>
+                    Para reimportar um período já existente, o arquivo deve conter dados desde ontem (d-1) até a data mais futura prevista, garantindo que o histórico já realizado seja preservado.
+                  </div>
+                </div>
+                <button
+                  onClick={() => setConfirmModal(null)}
+                  style={{ background:'var(--fs-surface-2)', color:'var(--fs-text-1)', border:'1px solid var(--fs-border)', borderRadius:9, padding:'12px', fontSize:14, fontWeight:600, cursor:'pointer' }}
+                >
+                  Entendido — fechar
+                </button>
+              </>
+            ) : confirmModal.smartReimport ? (
+              // Reimportação inteligente permitida
+              <>
+                <div style={{ background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:8, padding:'12px 14px', fontSize:13, color:'var(--fs-text-2)', marginBottom:4 }}>
+                  <strong style={{ color:'#22c55e' }}>✅ Arquivo válido para atualização</strong>
+                  <div style={{ marginTop:6 }}>
+                    O histórico <strong>já realizado</strong> (até ontem) será <strong>preservado</strong>. Apenas os registros a partir de hoje em diante serão substituídos pelas novas previsões do arquivo.
+                  </div>
+                </div>
+                <button
+                  onClick={() => executeImport({ ...confirmModal, replace: true })}
+                  disabled={isImporting}
+                  style={{ background: isImporting ? 'var(--fs-surface-3)' : '#22c55e', color: isImporting ? 'var(--fs-text-4)' : '#fff', border:'none', borderRadius:9, padding:'12px', fontSize:14, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
+                >
+                  {isImporting ? '⏳ Atualizando...' : '🔄 Atualizar — preservar histórico e substituir previsões futuras'}
+                </button>
+                <button
+                  onClick={() => setConfirmModal(null)}
+                  style={{ background:'var(--fs-surface-2)', color:'var(--fs-text-1)', border:'1px solid var(--fs-border)', borderRadius:9, padding:'12px', fontSize:14, fontWeight:600, cursor:'pointer' }}
+                >
+                  Cancelar — manter os dados existentes
+                </button>
+              </>
+            ) : (
+              // Substituição total (comportamento original)
+              <>
+                <button
+                  onClick={() => executeImport({ ...confirmModal, replace: true })}
+                  disabled={isImporting}
+                  style={{ background: isImporting ? 'var(--fs-surface-3)' : 'var(--fs-danger)', color: isImporting ? 'var(--fs-text-4)' : '#fff', border:'none', borderRadius:9, padding:'12px', fontSize:14, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
+                >
+                  {isImporting ? '⏳ Substituindo dados...' : `🔄 Substituir — apagar os ${confirmModal.count} existentes e importar novos`}
+                </button>
+                <button
+                  onClick={() => setConfirmModal(null)}
+                  style={{ background:'var(--fs-surface-2)', color:'var(--fs-text-1)', border:'1px solid var(--fs-border)', borderRadius:9, padding:'12px', fontSize:14, fontWeight:600, cursor:'pointer' }}
+                >
+                  Cancelar — manter os dados existentes
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

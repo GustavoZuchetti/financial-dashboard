@@ -1,4 +1,4 @@
 import { redirect } from 'next/navigation'
 export default function DashboardRoot() {
-  redirect('/dashboard/dre')
+  redirect('/dashboard/overview')
 }

@@ -28,6 +28,7 @@ const ICONS = {
 }
 
 const navItems = [
+  { label: 'Overview', href: '/dashboard/overview', icon: 'overview' },
   { label: 'Demonstrativos', href: '/dashboard/dre', icon: 'dre', children: [
     { label: 'Visão Geral',   href: '/dashboard/dre' },
     { label: 'Detalhado',     href: '/dashboard/dre/detalhado' },

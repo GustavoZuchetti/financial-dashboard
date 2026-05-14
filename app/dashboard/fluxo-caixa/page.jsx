@@ -1,199 +1,483 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Line, Cell, Legend } from 'recharts'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import {
+  ComposedChart, BarChart, Bar, Line, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+} from 'recharts'
 import { supabase } from '@/lib/supabase'
 
-const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(v)
-const fmtFull = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
+// ─── Formatadores ─────────────────────────────────────────────────────────────
+const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
-const S = {
-  card: { backgroundColor: 'var(--fs-surface)', borderRadius: '8px', padding: '20px', border: '1px solid var(--fs-border)' },
-  kpiTitle: { fontSize: '14px', color: 'var(--fs-text-2)', marginBottom: '8px' },
-  kpiValue: { fontSize: '24px', fontWeight: 'bold' },
-  sectionTitle: { fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', color: 'var(--fs-text-1)' },
-  input: { background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '6px', color: 'var(--fs-text-1)', padding: '6px 10px', fontSize: '13px', outline: 'none' },
-  badge: { display: 'inline-block', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', marginLeft: '8px' }
+const fC = (v) => {
+  if (v === undefined || v === null || isNaN(Number(v))) return '—'
+  const n = Number(v), a = Math.abs(n), s = n < 0 ? '-' : ''
+  if (a >= 1e6) return `${s}R$\u00a0${(a/1e6).toFixed(2)}M`
+  if (a >= 1e3) return `${s}R$\u00a0${(a/1e3).toFixed(1)}k`
+  return `${s}R$\u00a0${a.toFixed(0)}`
+}
+const fCFull = (v) => {
+  if (!v && v !== 0) return '—'
+  return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(v)
+}
+const fDate = (iso) => {
+  if (!iso) return ''
+  const [,m,d] = iso.split('-')
+  return `${d}/${m}`
+}
+const pad2 = (n) => String(n).padStart(2,'0')
+
+// ─── Tooltip customizado ──────────────────────────────────────────────────────
+const TT = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null
+  return (
+    <div style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, padding:'10px 14px', fontSize:12, minWidth:160 }}>
+      <div style={{ fontWeight:700, color:'var(--fs-text-1)', marginBottom:6 }}>{label}</div>
+      {payload.map((p,i) => (
+        <div key={i} style={{ display:'flex', justifyContent:'space-between', gap:20, marginBottom:2 }}>
+          <span style={{ color:p.color }}>{p.name}</span>
+          <strong style={{ color:'var(--fs-text-1)' }}>{fC(p.value)}</strong>
+        </div>
+      ))}
+    </div>
+  )
 }
 
-const KPICard = ({ title, value, color = '#3b82f6' }) => (
-  <div style={S.card}>
-    <div style={S.kpiTitle}>{title}</div>
-    <div style={{ ...S.kpiValue, color }}>{value}</div>
-  </div>
+// ─── Sparkline ────────────────────────────────────────────────────────────────
+const Spark = ({ data, color, positive }) => {
+  const c = positive ? '#22c55e' : '#ef4444'
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data} margin={{top:2,right:2,bottom:2,left:2}}>
+        <defs>
+          <linearGradient id={`sg-${color}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={c} stopOpacity={0.25} />
+            <stop offset="95%" stopColor={c} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <Area type="monotone" dataKey="v" stroke={c} fill={`url(#sg-${color})`} dot={false} strokeWidth={2} />
+      </AreaChart>
+    </ResponsiveContainer>
+  )
+}
+
+// ─── KPI Card ─────────────────────────────────────────────────────────────────
+const KCard = ({ label, value, pct, sparkData, positive = true }) => {
+  const pctNum = pct !== null && pct !== undefined ? Number(pct) : null
+  const up = pctNum === null ? null : positive ? pctNum >= 0 : pctNum <= 0
+  return (
+    <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 22px', flex:1, minWidth:0 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.9px', marginBottom:10 }}>{label}</div>
+      <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:8 }}>
+        <div>
+          <div style={{ fontSize:28, fontWeight:900, color:'var(--fs-text-1)', lineHeight:1.1, marginBottom:6, letterSpacing:'-0.5px' }}>{value}</div>
+          {pctNum !== null && (
+            <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+              <span style={{ fontSize:12, fontWeight:700, color: up ? '#22c55e' : '#ef4444' }}>
+                {up ? '↑' : '↓'}{Math.abs(pctNum).toFixed(1)}%
+              </span>
+            </div>
+          )}
+        </div>
+        {sparkData && sparkData.length > 1 && (
+          <div style={{ width:100, height:44, flexShrink:0 }}>
+            <Spark data={sparkData} color={label} positive={positive} />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Barra de progresso categor ───────────────────────────────────────────────
+const CatBar = ({ label, value, total, color }) => {
+  const pct = total > 0 ? (value / total) * 100 : 0
+  return (
+    <div style={{ marginBottom:16 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+        <span style={{ fontSize:13, color:'var(--fs-text-2)', fontWeight:500 }}>{label}</span>
+        <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+          <span style={{ fontSize:13, fontWeight:700, color:'var(--fs-text-1)' }}>{fC(value)}</span>
+          <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{pct.toFixed(1)}%</span>
+        </div>
+      </div>
+      <div style={{ height:5, background:'var(--fs-bg)', borderRadius:3, overflow:'hidden' }}>
+        <div style={{ height:'100%', width:`${pct}%`, background:color, borderRadius:3, transition:'width 0.4s ease' }} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Badge toggle ─────────────────────────────────────────────────────────────
+const TBtn = ({ label, active, onClick }) => (
+  <button onClick={onClick} style={{
+    padding:'5px 14px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer',
+    background: active ? 'var(--fs-brand,#3b82f6)' : 'transparent',
+    color: active ? '#fff' : 'var(--fs-text-3)',
+    border: active ? 'none' : '1px solid transparent',
+    transition:'all 0.15s', outline:'none',
+  }}>{label}</button>
 )
 
-const CustomTooltipFluxo = ({ active, payload, data }) => {
-  if (!active || !payload) return null;
+// ─── Componente principal ─────────────────────────────────────────────────────
+export default function FluxoCaixaPage() {
+  const now      = new Date()
+  const curYear  = now.getFullYear()
+  const curMonth = now.getMonth()
+  const today    = now.toISOString().split('T')[0]
 
-  const entry = payload[0]?.payload;
-  if (!entry) return null;
+  const [loading,      setLoading]      = useState(true)
+  const [empresaId,    setEmpresaId]    = useState(null)
+  const [isConsol,     setIsConsol]     = useState(false)
+  const [empNome,      setEmpNome]      = useState('')
+  const [startDate,    setStartDate]    = useState(`${curYear}-01-01`)
+  const [endDate,      setEndDate]      = useState(today)
+  const [granular,     setGranular]     = useState('mensal') // mensal | trimestral | anual
+  const [busca,        setBusca]        = useState('')
 
-  let details = [];
-  let label = '';
+  const [raw,          setRaw]          = useState([])    // todos os registros do período
+  const [rawPrev,      setRawPrev]      = useState([])    // período anterior (para % variação)
+  const [lancRecentes, setLancRecentes] = useState([])    // lançamentos da tabela
 
-  if (payload[0]?.dataKey === 'entradas' && data) {
-    const entradas = data.filter(d => d.tipo === 'entrada' && d.data.substring(0, 7) === entry.name.split('/')[1] + '-' + entry.name.split('/')[0]).sort((a, b) => Number(b.valor) - Number(a.valor));
-    const total = entradas.reduce((acc, curr) => acc + Number(curr.valor), 0);
-    const threshold = total * 0.8;
-    let accumulated = 0;
-    details = entradas.filter(e => {
-      accumulated += Number(e.valor);
-      return accumulated <= threshold;
-    }).slice(0, 3);
-    label = 'Entradas';
-  } else if (payload[0]?.dataKey === 'saidas' && data) {
-    const saidas = data.filter(d => d.tipo === 'saida' && d.data.substring(0, 7) === entry.name.split('/')[1] + '-' + entry.name.split('/')[0]).sort((a, b) => Number(b.valor) - Number(a.valor));
-    const total = saidas.reduce((acc, curr) => acc + Number(curr.valor), 0);
-    const threshold = total * 0.8;
-    let accumulated = 0;
-    details = saidas.filter(s => {
-      accumulated += Number(s.valor);
-      return accumulated <= threshold;
-    }).slice(0, 3);
-    label = 'Saídas';
+  useEffect(() => {
+    const id = localStorage.getItem('empresa_id') || ''
+    setEmpresaId(id); setIsConsol(id === 'todas')
+    const h = () => { const nid = localStorage.getItem('empresa_id')||''; setEmpresaId(nid); setIsConsol(nid==='todas') }
+    window.addEventListener('storage', h)
+    return () => window.removeEventListener('storage', h)
+  }, [])
+
+  const load = useCallback(async () => {
+    if (!empresaId) { setLoading(false); return }
+    setLoading(true)
+    try {
+      let empIds = []
+      if (isConsol) {
+        const { data: { session } } = await supabase.auth.getSession()
+        const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', session.user.id)
+        empIds = (ue||[]).map(e=>e.id)
+      } else {
+        empIds = [empresaId]
+        const { data: e } = await supabase.from('empresas').select('nome').eq('id', empresaId).single()
+        setEmpNome(e?.nome || '')
+      }
+      if (!empIds.length) { setLoading(false); return }
+
+      // Período anterior com mesmo número de dias
+      const diasCur   = Math.max(1, (new Date(endDate) - new Date(startDate)) / 86400000 + 1)
+      const prevEnd   = new Date(new Date(startDate).getTime() - 86400000)
+      const prevStart = new Date(prevEnd.getTime() - diasCur * 86400000 + 86400000)
+      const prevStartStr = prevStart.toISOString().split('T')[0]
+      const prevEndStr   = prevEnd.toISOString().split('T')[0]
+
+      const buildQ = (table, cols, s, e) => {
+        let q = supabase.from(table).select(cols).gte('data', s).lte('data', e)
+        return isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
+      }
+
+      const [
+        { data: fc     = [] },
+        { data: fcPrev = [] },
+        { data: lanc   = [] },
+      ] = await Promise.all([
+        buildQ('fluxo_caixa',  'id,tipo,valor,data,descricao,categoria', startDate, endDate),
+        buildQ('fluxo_caixa',  'tipo,valor',                             prevStartStr, prevEndStr),
+        buildQ('lancamentos',  'id,tipo,valor,data,descricao,categoria,conta_id', startDate, endDate),
+      ])
+
+      setRaw(fc || [])
+      setRawPrev(fcPrev || [])
+
+      // Lançamentos recentes mesclados com fluxo_caixa (usa lançamentos como fonte primária)
+      const lRecentes = [...(lanc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,20)
+      setLancRecentes(lRecentes)
+
+    } catch(e) { console.error('FluxoCaixa:', e) }
+    finally { setLoading(false) }
+  }, [empresaId, isConsol, startDate, endDate])
+
+  useEffect(() => { if (empresaId !== null) load() }, [load, empresaId])
+
+  // ─── Métricas ─────────────────────────────────────────────────────────────
+  const entradaTipos = ['entrada','fluxo_entrada','receita','receita_financeira']
+  const saidaTipos   = ['saida','fluxo_saida','despesa','custo','despesa_financeira']
+
+  const totalEntradas = raw.filter(d=>entradaTipos.includes(d.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
+  const totalSaidas   = raw.filter(d=>saidaTipos.includes(d.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
+  const saldo         = totalEntradas - totalSaidas
+  const margem        = totalEntradas > 0 ? (saldo / totalEntradas) * 100 : 0
+
+  const prevEntradas  = rawPrev.filter(d=>entradaTipos.includes(d.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
+  const prevSaidas    = rawPrev.filter(d=>saidaTipos.includes(d.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
+  const prevSaldo     = prevEntradas - prevSaidas
+  const prevMargem    = prevEntradas > 0 ? ((prevEntradas - prevSaidas) / prevEntradas) * 100 : 0
+
+  const pctE = prevEntradas > 0 ? ((totalEntradas - prevEntradas) / prevEntradas) * 100 : null
+  const pctS = prevSaidas   > 0 ? ((totalSaidas   - prevSaidas)   / prevSaidas)   * 100 : null
+  const pctD = prevSaldo    !== 0 ? ((saldo - prevSaldo) / Math.abs(prevSaldo)) * 100 : null
+  const pctM = prevMargem   !== 0 ? margem - prevMargem : null
+
+  // ─── Dados para gráfico (agrupa por granularidade) ────────────────────────
+  const getKey = (iso) => {
+    const d = new Date(iso + 'T00:00:00')
+    if (granular === 'mensal')     return MESES[d.getMonth()] + '/' + String(d.getFullYear()).slice(2)
+    if (granular === 'trimestral') return `T${Math.floor(d.getMonth()/3)+1}/${String(d.getFullYear()).slice(2)}`
+    return String(d.getFullYear())
   }
 
+  const chartMap = {}
+  raw.forEach(f => {
+    const k = getKey(f.data)
+    if (!chartMap[k]) chartMap[k] = { name:k, entradas:0, saidas:0, saldo:0 }
+    const v = Math.abs(Number(f.valor)||0)
+    if (entradaTipos.includes(f.tipo)) chartMap[k].entradas += v
+    else if (saidaTipos.includes(f.tipo)) chartMap[k].saidas += v
+  })
+
+  // Ordenar cronologicamente
+  const chartData = Object.values(chartMap).map(c => ({
+    ...c,
+    saldo: c.entradas - c.saidas
+  }))
+
+  // Sparklines — evolução mensal de cada KPI
+  const sparkByMonth = {}
+  raw.forEach(f => {
+    const m = new Date(f.data+'T00:00:00').getMonth()
+    if (!sparkByMonth[m]) sparkByMonth[m] = { e:0, s:0 }
+    const v = Math.abs(Number(f.valor)||0)
+    if (entradaTipos.includes(f.tipo)) sparkByMonth[m].e += v
+    else sparkByMonth[m].s += v
+  })
+  const sparkE    = Object.entries(sparkByMonth).sort((a,b)=>a[0]-b[0]).map(([,v])=>({ v:v.e }))
+  const sparkS    = Object.entries(sparkByMonth).sort((a,b)=>a[0]-b[0]).map(([,v])=>({ v:v.s }))
+  const sparkSald = Object.entries(sparkByMonth).sort((a,b)=>a[0]-b[0]).map(([,v])=>({ v:v.e-v.s }))
+  const sparkM    = Object.entries(sparkByMonth).sort((a,b)=>a[0]-b[0]).map(([,v])=>({ v: v.e>0?(v.e-v.s)/v.e*100:0 }))
+
+  // ─── Top categorias saídas ────────────────────────────────────────────────
+  const catMap = {}
+  raw.filter(d=>saidaTipos.includes(d.tipo)).forEach(d => {
+    const cat = d.categoria || d.descricao?.substring(0,20) || 'Outros'
+    catMap[cat] = (catMap[cat]||0) + Math.abs(Number(d.valor)||0)
+  })
+  const topCats = Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
+  const catColors = ['#ef4444','#f59e0b','#8b5cf6','#3b82f6','#14b8a6']
+
+  // ─── Tabela de lançamentos filtrada ───────────────────────────────────────
+  const tipoColor  = { receita:'#22c55e', custo:'#ef4444', despesa:'#f59e0b', deducao:'#f97316', receita_financeira:'#14b8a6', despesa_financeira:'#8b5cf6', investimento:'#64748b', entrada:'#22c55e', saida:'#ef4444' }
+  const tipoLabel  = { receita:'Receita Operacional', custo:'Custo', despesa:'Despesa', deducao:'Dedução', receita_financeira:'Rec. Financeira', despesa_financeira:'Desp. Financeira', investimento:'Investimento', entrada:'Receita Operacional', saida:'Despesa' }
+  const isEntrada  = (tipo) => ['receita','receita_financeira','entrada','fluxo_entrada'].includes(tipo)
+
+  const lancFiltrados = lancRecentes.filter(l => {
+    if (!busca) return true
+    const q = busca.toLowerCase()
+    return (l.descricao||'').toLowerCase().includes(q) || (l.categoria||'').toLowerCase().includes(q)
+  })
+
+  // ─── Período label ────────────────────────────────────────────────────────
+  const fDateFull = (iso) => { if (!iso) return ''; const [y,m,d]=iso.split('-'); return `${d} ${MESES[Number(m)-1]}, ${y}` }
+
+  if (!empresaId) return (
+    <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)' }}>Selecione uma empresa no menu lateral.</div>
+  )
+
+  // ═══════════════════════════════════════════════════════════════════════════
   return (
-    <div style={{ backgroundColor: 'var(--fs-bg)', border: '1px solid #3b82f6', borderRadius: '6px', padding: '10px', color: 'var(--fs-text-1)', fontSize: '12px' }}>
-      <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', color: '#3b82f6' }}>{label}</p>
-      <p style={{ margin: '4px 0', color: 'var(--fs-text-2)' }}>Período: <span style={{ color: 'var(--fs-text-1)', fontWeight: 'bold' }}>{entry.name}</span></p>
-      <p style={{ margin: '4px 0', color: 'var(--fs-text-2)' }}>Total: <span style={{ color: 'var(--fs-text-1)', fontWeight: 'bold' }}>{fmtFull(payload[0]?.value || 0)}</span></p>
-      {details.length > 0 && (
-        <>
-          <p style={{ margin: '8px 0 4px 0', color: 'var(--fs-text-2)', fontSize: '11px' }}>Top 80% (Pareto):</p>
-          {details.map((d, i) => (
-            <p key={i} style={{ margin: '2px 0 2px 8px', color: 'var(--fs-text-1)', fontSize: '11px' }}>
-              • {d.descricao?.substring(0, 20) || d.categoria?.substring(0, 20) || 'Item'}: {fmtFull(Number(d.valor))}
-            </p>
-          ))}
-        </>
-      )}
-    </div>
-  );
-};
+    <div style={{ color:'var(--fs-text-1)', width:'100%' }}>
 
-export default function FluxoCaixaGeral() {
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [empresaId, setEmpresaId] = useState(null);
-  const [isConsolidado, setIsConsolidado] = useState(false);
-
-  useEffect(() => {
-    const savedId = localStorage.getItem('empresa_id');
-    if (savedId) {
-      setEmpresaId(savedId);
-      setIsConsolidado(savedId === 'todas');
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!empresaId) return;
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        let query = supabase
-          .from('fluxo_caixa')
-          .select('*')
-          .gte('data', startDate)
-          .lte('data', endDate);
-
-        if (isConsolidado) {
-          const { data: userEmpresas } = await supabase
-            .from('empresas')
-            .select('id')
-            .eq('user_id', (await supabase.auth.getSession()).data.session.user.id);
-          
-          if (userEmpresas) {
-            const ids = (userEmpresas || []).map(e => e.id);
-            query = query.in('empresa_id', ids);
-          }
-        } else {
-          query = query.eq('empresa_id', empresaId);
-        }
-
-        const { data: fluxo } = await query;
-        setData(fluxo || []);
-      } catch (e) {
-        console.error('Erro ao carregar Fluxo de Caixa:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [empresaId, startDate, endDate, isConsolidado]);
-
-  const totalEntradas = data.filter(d => d.tipo === 'entrada').reduce((acc, curr) => acc + Number(curr.valor), 0);
-  const totalSaidas = data.filter(d => d.tipo === 'saida').reduce((acc, curr) => acc + Number(curr.valor), 0);
-  const saldo = totalEntradas - totalSaidas;
-
-  // Agrupar por mês para o gráfico
-  const chartData = data.reduce((acc, curr) => {
-    const date = new Date(curr.data);
-    const month = date.toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
-    let existing = acc.find(a => a.name === month);
-    if (!existing) {
-      existing = { name: month, entradas: 0, saidas: 0, saldo: 0 };
-      acc.push(existing);
-    }
-    if (curr.tipo === 'entrada') existing.entradas += Number(curr.valor);
-    else existing.saidas += Number(curr.valor);
-    existing.saldo = existing.entradas - existing.saidas;
-    return acc;
-  }, []).sort((a, b) => {
-    const [mA, yA] = a.name.split('/');
-    const [mB, yB] = b.name.split('/');
-    return new Date(`20${yA}-${mA}-01`) - new Date(`20${yB}-${mB}-01`);
-  });
-
-  return (
-    <div style={{ padding: '24px', color: 'var(--fs-text-1)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>
-          Fluxo de Caixa
-          {isConsolidado && <span style={S.badge}>📊 Consolidado</span>}
-        </h1>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--fs-surface)', padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--fs-border)' }}>
-            <span style={{ fontSize: '13px', color: 'var(--fs-text-2)' }}>Período:</span>
-            <input type="date" style={S.input} value={startDate} onChange={e => setStartDate(e.target.value)} />
-            <span style={{ color: 'var(--fs-text-2)' }}>→</span>
-            <input type="date" style={S.input} value={endDate} onChange={e => setEndDate(e.target.value)} />
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:24, flexWrap:'wrap', gap:12 }}>
+        <div>
+          <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>
+            Liquidez · Movimentação Financeira
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+            <h1 style={{ fontSize:28, fontWeight:900, margin:0, color:'var(--fs-text-1)' }}>Fluxo de Caixa</h1>
+            {isConsol && (
+              <span style={{ background:'rgba(59,130,246,0.12)', color:'#60a5fa', border:'1px solid rgba(59,130,246,0.25)', padding:'3px 11px', borderRadius:20, fontSize:12, fontWeight:700 }}>Consolidado</span>
+            )}
+          </div>
+          <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:4, display:'flex', alignItems:'center', gap:6 }}>
+            <span>📅</span>
+            <span>{fDateFull(startDate)} → {fDateFull(endDate)}</span>
+            <span>·</span>
+            <span>vs período anterior</span>
           </div>
         </div>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <KPICard title="Total Recebido" value={fmtFull(totalEntradas)} color="#3b82f6" />
-        <KPICard title="Total Pago" value={fmtFull(totalSaidas)} color="#ef4444" />
-        <KPICard title="Saldo do Período" value={fmtFull(saldo)} color={saldo >= 0 ? '#3b82f6' : '#ef4444'} />
-      </div>
+        {/* Ações */}
+        <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+          {/* Filtro de período */}
+          <div style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'7px 12px' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fs-text-4)" strokeWidth="2"><path d="M3 4h18M3 8h18M3 12h18M3 16h10"/></svg>
+            <input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)}
+              style={{ background:'transparent', border:'none', color:'var(--fs-text-2)', fontSize:12, outline:'none', colorScheme:'dark' }} />
+            <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>→</span>
+            <input type="date" value={endDate} onChange={e=>setEndDate(e.target.value)}
+              style={{ background:'transparent', border:'none', color:'var(--fs-text-2)', fontSize:12, outline:'none', colorScheme:'dark' }} />
+          </div>
 
-      <div style={S.card}>
-        <h2 style={S.sectionTitle}>Evolução Mensal</h2>
-        <div style={{ height: '400px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 12 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--fs-text-2)', fontSize: 12 }} tickFormatter={fmt} />
-              <Tooltip content={<CustomTooltipFluxo data={data} />} cursor={{ fill: 'transparent' }} />
-              <Legend verticalAlign="bottom" height={36}/>
-              <Bar dataKey="entradas" fill="#3b82f6" barSize={40} radius={[4, 4, 0, 0]} name="Entradas" />
-              <Bar dataKey="saidas" fill="#ef4444" barSize={40} radius={[4, 4, 0, 0]} name="Saídas" />
-              <Line type="monotone" dataKey="saldo" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 6, fill: '#8b5cf6' }} name="Saldo" />
-            </ComposedChart>
-          </ResponsiveContainer>
+          <button style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'8px 16px', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filtrar
+          </button>
+
+          <button style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'8px 16px', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Exportar
+          </button>
+
+          <button style={{ display:'flex', alignItems:'center', gap:6, background:'#3b82f6', border:'none', borderRadius:10, padding:'8px 16px', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo lançamento
+          </button>
         </div>
       </div>
-      
-      {loading && <div style={{ textAlign: 'center', color: '#3b82f6', marginTop: '20px' }}>Carregando dados...</div>}
+
+      {loading ? (
+        <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)', fontSize:14 }}>Carregando dados...</div>
+      ) : (
+        <>
+          {/* ── KPI Cards ─────────────────────────────────────────────────────── */}
+          <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
+            <KCard label="Total Recebido"  value={fC(totalEntradas)} pct={pctE}    sparkData={sparkE}    positive={true} />
+            <KCard label="Total Pago"      value={fC(totalSaidas)}   pct={pctS}    sparkData={sparkS}    positive={false} />
+            <KCard label="Saldo do Período" value={fC(saldo)}        pct={pctD}    sparkData={sparkSald} positive={true} />
+            <KCard label="Margem de Caixa" value={`${margem.toFixed(1)}%`} pct={pctM !== null ? pctM : null} sparkData={sparkM} positive={true} />
+          </div>
+
+          {/* ── Gráfico Evolução Mensal ────────────────────────────────────────── */}
+          <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, padding:'22px 26px', marginBottom:20 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20, flexWrap:'wrap', gap:12 }}>
+              <div>
+                <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:2 }}>Evolução Mensal</div>
+                <div style={{ fontSize:16, fontWeight:800, color:'var(--fs-text-1)' }}>Entradas, saídas e saldo acumulado</div>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+                {/* Legenda */}
+                <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+                  {[{c:'#3b82f6',l:'Entradas'},{c:'#ef4444',l:'Saídas'},{c:'#8b5cf6',l:'Saldo'}].map(({c,l})=>(
+                    <div key={l} style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--fs-text-3)' }}>
+                      <div style={{ width:8, height:8, borderRadius:'50%', background:c }} />
+                      {l}
+                    </div>
+                  ))}
+                </div>
+                {/* Toggle granularidade */}
+                <div style={{ display:'flex', background:'var(--fs-bg)', borderRadius:8, padding:3, gap:2 }}>
+                  {['mensal','trimestral','anual'].map(g => (
+                    <TBtn key={g} label={g.charAt(0).toUpperCase()+g.slice(1)} active={granular===g} onClick={()=>setGranular(g)} />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <ComposedChart data={chartData} margin={{top:4,right:8,left:0,bottom:4}}>
+                  <defs>
+                    <linearGradient id="gradEntradas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.4} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:12}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} tickFormatter={fC} width={68} />
+                  <Tooltip content={<TT />} cursor={{ fill:'rgba(255,255,255,0.04)' }} />
+                  <Bar dataKey="entradas" fill="url(#gradEntradas)" radius={[4,4,0,0]} name="Entradas" barSize={28} />
+                  <Bar dataKey="saidas"   fill="rgba(239,68,68,0.55)" radius={[4,4,0,0]} name="Saídas" barSize={28} />
+                  <Line type="monotone" dataKey="saldo" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r:4, fill:'#8b5cf6', strokeWidth:0 }} name="Saldo" />
+                </ComposedChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ textAlign:'center', padding:60, color:'var(--fs-text-4)', fontSize:13 }}>Sem dados no período selecionado</div>
+            )}
+          </div>
+
+          {/* ── Linha inferior: Top Categorias + Últimos Lançamentos ─────────── */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1.6fr', gap:16 }}>
+
+            {/* Top Categorias */}
+            <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, padding:'22px 26px' }}>
+              <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:2 }}>Top Categorias</div>
+              <div style={{ fontSize:16, fontWeight:800, color:'var(--fs-text-1)', marginBottom:20 }}>
+                Maiores saídas · {startDate.split('-')[0] === endDate.split('-')[0] && startDate.split('-')[1] === '01' ? 'YTD' : 'Período'}
+              </div>
+              {topCats.length > 0 ? topCats.map(([cat, val], i) => (
+                <CatBar key={cat} label={cat} value={val} total={totalSaidas} color={catColors[i % catColors.length]} />
+              )) : (
+                <div style={{ textAlign:'center', padding:'30px 0', color:'var(--fs-text-4)', fontSize:13 }}>Sem saídas registradas</div>
+              )}
+            </div>
+
+            {/* Últimos lançamentos */}
+            <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, padding:'22px 26px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
+                <div>
+                  <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:2 }}>Movimentações</div>
+                  <div style={{ fontSize:16, fontWeight:800, color:'var(--fs-text-1)' }}>Últimos lançamentos</div>
+                </div>
+                {/* Campo de busca */}
+                <div style={{ display:'flex', alignItems:'center', gap:7, background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, padding:'6px 12px' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fs-text-4)" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                  <input
+                    placeholder="Buscar lançamento..."
+                    value={busca}
+                    onChange={e=>setBusca(e.target.value)}
+                    style={{ background:'transparent', border:'none', color:'var(--fs-text-2)', fontSize:12, outline:'none', width:160 }}
+                  />
+                </div>
+              </div>
+
+              {/* Cabeçalho da tabela */}
+              <div style={{ display:'grid', gridTemplateColumns:'60px 1fr 130px 110px', gap:8, padding:'0 8px 8px', borderBottom:'1px solid var(--fs-border)', marginBottom:4 }}>
+                {['Data','Descrição','Categoria','Valor'].map(h => (
+                  <div key={h} style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px' }}>{h}</div>
+                ))}
+              </div>
+
+              {/* Linhas */}
+              <div style={{ maxHeight:320, overflowY:'auto' }}>
+                {lancFiltrados.length === 0 ? (
+                  <div style={{ textAlign:'center', padding:'30px 0', color:'var(--fs-text-4)', fontSize:13 }}>
+                    {busca ? 'Nenhum resultado encontrado' : 'Sem lançamentos no período'}
+                  </div>
+                ) : lancFiltrados.map((l, i) => {
+                  const entrada = isEntrada(l.tipo)
+                  const cat     = tipoLabel[l.tipo] || l.categoria || l.tipo
+                  const catBg   = entrada ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'
+                  const catClr  = entrada ? '#22c55e' : '#ef4444'
+                  return (
+                    <div key={l.id||i} style={{
+                      display:'grid', gridTemplateColumns:'60px 1fr 130px 110px', gap:8,
+                      padding:'11px 8px', borderBottom:'1px solid var(--fs-border)',
+                      transition:'background 0.1s',
+                    }}
+                      onMouseEnter={e=>e.currentTarget.style.background='var(--fs-bg)'}
+                      onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                    >
+                      <div style={{ fontSize:12, color:'var(--fs-text-4)', fontWeight:600 }}>{fDate(l.data)}</div>
+                      <div style={{ fontSize:13, color:'var(--fs-text-1)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:6 }}>
+                        <span style={{ color: entrada ? '#22c55e' : '#ef4444', fontSize:11 }}>{entrada ? '↑' : '↓'}</span>
+                        {l.descricao || l.categoria || 'Lançamento'}
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center' }}>
+                        <span style={{ background:catBg, color:catClr, fontSize:11, fontWeight:600, padding:'2px 8px', borderRadius:5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:120 }}>
+                          {cat.length > 16 ? cat.substring(0,16)+'…' : cat}
+                        </span>
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:700, color: entrada ? '#22c55e' : '#ef4444', textAlign:'right' }}>
+                        {entrada ? '+' : '-'}{fC(Math.abs(Number(l.valor)))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

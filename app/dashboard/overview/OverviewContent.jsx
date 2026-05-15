@@ -42,7 +42,7 @@ const Spark = ({ data, dataKey, color }) => (
 )
 
 // ─── KPI Card grande ──────────────────────────────────────────────────────────
-const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, isNegative }) => {
+const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, isNegative, sub }) => {
   const pctNum = pct !== undefined && pct !== null ? Number(pct) : null
   const pos = pctNum === null ? null : !isNegative ? pctNum >= 0 : pctNum <= 0
   return (
@@ -419,7 +419,10 @@ export default function OverviewPage() {
       const aReceber = fc30.filter(f=>['entrada','fluxo_entrada','receita'].includes(f.tipo)).reduce((a,f)=>a+Math.abs(Number(f.valor)||0),0)
       const aPagar   = fc30.filter(f=>['saida','fluxo_saida','despesa','custo'].includes(f.tipo)).reduce((a,f)=>a+Math.abs(Number(f.valor)||0),0)
 
-      setKpis({ rl:vCur.rl, rlPct, ebt:vCur.ebt, ebtPct, marg:margCur, margDiff, caixa, aReceber, aPagar, burnRate, runway })
+      // Variação Receita Bruta vs período anterior
+      const rbPrev_p = vPrev.rb * scale
+      const rbPct    = rbPrev_p > 0.01 ? (vCur.rb - rbPrev_p) / rbPrev_p * 100 : null
+      setKpis({ rb:vCur.rb, rbPct, rl:vCur.rl, rlPct, ebt:vCur.ebt, ebtPct, marg:margCur, margDiff, caixa, aReceber, aPagar, burnRate, runway })
 
       // ── Lançamentos recentes ──────────────────────────────────────────────
       const rec = [...(curLanc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,6)
@@ -499,7 +502,7 @@ export default function OverviewPage() {
         <>
           {/* ── KPIs principais ─────────────────────────────────────────────── */}
           <div style={{ display:'flex', gap:12, marginBottom:12, flexWrap:'wrap' }}>
-            <KCard label={`Receita Líquida · ${dr.subLabel}`} value={fC(kpis.rl)} pct={kpis.rlPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="rl" sparkColor="#14b8a6" />
+            <KCard label={`Receita Bruta · ${dr.subLabel}`} value={fC(kpis.rb)} pct={kpis.rbPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="receita" sparkColor="#22c55e" sub={kpis.rl !== kpis.rb ? `Rec. Líquida: ${fC(kpis.rl)}` : null} />
             <KCard label="EBITDA"          value={fC(kpis.ebt)}                   pct={kpis.ebtPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="#3b82f6" />
             <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`}     pct={kpis.margDiff} pctLabel="p.p. vs anterior"  sparkData={monthly} sparkKey="resLiq" sparkColor="#8b5cf6" />
             <KCard label="Caixa Disponível" value={fC(kpis.caixa)} pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="#f59e0b" />

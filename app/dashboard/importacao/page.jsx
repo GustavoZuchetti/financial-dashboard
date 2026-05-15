@@ -427,10 +427,9 @@ export default function ImportacaoPage() {
       if (!rows.length) { showToast('Arquivo vazio ou inválido.', 'error'); return }
 
       // ── Resolver campos usando layout personalizado (se houver) ou fallbacks padrão ──
-      const col = (campo) => {
-        // Se há layout ativo, usa o mapeamento configurado pelo admin
+      // col() recebe a linha atual como parâmetro — definida fora do map para evitar recriação
+      const col = (row, campo) => {
         if (activeLayout?.colunas?.[campo]) return row[activeLayout.colunas[campo]] || ''
-        // Fallbacks hardcoded para retrocompatibilidade
         const fallbacks = {
           descricao:   ['Descrição','descricao','Categoria','categoria'],
           nome:        ['Nome','nome'],
@@ -461,42 +460,40 @@ export default function ImportacaoPage() {
       }
 
       const processed = rows.map((row, i) => {
-        const tipoRaw    = col('tipo_raw')
+        const tipoRaw    = col(row, 'tipo_raw')
         const tipoLayout = resolverTipo(tipoRaw)
         return {
           __id:    i,
-          __desc:  (col('descricao') || col('categoria')).trim(),
-          nome:    col('nome').replace(/[\t\n\r]+/g, ' ').trim(),
+          __desc:  (col(row, 'descricao') || col(row, 'categoria')).trim(),
+          nome:    col(row, 'nome').replace(/[\t\n\r]+/g, ' ').trim(),
           valor: (() => {
             if (activeLayout) {
-              // Layout configurado: usa campo valor_pago para FC, valor para DRE
               return modulo === 'fluxo'
-                ? parseValueBR(col('valor_pago') || col('valor') || 0)
-                : parseValueBR(col('valor') || 0)
+                ? parseValueBR(col(row, 'valor_pago') || col(row, 'valor') || 0)
+                : parseValueBR(col(row, 'valor') || 0)
             }
             if (modulo === 'dre') {
-              return parseValueBR(col('valor') || row['Valor Pago/Recebido'] || 0)
+              return parseValueBR(col(row, 'valor') || row['Valor Pago/Recebido'] || 0)
             } else {
-              return parseValueBR(col('valor_pago') || col('valor') || 0)
+              return parseValueBR(col(row, 'valor_pago') || col(row, 'valor') || 0)
             }
           })(),
           data: (() => {
             if (activeLayout) {
-              // Layout: usa campo data configurado com formato definido
-              const rawData = col('data') || col(modulo === 'dre' ? 'competencia' : 'liquidacao')
+              const rawData = col(row, 'data') || col(row, modulo === 'dre' ? 'competencia' : 'liquidacao')
               return parseDataComFormato(rawData, activeLayout.formato_data || 'DD/MM/YYYY')
             }
             if (modulo === 'dre') {
-              return safeDateBR(col('competencia')) || safeDateBR(col('data')) || parseDateBR(col('data'))
+              return safeDateBR(col(row, 'competencia')) || safeDateBR(col(row, 'data')) || parseDateBR(col(row, 'data'))
             } else {
-              return safeDateBR(col('liquidacao')) || safeDateBR(col('data')) || parseDateBR(col('data'))
+              return safeDateBR(col(row, 'liquidacao')) || safeDateBR(col(row, 'data')) || parseDateBR(col(row, 'data'))
             }
           })(),
           tipoCsv:     tipoLayout,
           tipoResolvido: tipoLayout !== tipoRaw, // indica que foi resolvido pelo layout
-          empresa_csv: col('empresa'),           // empresa da coluna (multi-entidade)
-          categoria:   col('categoria'),
-          situacao:    col('situacao'),
+          empresa_csv: col(row, 'empresa'),           // empresa da coluna (multi-entidade)
+          categoria:   col(row, 'categoria'),
+          situacao:    col(row, 'situacao'),
           original: row,
         }
       }).filter(r => (r.__desc || r.valor > 0) && r.tipoCsv !== '__ignorar__')

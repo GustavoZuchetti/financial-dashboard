@@ -159,7 +159,11 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
     grouped[key].count++
     grouped[key].totalValor += row.valor
   })
-  const uniqueRows = Object.values(grouped).sort((a, b) => b.totalValor - a.totalValor)
+  // No FC: filtrar categorias onde o total é zero (sem liquidação / sem valor pago)
+  const allRows = Object.values(grouped).sort((a, b) => b.totalValor - a.totalValor)
+  const uniqueRows = modulo === 'fluxo'
+    ? allRows.filter(r => r.totalValor > 0)
+    : allRows
 
   const pendentes = uniqueRows.filter(r => {
     const map = (mappings || []).find(m => m.categoria_origem?.toLowerCase() === (r.__desc || '').toLowerCase())
@@ -212,9 +216,9 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
         ) : null
       })()}
 
-      {pendentes.length > 0 && (
+      {modulo === 'dre' && pendentes.length > 0 && (
         <div style={{ background: 'var(--fs-warning-bg)', border: '1px solid rgba(var(--fs-warning-rgb),0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: 'var(--fs-warning)' }}>
-          ⚠️ {pendentes.length} categoria{pendentes.length !== 1 ? 's' : ''} sem mapeamento de {uniqueRows.length} únicas. Registros ignorados não entram no DRE.
+          ⚠️ {pendentes.length} categoria{pendentes.length !== 1 ? 's' : ''} sem mapeamento de {uniqueRows.length} únicas. Registros sem mapeamento não entram no DRE.
         </div>
       )}
 
@@ -229,24 +233,35 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
           </thead>
           <tbody>
             {uniqueRows.map(row => {
-              const map = (mappings || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
+              // DRE: verifica mapeamento de categoria | FC: usa o tipo diretamente
+              const map = modulo === 'dre'
+                ? (mappings || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
+                : null
+              const tipoFC = row.tipoCsv || ''
+              const isEntrada = ['receita','entrada','fluxo_entrada','receita_financeira'].includes(tipoFC)
               return (
                 <tr key={row.__id} style={{ borderBottom: '1px solid var(--fs-border)' }}>
                   <td style={{ padding: '9px 12px', color: 'var(--fs-text-1)', fontWeight: 600 }}>{row.__desc || '—'}</td>
                   <td style={{ padding: '9px 12px', color: 'var(--fs-text-2)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.nome || '—'}</td>
-                  <td style={{ padding: '9px 12px', textAlign: 'right', color: 'var(--fs-success)', fontWeight: 700 }}>{fmtBRL(row.valor)}</td>
+                  <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 700, color: isEntrada ? 'var(--fs-success)' : row.valor < 0 ? 'var(--fs-danger)' : 'var(--fs-success)' }}>{fmtBRL(row.totalValor)}</td>
                   <td style={{ padding: '9px 12px', color: 'var(--fs-text-2)' }}>{row.data}</td>
                   <td style={{ padding: '9px 12px' }}>
-                    {map
-                      ? <span style={{ background: 'var(--fs-success-bg)', color: 'var(--fs-success)', border: '1px solid rgba(var(--fs-success-rgb),0.3)', padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>✓ {map.tipo_destino?.toUpperCase()}</span>
-                      : <span style={{ background: 'var(--fs-warning-bg)', color: 'var(--fs-warning)', border: '1px solid rgba(var(--fs-warning-rgb),0.3)', padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>PENDENTE</span>
+                    {modulo === 'fluxo'
+                      ? <span style={{ background: isEntrada ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: isEntrada ? '#10b981' : '#ef4444', border: `1px solid ${isEntrada ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>
+                          {isEntrada ? '↑ ENTRADA' : '↓ SAÍDA'}
+                        </span>
+                      : map
+                        ? <span style={{ background: 'var(--fs-success-bg)', color: 'var(--fs-success)', border: '1px solid rgba(var(--fs-success-rgb),0.3)', padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>✓ {map.tipo_destino?.toUpperCase()}</span>
+                        : <span style={{ background: 'var(--fs-warning-bg)', color: 'var(--fs-warning)', border: '1px solid rgba(var(--fs-warning-rgb),0.3)', padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>PENDENTE</span>
                     }
                   </td>
                   <td style={{ padding: '9px 12px' }}>
-                    <button onClick={() => onEdit(row)}
-                      style={{ background: map ? 'transparent' : 'var(--fs-brand)', color: map ? 'var(--fs-text-4)' : '#fff', border: map ? '1px solid var(--fs-border)' : 'none', padding: '4px 11px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                      {map ? 'Alterar' : 'Configurar'}
-                    </button>
+                    {modulo === 'dre' && (
+                      <button onClick={() => onEdit(row)}
+                        style={{ background: map ? 'transparent' : 'var(--fs-brand)', color: map ? 'var(--fs-text-4)' : '#fff', border: map ? '1px solid var(--fs-border)' : 'none', padding: '4px 11px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                        {map ? 'Alterar' : 'Configurar'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               )

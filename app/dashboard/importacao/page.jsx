@@ -736,7 +736,7 @@ export default function ImportacaoPage() {
       let tipo = map?.tipo_destino || (row.tipoCsv.includes('pagar') || row.tipoCsv.includes('saida') ? 'saida' : 'entrada')
       tipo = tipo.replace('fluxo_', '')
       if (!['entrada','saida'].includes(tipo)) tipo = 'entrada'
-      return { empresa_id: empresaId, data: row.data, descricao: row.nome || row.__desc || '', valor: row.valor, tipo, conta_id: map?.conta_id || null, categoria: row.__desc || '' }
+      return { empresa_id: empresaId, data: row.data, descricao: row.nome || row.__desc || '', valor: row.valor, tipo, categoria: row.__desc || '' }
     }).filter(r => r.valor > 0)
 
   // ─── Importar DRE ─────────────────────────────────────────────────────────

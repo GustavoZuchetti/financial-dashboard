@@ -177,11 +177,16 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
       {/* Resumo */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 10 }}>
-          {[
-            { label: 'Total',     val: data.length,        rgb: '59,130,246'  },
-            { label: 'Mapeados',  val: mapeados,           rgb: '16,185,129'  },
-            { label: 'Pendentes', val: pendentes.length,   rgb: '245,158,11'  },
-          ].map(k => (
+          {(modulo === 'dre'
+            ? [
+              { label: 'Total',     val: data.length,      rgb: '59,130,246' },
+              { label: 'Mapeados',  val: mapeados,         rgb: '16,185,129' },
+              { label: 'Pendentes', val: pendentes.length, rgb: '245,158,11' },
+            ]
+            : [
+              { label: 'Total', val: uniqueRows.length, rgb: '59,130,246' },
+            ]
+          ).map(k => (
             <div key={k.label} style={{ background: `rgba(${k.rgb},0.1)`, border: `1px solid rgba(${k.rgb},0.2)`, borderRadius: 8, padding: '7px 14px', textAlign: 'center' }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: `rgb(${k.rgb})` }}>{k.val}</div>
               <div style={{ fontSize: 10, color: 'var(--fs-text-4)', textTransform: 'uppercase' }}>{k.label}</div>
@@ -193,8 +198,8 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
         </button>
       </div>
 
-      {/* Distribuição por mês — permite verificar se está usando Competência corretamente */}
-      {(() => {
+      {/* Distribuição por mês — apenas no DRE */}
+      {modulo === 'dre' && (() => {
         const dist = {}
         ;(data || []).forEach(r => {
           const m = r.data ? r.data.substring(0, 7) : '?'

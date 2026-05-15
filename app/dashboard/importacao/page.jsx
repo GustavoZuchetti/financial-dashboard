@@ -466,9 +466,7 @@ export default function ImportacaoPage() {
         return {
           __id:    i,
           __desc:  (col('descricao') || col('categoria')).trim(),
-          nome:    col('nome').replace(/[	
-
-]+/g, ' ').trim(),
+          nome:    col('nome').replace(/[\t\n\r]+/g, ' ').trim(),
           valor: (() => {
             if (activeLayout) {
               // Layout configurado: usa campo valor_pago para FC, valor para DRE

@@ -159,9 +159,23 @@ export default function GestaoFluxoCaixaPage() {
   // Seleção múltipla
   const [selected,   setSelected]   = useState(new Set())
 
+  // Saldo inicial
+  const [saldoInicial,    setSaldoInicial]    = useState('')
+  const [saldoInicialDB,  setSaldoInicialDB]  = useState(0)
+  const [editSaldo,       setEditSaldo]       = useState(false)
+
+  // Totais globais (sem filtro de período)
+  const [totalGlobalE,    setTotalGlobalE]    = useState(0)
+  const [totalGlobalS,    setTotalGlobalS]    = useState(0)
+
+  // Modal novo lançamento
+  const [novoModal,    setNovoModal]    = useState(false)
+  const [novoForm,     setNovoForm]     = useState({ data: today, descricao:'', tipo:'saida', valor:'', categoria:'' })
+  const [novoLoading,  setNovoLoading]  = useState(false)
+
   // Modais
-  const [delItem,    setDelItem]    = useState(null)  // exclusão unitária
-  const [bulkModal,  setBulkModal]  = useState(false) // exclusão em lote
+  const [delItem,    setDelItem]    = useState(null)
+  const [bulkModal,  setBulkModal]  = useState(false)
   const [toast,      setToast]      = useState(null)
 
   const showToast = (msg, type = 'info') => setToast({ msg, type })
@@ -208,6 +222,22 @@ export default function GestaoFluxoCaixaPage() {
       setRegistros(data || [])
       setTotal(count || 0)
       setSelected(new Set())
+
+      // Totais globais (sem filtro de data/tipo — saldo corrente real)
+      let qGlobal = supabase.from('fluxo_caixa').select('tipo,valor')
+      qGlobal = isConsol ? qGlobal.in('empresa_id', empIds) : qGlobal.eq('empresa_id', empIds[0])
+      const { data: global = [] } = await qGlobal
+      const gEntradas = (global||[]).filter(r=>r.tipo==='entrada').reduce((a,c)=>a+Number(c.valor),0)
+      const gSaidas   = (global||[]).filter(r=>r.tipo==='saida').reduce((a,c)=>a+Number(c.valor),0)
+      setTotalGlobalE(gEntradas)
+      setTotalGlobalS(gSaidas)
+
+      // Saldo inicial configurado
+      const { data: cfg } = await supabase.from('empresa_config')
+        .select('valor').eq('empresa_id', empIds[0]).eq('chave', 'saldo_inicial').single()
+      setSaldoInicialDB(Number(cfg?.valor || 0))
+      setSaldoInicial(cfg?.valor || '')
+
     } catch(e) { console.error('GestaoFluxo:', e); showToast('Erro ao carregar dados', 'error') }
     finally { setLoading(false) }
   }, [empresaId, isConsol, startDate, endDate, tipoFiltro, page])
@@ -262,6 +292,41 @@ export default function GestaoFluxoCaixaPage() {
     }
   }
 
+  // ─── Salvar saldo inicial ───────────────────────────────────────────────────
+  const handleSaveSaldo = async () => {
+    const val = parseFloat(String(saldoInicial).replace(',', '.')) || 0
+    await supabase.from('empresa_config')
+      .upsert({ empresa_id: empresaId, chave: 'saldo_inicial', valor: String(val), updated_at: new Date().toISOString() },
+              { onConflict: 'empresa_id,chave' })
+    setSaldoInicialDB(val)
+    setEditSaldo(false)
+    showToast('Saldo inicial salvo com sucesso!', 'success')
+  }
+
+  // ─── Inserir novo lançamento manual ──────────────────────────────────────────
+  const handleNovoLancamento = async () => {
+    const val = parseFloat(String(novoForm.valor).replace(/\./g,'').replace(',','.'))
+    if (!novoForm.data || !novoForm.descricao.trim() || !val || val <= 0) {
+      showToast('Preencha data, descrição e valor.', 'error'); return
+    }
+    setNovoLoading(true)
+    const { error } = await supabase.from('fluxo_caixa').insert({
+      empresa_id:  empresaId,
+      data:        novoForm.data,
+      descricao:   novoForm.descricao.trim(),
+      tipo:        novoForm.tipo,
+      valor:       val,
+      categoria:   novoForm.categoria.trim() || null,
+      created_at:  new Date().toISOString(),
+    })
+    setNovoLoading(false)
+    if (error) { showToast('Erro ao inserir: ' + error.message, 'error'); return }
+    showToast(`Lançamento inserido: ${novoForm.tipo === 'entrada' ? '+' : '-'}R$ ${val.toFixed(2)}`, 'success')
+    setNovoModal(false)
+    setNovoForm({ data: today, descricao:'', tipo:'saida', valor:'', categoria:'' })
+    load()
+  }
+
   // ─── Filtro local por busca ──────────────────────────────────────────────────
   const filtrados = registros.filter(r => {
     if (!busca) return true
@@ -272,6 +337,8 @@ export default function GestaoFluxoCaixaPage() {
   // ─── Totais da página ────────────────────────────────────────────────────────
   const totalEntradas = filtrados.filter(r=>r.tipo==='entrada').reduce((a,c)=>a+Number(c.valor),0)
   const totalSaidas   = filtrados.filter(r=>r.tipo==='saida').reduce((a,c)=>a+Number(c.valor),0)
+  // Saldo corrente = saldo inicial + todas entradas - todas saídas (sem filtro de período)
+  const saldoCorrente = saldoInicialDB + totalGlobalE - totalGlobalS
 
   // ─── Labels do período selecionado ──────────────────────────────────────────
   const periodoLabel = (() => {
@@ -300,6 +367,61 @@ export default function GestaoFluxoCaixaPage() {
       {/* Toasts */}
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)} />}
 
+      {/* Modal Novo Lançamento */}
+      {novoModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:500, padding:24 }}>
+          <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:16, padding:28, width:'100%', maxWidth:440, boxShadow:'0 8px 32px rgba(0,0,0,0.4)' }}>
+            <div style={{ fontSize:16, fontWeight:800, color:'var(--fs-text-1)', marginBottom:20 }}>Novo Lançamento Manual</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              {/* Tipo */}
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Tipo *</div>
+                <div style={{ display:'flex', gap:8 }}>
+                  {[['entrada','↑ A Receber','#22c55e'],['saida','↓ A Pagar','#ef4444']].map(([v,l,clr])=>(
+                    <button key={v} onClick={()=>setNovoForm(f=>({...f,tipo:v}))} style={{ flex:1, padding:'8px', borderRadius:8, fontWeight:700, fontSize:13, cursor:'pointer', transition:'all 0.15s', border: novoForm.tipo===v ? `2px solid ${clr}` : '2px solid var(--fs-border)', background: novoForm.tipo===v ? `rgba(${v==='entrada'?'34,197,94':'239,68,68'},0.12)` : 'var(--fs-bg)', color: novoForm.tipo===v ? clr : 'var(--fs-text-3)' }}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Data */}
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Data *</div>
+                <input type="date" value={novoForm.data} onChange={e=>setNovoForm(f=>({...f,data:e.target.value}))}
+                  style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'8px 10px', fontSize:13, outline:'none', colorScheme:'dark', width:'100%' }} />
+              </div>
+              {/* Descrição */}
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Descrição *</div>
+                <input value={novoForm.descricao} onChange={e=>setNovoForm(f=>({...f,descricao:e.target.value}))}
+                  placeholder="Ex: Pagamento Fornecedor XYZ"
+                  style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'8px 10px', fontSize:13, outline:'none', width:'100%' }} />
+              </div>
+              {/* Valor */}
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Valor (R$) *</div>
+                <input value={novoForm.valor} onChange={e=>setNovoForm(f=>({...f,valor:e.target.value}))}
+                  placeholder="Ex: 1.500,00"
+                  style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'8px 10px', fontSize:13, outline:'none', width:'100%' }} />
+              </div>
+              {/* Categoria */}
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Categoria</div>
+                <input value={novoForm.categoria} onChange={e=>setNovoForm(f=>({...f,categoria:e.target.value}))}
+                  placeholder="Ex: Fornecedor, Pessoal, Banco..."
+                  style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'8px 10px', fontSize:13, outline:'none', width:'100%' }} />
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:8, marginTop:20, justifyContent:'flex-end' }}>
+              <button onClick={()=>{setNovoModal(false);setNovoForm({data:today,descricao:'',tipo:'saida',valor:'',categoria:''})}} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-2)', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
+              <button onClick={handleNovoLancamento} disabled={novoLoading} style={{ background: novoLoading?'rgba(59,130,246,0.5)':'#3b82f6', border:'none', color:'#fff', borderRadius:8, padding:'8px 20px', fontSize:13, fontWeight:700, cursor:novoLoading?'default':'pointer' }}>
+                {novoLoading ? 'Salvando...' : '✓ Inserir Lançamento'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modais */}
       {delItem  && <ConfirmModal item={delItem} onConfirm={handleDelete} onCancel={()=>setDelItem(null)} loading={delLoading} />}
       {bulkModal && (
@@ -324,7 +446,7 @@ export default function GestaoFluxoCaixaPage() {
           </span>
         </div>
         <div style={{ fontSize:12, color:'var(--fs-text-4)' }}>
-          {empNome || 'Consolidado'} · Visualize, filtre e exclua registros do fluxo de caixa
+          {empNome || 'Consolidado'} · Visualize, filtre, inclua e exclua registros do fluxo de caixa
         </div>
       </div>
 
@@ -360,6 +482,12 @@ export default function GestaoFluxoCaixaPage() {
             style={{ background:'transparent', border:'none', color:'var(--fs-text-2)', fontSize:12, outline:'none', flex:1 }} />
         </div>
 
+        {/* Botão novo lançamento */}
+        <button onClick={()=>setNovoModal(true)} style={{ display:'flex', alignItems:'center', gap:6, background:'#3b82f6', border:'none', borderRadius:8, padding:'7px 14px', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', marginLeft:'auto' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Lançamento
+        </button>
+
         {/* Botão excluir selecionados */}
         {selected.size > 0 && (
           <button onClick={()=>setBulkModal(true)}
@@ -371,18 +499,64 @@ export default function GestaoFluxoCaixaPage() {
       </div>
 
       {/* ── Totalizadores ─────────────────────────────────────────────────────── */}
-      <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap' }}>
+      <div style={{ display:'flex', gap:10, marginBottom:10, flexWrap:'wrap' }}>
         {[
-          { label:'Total de registros', value: String(total), color:'var(--fs-text-1)' },
-          { label:'Entradas (página)',  value: fC(totalEntradas), color:'#22c55e' },
-          { label:'Saídas (página)',    value: fC(totalSaidas),   color:'#ef4444' },
-          { label:'Saldo (página)',     value: fC(totalEntradas - totalSaidas), color: totalEntradas >= totalSaidas ? '#22c55e' : '#ef4444' },
+          { label:'Total de registros', value: String(total),                     color:'var(--fs-text-1)' },
+          { label:'Entradas (página)',  value: fC(totalEntradas),                  color:'#22c55e' },
+          { label:'Saídas (página)',    value: fC(totalSaidas),                    color:'#ef4444' },
+          { label:'Saldo (página)',     value: fC(totalEntradas - totalSaidas),    color: totalEntradas >= totalSaidas ? '#22c55e' : '#ef4444' },
         ].map(k => (
           <div key={k.label} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'10px 16px', flex:1, minWidth:140 }}>
             <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>{k.label}</div>
             <div style={{ fontSize:18, fontWeight:800, color:k.color }}>{k.value}</div>
           </div>
         ))}
+      </div>
+
+      {/* ── Saldo Corrente + Saldo Inicial ────────────────────────────────────── */}
+      <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap' }}>
+        {/* Saldo corrente real */}
+        <div style={{ background: saldoCorrente >= 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border:`1px solid ${saldoCorrente>=0?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)'}`, borderRadius:10, padding:'12px 18px', flex:2 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>
+            💰 Saldo Corrente (todas as movimentações)
+          </div>
+          <div style={{ display:'flex', alignItems:'baseline', gap:12 }}>
+            <div style={{ fontSize:24, fontWeight:900, color: saldoCorrente >= 0 ? '#22c55e' : '#ef4444' }}>
+              {fCFull(saldoCorrente)}
+            </div>
+            <div style={{ fontSize:11, color:'var(--fs-text-4)' }}>
+              Saldo inicial: {fC(saldoInicialDB)} + Entradas: {fC(totalGlobalE)} − Saídas: {fC(totalGlobalS)}
+            </div>
+          </div>
+        </div>
+
+        {/* Saldo inicial configurável */}
+        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 18px', flex:1, minWidth:220 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:6 }}>
+            🏦 Saldo Inicial
+          </div>
+          {editSaldo ? (
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <input
+                value={saldoInicial}
+                onChange={e=>setSaldoInicial(e.target.value)}
+                placeholder="Ex: 50000,00"
+                style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:7, color:'var(--fs-text-1)', padding:'6px 10px', fontSize:13, outline:'none', flex:1 }}
+                onKeyDown={e => e.key === 'Enter' && handleSaveSaldo()}
+                autoFocus
+              />
+              <button onClick={handleSaveSaldo} style={{ background:'#3b82f6', border:'none', color:'#fff', borderRadius:7, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>Salvar</button>
+              <button onClick={()=>setEditSaldo(false)} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:7, padding:'6px 10px', fontSize:12, cursor:'pointer' }}>✕</button>
+            </div>
+          ) : (
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)' }}>{fC(saldoInicialDB) || 'R$ 0'}</div>
+              <button onClick={()=>setEditSaldo(true)} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
+                ✏️ Editar
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Tabela ────────────────────────────────────────────────────────────── */}

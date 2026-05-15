@@ -135,7 +135,8 @@ export default function FluxoCaixaPage() {
   const [granular,     setGranular]     = useState('mensal') // mensal | trimestral | anual
   const [busca,        setBusca]        = useState('')
 
-  const [raw,          setRaw]          = useState([])    // todos os registros do período
+  const [raw,          setRaw]          = useState([])
+  const [vencidos,     setVencidos]     = useState({ e:0, s:0, aE:0, aS:0 })    // todos os registros do período
   const [rawPrev,      setRawPrev]      = useState([])    // período anterior (para % variação)
   const [lancRecentes, setLancRecentes] = useState([])    // lançamentos da tabela
 
@@ -189,6 +190,13 @@ export default function FluxoCaixaPage() {
       // Lançamentos recentes do fluxo_caixa — fonte correta após importação
       const lRecentes = [...(fc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,20)
       setLancRecentes(lRecentes)
+
+      // Vencidos e a vencer (baseado na data vs hoje)
+      const vencidosE  = (fcFuture||[]).filter(f => f.tipo==='entrada' && f.data < today).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
+      const vencidosS  = (fcFuture||[]).filter(f => f.tipo==='saida'   && f.data < today).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
+      const aVencerE   = (fcFuture||[]).filter(f => f.tipo==='entrada' && f.data >= today && f.data <= next30str).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
+      const aVencerS   = (fcFuture||[]).filter(f => f.tipo==='saida'   && f.data >= today && f.data <= next30str).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
+      setVencidos({ e: vencidosE, s: vencidosS, aE: aVencerE, aS: aVencerS })
 
     } catch(e) { console.error('FluxoCaixa:', e) }
     finally { setLoading(false) }
@@ -343,6 +351,40 @@ export default function FluxoCaixaPage() {
             <KCard label="Saldo do Período" value={fC(saldo)}        pct={pctD}    sparkData={sparkSald} positive={true} />
             <KCard label="Margem de Caixa" value={`${margem.toFixed(1)}%`} pct={pctM !== null ? pctM : null} sparkData={sparkM} positive={true} />
           </div>
+
+          {/* ── Cards Vencidos + A Vencer ─────────────────────────────────────── */}
+          {(vencidos.e > 0 || vencidos.s > 0 || vencidos.aE > 0 || vencidos.aS > 0) && (
+            <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
+              {vencidos.s > 0 && (
+                <div style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'#ef4444', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>⚠️ A Pagar Vencido</div>
+                  <div style={{ fontSize:22, fontWeight:900, color:'#ef4444' }}>{fC(vencidos.s)}</div>
+                  <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Saídas com data no passado</div>
+                </div>
+              )}
+              {vencidos.e > 0 && (
+                <div style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'#f59e0b', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>⚠️ A Receber Vencido</div>
+                  <div style={{ fontSize:22, fontWeight:900, color:'#f59e0b' }}>{fC(vencidos.e)}</div>
+                  <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Entradas com data no passado</div>
+                </div>
+              )}
+              {vencidos.aS > 0 && (
+                <div style={{ background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.2)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'#60a5fa', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>📅 A Pagar · 30 dias</div>
+                  <div style={{ fontSize:22, fontWeight:900, color:'#60a5fa' }}>{fC(vencidos.aS)}</div>
+                  <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Saídas nos próximos 30 dias</div>
+                </div>
+              )}
+              {vencidos.aE > 0 && (
+                <div style={{ background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'#22c55e', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>📅 A Receber · 30 dias</div>
+                  <div style={{ fontSize:22, fontWeight:900, color:'#22c55e' }}>{fC(vencidos.aE)}</div>
+                  <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Entradas nos próximos 30 dias</div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── Gráfico Evolução Mensal ────────────────────────────────────────── */}
           <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, padding:'22px 26px', marginBottom:20 }}>

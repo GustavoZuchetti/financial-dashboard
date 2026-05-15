@@ -149,7 +149,7 @@ export default function GestaoFluxoCaixaPage() {
   const [total,      setTotal]      = useState(0)
 
   // Filtros
-  const [startDate,  setStartDate]  = useState(`${curYear}-01-01`)
+  const [startDate,  setStartDate]  = useState(`${curYear - 2}-01-01`)
   const [endDate,    setEndDate]    = useState(today)
   const [tipoFiltro, setTipoFiltro] = useState('todos')
   const [busca,      setBusca]      = useState('')

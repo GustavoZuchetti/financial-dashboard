@@ -46,7 +46,10 @@ const navItems = [
   ]},
   { label: 'Ciclo Financeiro', href: '/dashboard/ciclo-financeiro', icon: 'ciclo' },
   { label: 'Plano de Contas',  href: '/dashboard/plano-contas',     icon: 'plano' },
-  { label: 'Importação',       href: '/dashboard/importacao',       icon: 'importacao' },
+  { label: 'Importação', href: '/dashboard/importacao', icon: 'importacao', children: [
+    { label: 'Importar Arquivo', href: '/dashboard/importacao' },
+    { label: 'Layouts',          href: '/dashboard/importacao/layout', adminOnly: true },
+  ]},
   { label: 'Configurações',    href: '/dashboard/configuracoes',    icon: 'config', children: [
     { label: 'Empresas',      href: '/dashboard/configuracoes' },
     { label: 'Perfil',        href: '/dashboard/configuracoes/perfil' },

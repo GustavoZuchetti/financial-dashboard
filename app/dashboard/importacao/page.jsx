@@ -91,11 +91,14 @@ function parseDateBR(s) {
 // Retorna data ISO apenas se o campo for uma data válida — senão null
 function safeDateBR(s) {
   const str = String(s || '').trim()
+  if (!str || str === '00/00/0000' || str.startsWith('00/')) return null
   const m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
   if (m) {
-    const iso = `${m[3]}-${m[2]}-${m[1]}`
-    const d = new Date(iso + 'T00:00:00')
-    return isNaN(d.getTime()) ? null : iso
+    const [, d, mo, y] = m
+    if (d === '00' || mo === '00' || y === '0000') return null
+    const iso = `${y}-${mo}-${d}`
+    const dt = new Date(iso + 'T00:00:00')
+    return isNaN(dt.getTime()) ? null : iso
   }
   if (str.match(/^\d{4}-\d{2}-\d{2}/)) return str.split('T')[0]
   return null // Não é uma data válida
@@ -444,6 +447,7 @@ export default function ImportacaoPage() {
           data:        ['Data','data'],
           competencia: ['Competência','Competencia','competência','competencia'],
           liquidacao:  ['Liquidação','Liquidacao','liquidação','liquidacao'],
+          vencimento:  ['Data de vencimento','Vencimento','vencimento','data_vencimento'],
           tipo_raw:    ['Tipo','tipo'],
           situacao:    ['Situação','Situacao','situacao'],
           empresa:     ['Empresa','empresa'],
@@ -479,9 +483,12 @@ export default function ImportacaoPage() {
                 : parseValueBR(col(row, 'valor') || 0)
             }
             if (modulo === 'dre') {
-              return parseValueBR(col(row, 'valor') || row['Valor Pago/Recebido'] || 0)
+              return parseValueBR(col(row, 'valor') || 0)
             } else {
-              return parseValueBR(col(row, 'valor_pago') || col(row, 'valor') || 0)
+              // FC: usar Valor Pago/Recebido se > 0, senão usar Valor (previsto)
+              const pago    = parseValueBR(col(row, 'valor_pago') || 0)
+              const previsto = parseValueBR(col(row, 'valor') || 0)
+              return pago > 0 ? pago : previsto
             }
           })(),
           data: (() => {
@@ -492,7 +499,12 @@ export default function ImportacaoPage() {
             if (modulo === 'dre') {
               return safeDateBR(col(row, 'competencia')) || safeDateBR(col(row, 'data')) || parseDateBR(col(row, 'data'))
             } else {
-              return safeDateBR(col(row, 'liquidacao')) || safeDateBR(col(row, 'data')) || parseDateBR(col(row, 'data'))
+              // FC: usar Liquidação (data real) → vencimento → data lançamento
+              const liq = safeDateBR(col(row, 'liquidacao'))
+              if (liq) return liq
+              const venc = safeDateBR(col(row, 'vencimento'))
+              if (venc) return venc
+              return safeDateBR(col(row, 'data')) || parseDateBR(col(row, 'data'))
             }
           })(),
           tipoCsv:     tipoLayout,

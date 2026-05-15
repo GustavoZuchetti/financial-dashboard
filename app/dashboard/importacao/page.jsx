@@ -889,26 +889,35 @@ export default function ImportacaoPage() {
                 </button>
               </>
             ) : confirmModal.smartReimport ? (
-              // Reimportação inteligente permitida
+              // Reimportação inteligente: oferecer substituição parcial OU total
               <>
-                <div style={{ background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:8, padding:'12px 14px', fontSize:13, color:'var(--fs-text-2)', marginBottom:4 }}>
+                <div style={{ background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:8, padding:'12px 14px', fontSize:13, color:'var(--fs-text-2)', marginBottom:8 }}>
                   <strong style={{ color:'#22c55e' }}>✅ Arquivo válido para atualização</strong>
-                  <div style={{ marginTop:6 }}>
-                    O histórico <strong>já realizado</strong> (até ontem) será <strong>preservado</strong>. Apenas os registros a partir de hoje em diante serão substituídos pelas novas previsões do arquivo.
-                  </div>
+                  <div style={{ marginTop:6 }}>Escolha como deseja importar os novos dados:</div>
                 </div>
+                {/* Opção 1: Atualização parcial — preserva histórico */}
                 <button
-                  onClick={() => executeImport({ ...confirmModal, replace: true })}
+                  onClick={() => executeImport({ ...confirmModal, replace: true, smartReimport: true })}
                   disabled={isImporting}
-                  style={{ background: isImporting ? 'var(--fs-surface-3)' : '#22c55e', color: isImporting ? 'var(--fs-text-4)' : '#fff', border:'none', borderRadius:9, padding:'12px', fontSize:14, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
+                  style={{ background: isImporting ? 'var(--fs-surface-3)' : 'rgba(34,197,94,0.15)', color: isImporting ? 'var(--fs-text-4)' : '#22c55e', border:'1px solid rgba(34,197,94,0.35)', borderRadius:9, padding:'12px', fontSize:13, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', textAlign:'left' }}
                 >
-                  {isImporting ? '⏳ Atualizando...' : '🔄 Atualizar — preservar histórico e substituir previsões futuras'}
+                  <div style={{ fontWeight:800, marginBottom:3 }}>🔄 Atualizar previsões (recomendado)</div>
+                  <div style={{ fontSize:12, opacity:0.8 }}>Preserva o histórico já realizado. Substitui apenas registros a partir de hoje.</div>
+                </button>
+                {/* Opção 2: Substituição total — apaga tudo e reimporta */}
+                <button
+                  onClick={() => executeImport({ ...confirmModal, replace: true, smartReimport: false })}
+                  disabled={isImporting}
+                  style={{ background: isImporting ? 'var(--fs-surface-3)' : 'rgba(239,68,68,0.1)', color: isImporting ? 'var(--fs-text-4)' : '#ef4444', border:'1px solid rgba(239,68,68,0.3)', borderRadius:9, padding:'12px', fontSize:13, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', textAlign:'left' }}
+                >
+                  <div style={{ fontWeight:800, marginBottom:3 }}>🗑️ Substituir tudo</div>
+                  <div style={{ fontSize:12, opacity:0.8 }}>Apaga todos os {confirmModal.count} registros existentes e reimporta o arquivo completo.</div>
                 </button>
                 <button
                   onClick={() => setConfirmModal(null)}
-                  style={{ background:'var(--fs-surface-2)', color:'var(--fs-text-1)', border:'1px solid var(--fs-border)', borderRadius:9, padding:'12px', fontSize:14, fontWeight:600, cursor:'pointer' }}
+                  style={{ background:'var(--fs-surface-2)', color:'var(--fs-text-1)', border:'1px solid var(--fs-border)', borderRadius:9, padding:'12px', fontSize:13, fontWeight:600, cursor:'pointer' }}
                 >
-                  Cancelar — manter os dados existentes
+                  Cancelar
                 </button>
               </>
             ) : (

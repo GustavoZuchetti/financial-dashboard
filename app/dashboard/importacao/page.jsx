@@ -33,16 +33,19 @@ function parseDataComFormato(val, formato = 'DD/MM/YYYY') {
 
 function parseCSV(text) {
   const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-  const sep   = (clean.split('\n')[0].match(/;/g) || []).length >
-                (clean.split('\n')[0].match(/,/g) || []).length ? ';' : ','
+  const firstLine = clean.split('\n')[0]
+  const sep = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ','
+  const expectedCols = firstLine.split(sep).length
 
-  // Juntar linhas dentro de aspas abertas (campos multi-linha do Bling)
+  // Juntar linhas dentro de aspas abertas (campos multi-linha do Bling/Excel)
   const rawLines = clean.split('\n')
   const joined   = []
   let buf = ''
   for (const line of rawLines) {
-    buf = buf ? buf + '\n' + line : line
-    if ((buf.match(/"/g) || []).length % 2 === 0) { joined.push(buf); buf = '' }
+    buf = buf ? buf + ' ' + line : line  // substituir quebra por espaço dentro do campo
+    const quoteCount = (buf.match(/"/g) || []).length
+    // Linha completa: aspas pares E número de separadores próximo ao esperado
+    if (quoteCount % 2 === 0) { joined.push(buf); buf = '' }
   }
   if (buf) joined.push(buf)
   if (joined.length < 2) return []
@@ -61,13 +64,15 @@ function parseCSV(text) {
   return joined.slice(1)
     .map(line => {
       const cells = parseRow(line)
-      const obj   = {}
+      // Ignorar linhas com número muito diferente de colunas (linhas corrompidas)
+      if (cells.length < Math.floor(expectedCols * 0.5)) return null
+      const obj = {}
       headers.forEach((h, i) => {
         obj[h] = (cells[i] || '').replace(/^"|"$/g, '').replace(/[\t\n\r]+/g, ' ').trim()
       })
       return obj
     })
-    .filter(row => Object.values(row).some(v => v !== ''))
+    .filter(row => row && Object.values(row).some(v => v !== ''))
 }
 
 function parseXLSX(buffer) {
@@ -746,9 +751,21 @@ export default function ImportacaoPage() {
   const buildFluxoPayload = () =>
     (dataFluxo || []).map(row => {
       const map = (mappingsFluxo || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
-      let tipo = map?.tipo_destino || (row.tipoCsv.includes('pagar') || row.tipoCsv.includes('saida') ? 'saida' : 'entrada')
+      // Classificar: 'Conta a pagar' / 'saida' / 'despesa' = saida
+      //             'Conta a receber' / 'entrada' / 'receita' = entrada
+      const tcLower = (row.tipoCsv || '').toLowerCase()
+      const isSaida = tcLower.includes('pagar') || tcLower.includes('saida') ||
+                      tcLower.includes('despesa') || tcLower.includes('custo') ||
+                      tcLower.includes('deducao') || tcLower.includes('dedução') ||
+                      tcLower.includes('saída')
+      const isEntradaTipo = tcLower.includes('receber') || tcLower.includes('entrada') ||
+                            tcLower.includes('receita') || tcLower.includes('crédito') ||
+                            tcLower.includes('credito')
+      let tipo = map?.tipo_destino ||
+                 (isSaida ? 'saida' : isEntradaTipo ? 'entrada' :
+                 row.tipoCsv ? 'saida' : 'entrada') // default saida quando tipo desconhecido
       tipo = tipo.replace('fluxo_', '')
-      if (!['entrada','saida'].includes(tipo)) tipo = 'entrada'
+      if (!['entrada','saida'].includes(tipo)) tipo = tipo.includes('receita') ? 'entrada' : 'saida'
       return { empresa_id: empresaId, data: row.data, descricao: row.nome || row.__desc || '', valor: row.valor, tipo, categoria: row.__desc || '' }
     }).filter(r => r.valor > 0)
 

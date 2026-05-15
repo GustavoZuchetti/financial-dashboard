@@ -51,7 +51,7 @@ const LS = { fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransfor
 const Card = ({ children, style }) => <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px', ...style }}>{children}</div>
 const Step = ({ n }) => <span style={{ background:'rgba(59,130,246,0.15)', color:'#60a5fa', width:22, height:22, borderRadius:'50%', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, marginRight:8, flexShrink:0 }}>{n}</span>
 
-const EMPTY_FORM = { nome:'', descricao:'', separador:';', formato_data:'DD/MM/YYYY', linha_header:1, colunas:{}, tipo_regras:[] }
+const EMPTY_FORM = { nome:'', descricao:'', separador:';', formato_data:'DD/MM/YYYY', linha_header:1, colunas:{}, tipo_regras:[], is_default:false }
 
 export default function LayoutImportacao() {
   const { isSuperAdmin, profile } = useOrg()
@@ -116,7 +116,9 @@ export default function LayoutImportacao() {
     const missing = CAMPOS_SISTEMA.filter(c=>c.required && !form.colunas[c.key])
     if (missing.length) { setMsg({type:'err',text:`Mapeie os campos obrigatórios: ${missing.map(m=>m.label).join(', ')}`}); return }
     setSaving(true)
-    const payload = { empresa_id:empresaId, nome:form.nome.trim(), descricao:form.descricao.trim(), separador:form.separador, formato_data:form.formato_data, linha_header:form.linha_header, colunas:form.colunas, tipo_regras:form.tipo_regras, csv_headers_amostra:csvHeaders, updated_at:new Date().toISOString() }
+    const payload = { empresa_id:empresaId, nome:form.nome.trim(), descricao:form.descricao.trim(), separador:form.separador, formato_data:form.formato_data, linha_header:form.linha_header, colunas:form.colunas, tipo_regras:form.tipo_regras, csv_headers_amostra:csvHeaders, is_default:form.is_default, updated_at:new Date().toISOString() }
+    // Se definido como padrão, remove o padrão dos demais
+    if (form.is_default) { await supabase.from('import_layouts').update({is_default:false}).eq('empresa_id',empresaId).neq('id', selectedId||'00000000-0000-0000-0000-000000000000') }
     const { error } = mode === 'new'
       ? await supabase.from('import_layouts').insert({...payload, created_at:new Date().toISOString()})
       : await supabase.from('import_layouts').update(payload).eq('id', selectedId)
@@ -208,7 +210,17 @@ export default function LayoutImportacao() {
                     </div>
                   </div>
                   <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'flex-end'}}>
-                    {!lay.is_default&&<button onClick={()=>setDefault(lay.id)} style={{background:'transparent',border:'1px solid var(--fs-border)',color:'var(--fs-text-3)',borderRadius:7,padding:'6px 12px',fontSize:11,fontWeight:600,cursor:'pointer'}}>Definir Padrão</button>}
+                    <button onClick={()=>lay.is_default ? null : setDefault(lay.id)} style={{
+                      background: lay.is_default ? 'rgba(59,130,246,0.15)' : 'transparent',
+                      border: lay.is_default ? '1px solid rgba(59,130,246,0.4)' : '1px solid var(--fs-border)',
+                      color: lay.is_default ? '#60a5fa' : 'var(--fs-text-3)',
+                      borderRadius:7, padding:'6px 12px', fontSize:11, fontWeight:700,
+                      cursor: lay.is_default ? 'default' : 'pointer',
+                      display:'flex', alignItems:'center', gap:5,
+                    }}>
+                      <span style={{ width:8,height:8,borderRadius:'50%', background: lay.is_default ? '#3b82f6' : 'var(--fs-border)', display:'inline-block', flexShrink:0 }} />
+                      {lay.is_default ? 'Padrão ativo' : 'Definir Padrão'}
+                    </button>
                     <button onClick={()=>openEdit(lay)} style={{background:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.25)',color:'#60a5fa',borderRadius:7,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer'}}>Editar</button>
                     <button onClick={()=>deleteLayout(lay.id)} style={{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.2)',color:'#ef4444',borderRadius:7,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer'}}>Excluir</button>
                   </div>
@@ -232,6 +244,21 @@ export default function LayoutImportacao() {
               <div>
                 <label style={LS}>Descrição</label>
                 <input value={form.descricao} onChange={e=>setForm(f=>({...f,descricao:e.target.value}))} placeholder="Quando usar este layout..." style={IS}/>
+              </div>
+            </div>
+            {/* Toggle: definir como padrão */}
+            <div style={{ marginTop:14, display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'var(--fs-bg)', borderRadius:8, border:'1px solid var(--fs-border)', cursor:'pointer' }}
+              onClick={() => setForm(f=>({...f, is_default:!f.is_default}))}>
+              <div style={{ width:36, height:20, borderRadius:10, background: form.is_default ? '#3b82f6' : 'var(--fs-border)', position:'relative', transition:'background 0.2s', flexShrink:0 }}>
+                <div style={{ width:16, height:16, borderRadius:'50%', background:'#fff', position:'absolute', top:2, left: form.is_default ? 18 : 2, transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)' }} />
+              </div>
+              <div>
+                <div style={{ fontSize:13, fontWeight:700, color: form.is_default ? '#60a5fa' : 'var(--fs-text-2)' }}>
+                  {form.is_default ? '✓ Definido como layout padrão' : 'Definir como layout padrão'}
+                </div>
+                <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:1 }}>
+                  O layout padrão é aplicado automaticamente ao importar arquivos desta empresa
+                </div>
               </div>
             </div>
           </Card>

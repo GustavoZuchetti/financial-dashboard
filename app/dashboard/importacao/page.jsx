@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '@/lib/supabase'
+import { useOrg } from '@/lib/org-context'
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
 // ─── Parser de data com formato configurável (para layouts personalizados) ───
@@ -350,6 +351,9 @@ export default function ImportacaoPage() {
   const fileRefDre   = useRef(null)
   const fileRefFluxo = useRef(null)
 
+  const router   = useRouter()
+  const { isSuperAdmin, profile } = useOrg()
+  const isAdmin  = isSuperAdmin || profile?.role === 'org_admin'
   const showToast = useCallback((msg, type = 'info') => setToast({ msg, type }), [])
 
   const loadMappings = useCallback(async (id) => {
@@ -922,11 +926,24 @@ export default function ImportacaoPage() {
       )}
 
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 }}>Importação de Dados</h1>
-        <p style={{ color: 'var(--fs-text-4)', fontSize: 13, margin: '4px 0 0' }}>
-          Importe arquivos CSV ou XLSX do ERP Bling para o sistema financeiro
-        </p>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24, flexWrap:'wrap', gap:12 }}>
+        <div>
+          <h1 style={{ fontSize:24, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>Importação de Dados</h1>
+          <p style={{ color:'var(--fs-text-4)', fontSize:13, margin:'4px 0 0' }}>
+            Importe arquivos CSV ou XLSX para o sistema financeiro
+          </p>
+        </div>
+        {isAdmin && (
+          <button
+            onClick={() => router.push('/dashboard/importacao/layout')}
+            style={{ display:'flex', alignItems:'center', gap:7, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'9px 16px', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor:'pointer', transition:'all 0.15s', whiteSpace:'nowrap' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor='#3b82f6'; e.currentTarget.style.color='#60a5fa' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor='var(--fs-border)'; e.currentTarget.style.color='var(--fs-text-2)' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+            {activeLayout ? `Layout: ${activeLayout.nome.substring(0,20)}${activeLayout.nome.length>20?'…':''}` : '⚙️ Configurar Layout'}
+          </button>
+        )}
       </div>
 
       {/* Empresa */}

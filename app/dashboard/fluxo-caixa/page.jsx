@@ -181,6 +181,7 @@ export default function FluxoCaixaPage() {
       ] = await Promise.all([
         buildQ('fluxo_caixa',  'id,tipo,valor,data,descricao,categoria', startDate, endDate),
         buildQ('fluxo_caixa',  'tipo,valor',                             prevStartStr, prevEndStr),
+      ])
 
       setRaw(fc || [])
       setRawPrev(fcPrev || [])

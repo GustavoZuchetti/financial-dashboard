@@ -4,6 +4,31 @@ import * as XLSX from 'xlsx'
 import { supabase } from '@/lib/supabase'
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
+// ─── Parser de data com formato configurável (para layouts personalizados) ───
+function parseDataComFormato(val, formato = 'DD/MM/YYYY') {
+  if (!val || val === '00/00/0000') return null
+  const v = String(val).trim()
+  let d, m, y
+  if (formato === 'DD/MM/YYYY' || formato === 'DD/MM/YY') {
+    const parts = v.split(/[\/\-]/)
+    d = parseInt(parts[0]); m = parseInt(parts[1]); y = parseInt(parts[2])
+    if (formato === 'DD/MM/YY' && y < 100) y += 2000
+  } else if (formato === 'MM/DD/YYYY') {
+    const parts = v.split(/[\/\-]/)
+    m = parseInt(parts[0]); d = parseInt(parts[1]); y = parseInt(parts[2])
+  } else if (formato === 'YYYY-MM-DD' || formato === 'DD-MM-YYYY') {
+    const parts = v.split(/[\/\-]/)
+    if (formato === 'YYYY-MM-DD') { y = parseInt(parts[0]); m = parseInt(parts[1]); d = parseInt(parts[2]) }
+    else { d = parseInt(parts[0]); m = parseInt(parts[1]); y = parseInt(parts[2]) }
+  } else {
+    // fallback genérico
+    return safeDateBR(v)
+  }
+  if (!d || !m || !y || isNaN(d) || isNaN(m) || isNaN(y)) return null
+  if (d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > 2100) return null
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+}
+
 function parseCSV(text) {
   const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
   const sep   = (clean.split('\n')[0].match(/;/g) || []).length >
@@ -321,6 +346,7 @@ export default function ImportacaoPage() {
   const [limpandoDados,  setLimpandoDados]  = useState(false)
   const [confirmLimpar,  setConfirmLimpar]  = useState(false)
   const [confirmModal,   setConfirmModal]   = useState(null) // { modulo, periodo, count, onConfirm }
+  const [activeLayout,   setActiveLayout]   = useState(null)  // layout personalizado ativo
   const fileRefDre   = useRef(null)
   const fileRefFluxo = useRef(null)
 
@@ -328,12 +354,17 @@ export default function ImportacaoPage() {
 
   const loadMappings = useCallback(async (id) => {
     if (!id) return
-    const { data } = await supabase.from('categoria_mappings').select('id,categoria_origem,tipo_destino,conta_id,empresa_id').eq('empresa_id', id)
+    const [{ data }, { data: layouts }] = await Promise.all([
+      supabase.from('categoria_mappings').select('id,categoria_origem,tipo_destino,conta_id,empresa_id').eq('empresa_id', id),
+      supabase.from('import_layouts').select('*').eq('empresa_id', id).eq('is_default', true).limit(1),
+    ])
     const all = data || []
     const DRE_TIPOS = ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','imposto_lucro','investimento','ignorar']
     const FC_TIPOS  = ['entrada','saida','fluxo_entrada','fluxo_saida']
     setMappingsDre(all.filter(m => DRE_TIPOS.includes(m.tipo_destino)))
     setMappingsFluxo(all.filter(m => FC_TIPOS.includes(m.tipo_destino)))
+    // Ativa o layout padrão se existir
+    setActiveLayout(layouts?.[0] || null)
   }, [])
 
   useEffect(() => {
@@ -375,37 +406,84 @@ export default function ImportacaoPage() {
         : parseXLSX(buffer)
       if (!rows.length) { showToast('Arquivo vazio ou inválido.', 'error'); return }
 
-      const processed = rows.map((row, i) => ({
-        __id:    i,
-        __desc:  (row['Descrição'] || row['descricao'] || row['Categoria'] || row['categoria'] || '').trim(),
-        nome:    (row['Nome'] || row['nome'] || '').replace(/[\t\n\r]+/g, ' ').trim(),
-        valor: (() => {
-          if (modulo === 'dre') {
-            // DRE (competência): usa Valor FATURADO (col D) — inclui não recebidos
-            return parseValueBR(row['Valor'] || row['valor'] || row['Valor Pago/Recebido'] || 0)
-          } else {
-            // FC (caixa): usa apenas Valor PAGO/RECEBIDO (col E) — só o que entrou no caixa
-            return parseValueBR(row['Valor Pago/Recebido'] || row['Valor Pago'] || 0)
-          }
-        })(),
-        data: (() => {
-          if (modulo === 'dre') {
-            // DRE: regime de competência — usar campo Competência, fallback Data
-            return safeDateBR(row['Competência']) || safeDateBR(row['Competencia'])
-                || safeDateBR(row['competência']) || safeDateBR(row['competencia'])
-                || safeDateBR(row['Data'])         || parseDateBR(row['data'] || '')
-          } else {
-            // Fluxo de Caixa: regime de caixa — usar Liquidação SE for data válida, fallback Data
-            return safeDateBR(row['Liquidação'])   || safeDateBR(row['Liquidacao'])
-                || safeDateBR(row['liquidação'])   || safeDateBR(row['liquidacao'])
-                || safeDateBR(row['Data'])         || parseDateBR(row['data'] || '')
-          }
-        })(),
-        tipoCsv: (row['Tipo'] || '').toLowerCase(),
-        original: row,
-      })).filter(r => r.__desc || r.valor > 0)
+      // ── Resolver campos usando layout personalizado (se houver) ou fallbacks padrão ──
+      const col = (campo) => {
+        // Se há layout ativo, usa o mapeamento configurado pelo admin
+        if (activeLayout?.colunas?.[campo]) return row[activeLayout.colunas[campo]] || ''
+        // Fallbacks hardcoded para retrocompatibilidade
+        const fallbacks = {
+          descricao:   ['Descrição','descricao','Categoria','categoria'],
+          nome:        ['Nome','nome'],
+          valor:       ['Valor','valor'],
+          valor_pago:  ['Valor Pago/Recebido','Valor Pago','valor_pago'],
+          data:        ['Data','data'],
+          competencia: ['Competência','Competencia','competência','competencia'],
+          liquidacao:  ['Liquidação','Liquidacao','liquidação','liquidacao'],
+          tipo_raw:    ['Tipo','tipo'],
+          situacao:    ['Situação','Situacao','situacao'],
+          empresa:     ['Empresa','empresa'],
+          categoria:   ['Grupo Caixa','grupo','Categoria','categoria'],
+        }
+        for (const f of (fallbacks[campo] || [])) { if (row[f] !== undefined && row[f] !== '') return row[f] }
+        return ''
+      }
 
-      // Debug: verificar qual campo de data foi selecionado
+      // ── Aplicar regras de tipo do layout (se existirem) ──
+      const resolverTipo = (tipoCsv) => {
+        if (activeLayout?.tipo_regras?.length) {
+          const regra = activeLayout.tipo_regras.find(r =>
+            r.valor_csv?.toLowerCase().trim() === tipoCsv?.toLowerCase().trim()
+          )
+          if (regra && regra.tipo_destino !== 'ignorar') return regra.tipo_destino
+          if (regra?.tipo_destino === 'ignorar') return '__ignorar__'
+        }
+        return tipoCsv // sem layout: retorna raw para o mapeamento por categoria
+      }
+
+      const processed = rows.map((row, i) => {
+        const tipoRaw    = col('tipo_raw')
+        const tipoLayout = resolverTipo(tipoRaw)
+        return {
+          __id:    i,
+          __desc:  (col('descricao') || col('categoria')).trim(),
+          nome:    col('nome').replace(/[	
+
+]+/g, ' ').trim(),
+          valor: (() => {
+            if (activeLayout) {
+              // Layout configurado: usa campo valor_pago para FC, valor para DRE
+              return modulo === 'fluxo'
+                ? parseValueBR(col('valor_pago') || col('valor') || 0)
+                : parseValueBR(col('valor') || 0)
+            }
+            if (modulo === 'dre') {
+              return parseValueBR(col('valor') || row['Valor Pago/Recebido'] || 0)
+            } else {
+              return parseValueBR(col('valor_pago') || col('valor') || 0)
+            }
+          })(),
+          data: (() => {
+            if (activeLayout) {
+              // Layout: usa campo data configurado com formato definido
+              const rawData = col('data') || col(modulo === 'dre' ? 'competencia' : 'liquidacao')
+              return parseDataComFormato(rawData, activeLayout.formato_data || 'DD/MM/YYYY')
+            }
+            if (modulo === 'dre') {
+              return safeDateBR(col('competencia')) || safeDateBR(col('data')) || parseDateBR(col('data'))
+            } else {
+              return safeDateBR(col('liquidacao')) || safeDateBR(col('data')) || parseDateBR(col('data'))
+            }
+          })(),
+          tipoCsv:     tipoLayout,
+          tipoResolvido: tipoLayout !== tipoRaw, // indica que foi resolvido pelo layout
+          empresa_csv: col('empresa'),           // empresa da coluna (multi-entidade)
+          categoria:   col('categoria'),
+          situacao:    col('situacao'),
+          original: row,
+        }
+      }).filter(r => (r.__desc || r.valor > 0) && r.tipoCsv !== '__ignorar__')
+
+      // Debug: verificar campos processados
       const sampleRows = processed.filter(r => r.valor > 0).slice(0, 5)
       console.log(`[importação ${modulo}] ${processed.length} registros. Campo de data usado:`,
         sampleRows.map(r => ({ nome: r.nome.substring(0,20), data: r.data }))
@@ -810,6 +888,30 @@ export default function ImportacaoPage() {
   return (
     <div style={{ color: 'var(--fs-text-1)', width: '100%' }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* Banner: layout personalizado ativo */}
+      {activeLayout && (
+        <div style={{ background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.2)', borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <span style={{ fontSize:16 }}>⚙️</span>
+            <div>
+              <span style={{ fontSize:13, fontWeight:700, color:'#60a5fa' }}>Layout ativo: {activeLayout.nome}</span>
+              {activeLayout.descricao && <span style={{ fontSize:11, color:'var(--fs-text-4)', marginLeft:8 }}>{activeLayout.descricao}</span>}
+            </div>
+          </div>
+          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+            <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>
+              Sep: <strong style={{ color:'var(--fs-text-3)' }}>{activeLayout.separador === '\t' ? 'TAB' : activeLayout.separador}</strong>
+              {' · '}Data: <strong style={{ color:'var(--fs-text-3)' }}>{activeLayout.formato_data}</strong>
+              {' · '}{Object.keys(activeLayout.colunas || {}).length} colunas mapeadas
+              {' · '}{(activeLayout.tipo_regras || []).length} regras de tipo
+            </span>
+            <button onClick={() => setActiveLayout(null)} style={{ background:'transparent', border:'1px solid rgba(59,130,246,0.3)', color:'#60a5fa', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
+              Usar padrão
+            </button>
+          </div>
+        </div>
+      )}
       <ConfirmReplaceModal />
       {editingRow && (
         <MappingModal

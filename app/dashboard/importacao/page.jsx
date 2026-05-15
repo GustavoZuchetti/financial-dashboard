@@ -712,14 +712,14 @@ export default function ImportacaoPage() {
         }
       }
 
-      const label = modulo === 'dre' ? 'lançamentos no DRE' : 'registros no Fluxo de Caixa'
-      const extra = modulo === 'fluxo' ? ' · Ciclo Financeiro atualizado.' : ''
-      // Mostrar distribuição por mês no sucesso
+      const modLabel = modulo === 'dre' ? 'DRE' : 'Fluxo de Caixa'
+      const extra    = modulo === 'fluxo' ? ' · Ciclo Financeiro atualizado.' : ''
+      // Log interno da distribuição por mês (não exibir na mensagem)
       const dist = {}
       toInsert.forEach(r => { const m = r.data?.substring(0,7); if(m) dist[m] = (dist[m]||0)+1 })
-      const distStr = Object.entries(dist).sort().map(([m,n])=>`${m}:${n}`).join(' ')
       console.log(`✓ Import concluído [${tabela}]:`, dist)
-      showToast(`✓ ${toInsert.length} ${label} importados! (${distStr})${extra}`, 'success')
+      const nMeses = Object.keys(dist).length
+      showToast(`✓ ${toInsert.length} lançamentos importados para o ${modLabel}!${nMeses > 0 ? ` · ${nMeses} ${nMeses === 1 ? 'mês' : 'meses'} cobertos.` : ''}${extra}`, 'success')
       if (modulo === 'dre') setDataDre([])
       else                  setDataFluxo([])
       setConfirmModal(null)

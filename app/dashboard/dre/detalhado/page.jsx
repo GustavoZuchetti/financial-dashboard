@@ -28,7 +28,7 @@ export default function DREDetalhado() {
       const { data: pc } = await supabase.from('plano_contas').select('id,codigo,nome,tipo')
       setContas(pc || [])
 
-      let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,conta_id,empresa_id').gte('data', startDate).lte('data', endDate)
+      let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,conta_id,empresa_id').range(0, 9999).gte('data', startDate).lte('data', endDate)
       if (isConsol) {
         const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
         if (ue?.length) q = q.in('empresa_id', ue.map(e => e.id))

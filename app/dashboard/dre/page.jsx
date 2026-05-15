@@ -225,7 +225,7 @@ export default function DREGeral() {
   const empIdsRef = useRef(null)
 
   const fetchPeriod = useCallback(async (s, e, consol, empId) => {
-    let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,conta_id,empresa_id').gte('data',s).lte('data',e)
+    let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,conta_id,empresa_id').range(0, 9999).gte('data',s).lte('data',e)
     if (consol) {
       if (!empIdsRef.current) {
         const { data: { session } } = await supabase.auth.getSession()

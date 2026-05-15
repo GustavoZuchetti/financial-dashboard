@@ -31,7 +31,7 @@ export default function DREAnalise() {
     if (!empresaId) return
     setLoading(true)
     try {
-      let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria').gte('data', debouncedStart).lte('data', debouncedEnd)
+      let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria').range(0, 9999).gte('data', debouncedStart).lte('data', debouncedEnd)
       if (isConsol) {
         const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
         if (ue?.length) q = q.in('empresa_id', ue.map(e => e.id))

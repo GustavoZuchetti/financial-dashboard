@@ -61,7 +61,7 @@ export default function FluxoComparativo() {
     if (!empIds.length) return []
     let q = supabase.from('fluxo_caixa').select('tipo,valor,data').gte('data', start).lte('data', end)
     q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
-    const { data } = await q
+    const { data } = await q.range(0, 9999)
     return data || []
   }, [empresaId, isConsol])
 

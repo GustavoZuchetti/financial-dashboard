@@ -72,7 +72,7 @@ export default function FluxoProjecao() {
         .gte('data', baseStart.toISOString().split('T')[0])
         .lte('data', baseEnd.toISOString().split('T')[0])
       q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
-      const { data: hist = [] } = await q
+      const { data: hist = [] } = await q.range(0, 9999)
 
       // Agrupar por mês
       const byMonth = {}

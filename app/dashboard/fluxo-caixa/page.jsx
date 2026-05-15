@@ -176,22 +176,38 @@ export default function FluxoCaixaPage() {
         return isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
       }
 
-      const [
-        { data: fc     = [] },
-        { data: fcPrev = [] },
-      ] = await Promise.all([
-        buildQ('fluxo_caixa',  'id,tipo,valor,data,descricao,categoria', startDate, endDate),
-        buildQ('fluxo_caixa',  'tipo,valor',                             prevStartStr, prevEndStr),
+      // fetchAll: paginação completa — Supabase limita 1000 por request
+      const fetchAll = async (cols, gte, lte) => {
+        let all = [], pg = 0
+        while (true) {
+          let q = supabase.from('fluxo_caixa').select(cols).range(pg*1000, (pg+1)*1000-1)
+          q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
+          if (gte) q = q.gte('data', gte)
+          if (lte) q = q.lte('data', lte)
+          const { data: batch = [] } = await q
+          if (!batch || batch.length === 0) break
+          all = all.concat(batch)
+          if (batch.length < 1000) break
+          pg++
+        }
+        return all
+      }
+
+      const [fc, fcPrev, fcAll] = await Promise.all([
+        fetchAll('id,tipo,valor,data,descricao,categoria', startDate, endDate),
+        fetchAll('tipo,valor', prevStartStr, prevEndStr),
+        fetchAll('tipo,valor,data', '2020-01-01', null),
       ])
 
       setRaw(fc || [])
       setRawPrev(fcPrev || [])
 
-      // Lançamentos recentes do fluxo_caixa — fonte correta após importação
+      // Lançamentos recentes
       const lRecentes = [...(fc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,20)
       setLancRecentes(lRecentes)
 
-      // Vencidos e a vencer (baseado na data vs hoje)
+      // Vencidos e a vencer — usa fcAll (todos os registros)
+      const fcFuture = fcAll
       const vencidosE  = (fcFuture||[]).filter(f => f.tipo==='entrada' && f.data < today).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
       const vencidosS  = (fcFuture||[]).filter(f => f.tipo==='saida'   && f.data < today).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
       const aVencerE   = (fcFuture||[]).filter(f => f.tipo==='entrada' && f.data >= today && f.data <= next30str).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)

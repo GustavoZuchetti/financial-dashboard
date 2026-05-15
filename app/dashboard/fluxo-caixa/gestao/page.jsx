@@ -223,12 +223,21 @@ export default function GestaoFluxoCaixaPage() {
       setTotal(count || 0)
       setSelected(new Set())
 
-      // Totais globais (sem filtro de data/tipo — saldo corrente real)
-      let qGlobal = supabase.from('fluxo_caixa').select('tipo,valor')
-      qGlobal = isConsol ? qGlobal.in('empresa_id', empIds) : qGlobal.eq('empresa_id', empIds[0])
-      const { data: global = [] } = await qGlobal
-      const gEntradas = (global||[]).filter(r=>r.tipo==='entrada').reduce((a,c)=>a+Number(c.valor),0)
-      const gSaidas   = (global||[]).filter(r=>r.tipo==='saida').reduce((a,c)=>a+Number(c.valor),0)
+      // Totais globais — paginação completa para passar do limite de 1000 do Supabase
+      let gEntradas = 0, gSaidas = 0, gPage = 0, gDone = false
+      while (!gDone) {
+        let qGlobal = supabase.from('fluxo_caixa').select('tipo,valor')
+          .range(gPage * 1000, (gPage + 1) * 1000 - 1)
+        qGlobal = isConsol ? qGlobal.in('empresa_id', empIds) : qGlobal.eq('empresa_id', empIds[0])
+        const { data: gBatch = [] } = await qGlobal
+        if (!gBatch || gBatch.length === 0) break
+        gBatch.forEach(r => {
+          if (r.tipo === 'entrada') gEntradas += Number(r.valor)
+          else gSaidas += Number(r.valor)
+        })
+        if (gBatch.length < 1000) gDone = true
+        gPage++
+      }
       setTotalGlobalE(gEntradas)
       setTotalGlobalS(gSaidas)
 

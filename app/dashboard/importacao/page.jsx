@@ -184,7 +184,8 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
               { label: 'Pendentes', val: pendentes.length, rgb: '245,158,11' },
             ]
             : [
-              { label: 'Total', val: uniqueRows.length, rgb: '59,130,246' },
+              { label: 'Total',      val: data.length,      rgb: '59,130,246' },
+              { label: 'Categorias', val: uniqueRows.length, rgb: '16,185,129' },
             ]
           ).map(k => (
             <div key={k.label} style={{ background: `rgba(${k.rgb},0.1)`, border: `1px solid rgba(${k.rgb},0.2)`, borderRadius: 8, padding: '7px 14px', textAlign: 'center' }}>

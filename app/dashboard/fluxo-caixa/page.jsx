@@ -130,7 +130,7 @@ export default function FluxoCaixaPage() {
   const [empresaId,    setEmpresaId]    = useState(null)
   const [isConsol,     setIsConsol]     = useState(false)
   const [empNome,      setEmpNome]      = useState('')
-  const [startDate,    setStartDate]    = useState(`${curYear}-01-01`)
+  const [startDate,    setStartDate]    = useState(`${curYear - 2}-01-01`)
   const [endDate,      setEndDate]      = useState(today)
   const [granular,     setGranular]     = useState('mensal') // mensal | trimestral | anual
   const [busca,        setBusca]        = useState('')
@@ -178,18 +178,15 @@ export default function FluxoCaixaPage() {
       const [
         { data: fc     = [] },
         { data: fcPrev = [] },
-        { data: lanc   = [] },
       ] = await Promise.all([
         buildQ('fluxo_caixa',  'id,tipo,valor,data,descricao,categoria', startDate, endDate),
         buildQ('fluxo_caixa',  'tipo,valor',                             prevStartStr, prevEndStr),
-        buildQ('lancamentos',  'id,tipo,valor,data,descricao,categoria,conta_id', startDate, endDate),
-      ])
 
       setRaw(fc || [])
       setRawPrev(fcPrev || [])
 
-      // Lançamentos recentes mesclados com fluxo_caixa (usa lançamentos como fonte primária)
-      const lRecentes = [...(lanc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,20)
+      // Lançamentos recentes do fluxo_caixa — fonte correta após importação
+      const lRecentes = [...(fc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,20)
       setLancRecentes(lRecentes)
 
     } catch(e) { console.error('FluxoCaixa:', e) }

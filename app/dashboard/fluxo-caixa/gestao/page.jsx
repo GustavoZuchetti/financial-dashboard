@@ -349,6 +349,32 @@ export default function GestaoFluxoCaixaPage() {
   // Saldo corrente = saldo inicial + todas entradas - todas saídas (sem filtro de período)
   const saldoCorrente = saldoInicialDB + totalGlobalE - totalGlobalS
 
+  // ─── Saldo acumulado dia a dia (extrato bancário) ───────────────────────────
+  const extratoComSaldo = (() => {
+    // Ordenar todos os filtrados por data ASC para calcular saldo acumulado
+    const ordenados = [...filtrados].sort((a,b) => a.data > b.data ? 1 : a.data < b.data ? -1 : 0)
+    
+    // Agrupar por dia
+    const porDia = {}
+    ordenados.forEach(r => {
+      if (!porDia[r.data]) porDia[r.data] = []
+      porDia[r.data].push(r)
+    })
+
+    // Calcular saldo acumulado partindo do saldo inicial
+    let saldoAcum = saldoInicialDB
+    const resultado = []
+    
+    Object.keys(porDia).sort().forEach(data => {
+      const lancamentos = porDia[data]
+      lancamentos.forEach(r => {
+        saldoAcum += r.tipo === 'entrada' ? Number(r.valor) : -Number(r.valor)
+      })
+      resultado.push({ data, lancamentos, saldoDia: saldoAcum })
+    })
+    return resultado
+  })()
+
   // ─── Labels do período selecionado ──────────────────────────────────────────
   const periodoLabel = (() => {
     const s = startDate.split('-')
@@ -568,85 +594,103 @@ export default function GestaoFluxoCaixaPage() {
         </div>
       </div>
 
-      {/* ── Tabela ────────────────────────────────────────────────────────────── */}
+      {/* ── Extrato bancário ──────────────────────────────────────────────────── */}
       <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, overflow:'hidden' }}>
 
         {/* Cabeçalho */}
-        <div style={{ display:'grid', gridTemplateColumns:'40px 90px 1fr 140px 100px 110px 48px', gap:8, padding:'12px 16px', borderBottom:'1px solid var(--fs-border)', background:'var(--fs-bg)' }}>
-          <div style={{ display:'flex', alignItems:'center' }}>
-            <input type="checkbox"
-              checked={registros.length > 0 && selected.size === registros.length}
-              onChange={toggleAll}
-              style={{ cursor:'pointer', accentColor:'#3b82f6', width:14, height:14 }} />
-          </div>
-          {['Data','Descrição','Categoria','Tipo','Valor',''].map(h=>(
-            <div key={h} style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', display:'flex', alignItems:'center' }}>{h}</div>
+        <div style={{ display:'grid', gridTemplateColumns:'40px 1fr 150px 100px 120px 130px 48px', gap:8, padding:'11px 16px', borderBottom:'2px solid var(--fs-border)', background:'var(--fs-bg)' }}>
+          <div><input type="checkbox" checked={registros.length > 0 && selected.size === registros.length} onChange={toggleAll} style={{ cursor:'pointer', accentColor:'#3b82f6', width:14, height:14 }} /></div>
+          {['Descrição','Categoria','Tipo','Valor','Saldo do Dia',''].map(h=>(
+            <div key={h} style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', display:'flex', alignItems:'center', justifyContent: h==='Valor'||h==='Saldo do Dia' ? 'flex-end' : 'flex-start' }}>{h}</div>
           ))}
         </div>
 
-        {/* Linhas */}
+        {/* Corpo */}
         {loading ? (
           <div style={{ textAlign:'center', padding:60, color:'var(--fs-text-4)', fontSize:13 }}>Carregando...</div>
-        ) : filtrados.length === 0 ? (
+        ) : extratoComSaldo.length === 0 ? (
           <div style={{ textAlign:'center', padding:60, color:'var(--fs-text-4)', fontSize:13 }}>
             {busca ? 'Nenhum resultado para a busca.' : 'Sem registros no período selecionado.'}
           </div>
-        ) : filtrados.map((r, i) => {
-          const isEntrada = r.tipo === 'entrada'
-          const isSel     = selected.has(r.id)
-          return (
-            <div key={r.id}
-              style={{ display:'grid', gridTemplateColumns:'40px 90px 1fr 140px 100px 110px 48px', gap:8, padding:'11px 16px',
-                borderBottom: i < filtrados.length-1 ? '1px solid var(--fs-border)' : 'none',
-                background: isSel ? 'rgba(59,130,246,0.06)' : 'transparent',
-                transition:'background 0.1s', alignItems:'center',
-              }}
-              onMouseEnter={e => { if (!isSel) e.currentTarget.style.background='var(--fs-bg)' }}
-              onMouseLeave={e => { if (!isSel) e.currentTarget.style.background='transparent' }}
-            >
-              {/* Checkbox */}
-              <div style={{ display:'flex', alignItems:'center' }}>
-                <input type="checkbox" checked={isSel} onChange={()=>toggleSelect(r.id)}
-                  style={{ cursor:'pointer', accentColor:'#3b82f6', width:14, height:14 }} />
+        ) : extratoComSaldo.map(({ data, lancamentos, saldoDia }, gi) => (
+          <div key={data}>
+            {/* Separador de data */}
+            <div style={{ display:'flex', alignItems:'center', padding:'7px 16px', background:'var(--fs-bg)', borderBottom:'1px solid var(--fs-border)', borderTop: gi > 0 ? '2px solid var(--fs-border)' : 'none' }}>
+              <div style={{ fontSize:11, fontWeight:800, color:'var(--fs-text-3)', letterSpacing:'0.4px' }}>
+                📅 {fDateBR(data)}
               </div>
-
-              {/* Data */}
-              <div style={{ fontSize:12, color:'var(--fs-text-3)', fontWeight:600, fontVariantNumeric:'tabular-nums' }}>
-                {fDateBR(r.data)}
-              </div>
-
-              {/* Descrição */}
-              <div style={{ fontSize:13, color:'var(--fs-text-1)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                {r.descricao || <span style={{ color:'var(--fs-text-4)', fontStyle:'italic' }}>sem descrição</span>}
-              </div>
-
-              {/* Categoria */}
-              <div style={{ fontSize:12, color:'var(--fs-text-3)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                {r.categoria || '—'}
-              </div>
-
-              {/* Tipo */}
-              <div><Badge tipo={r.tipo} /></div>
-
-              {/* Valor */}
-              <div style={{ fontSize:13, fontWeight:700, color: isEntrada ? '#22c55e' : '#ef4444', textAlign:'right', fontVariantNumeric:'tabular-nums' }}>
-                {isEntrada ? '+' : '-'}{fC(Math.abs(Number(r.valor)))}
-              </div>
-
-              {/* Ação excluir */}
-              <div style={{ display:'flex', justifyContent:'center' }}>
-                <button onClick={()=>setDelItem(r)}
-                  title="Excluir registro"
-                  style={{ background:'transparent', border:'1px solid transparent', borderRadius:6, padding:'5px 6px', cursor:'pointer', color:'var(--fs-text-4)', transition:'all 0.15s', display:'flex', alignItems:'center' }}
-                  onMouseEnter={e=>{ e.currentTarget.style.background='rgba(239,68,68,0.1)'; e.currentTarget.style.color='#ef4444'; e.currentTarget.style.borderColor='rgba(239,68,68,0.2)' }}
-                  onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--fs-text-4)'; e.currentTarget.style.borderColor='transparent' }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                </button>
+              <div style={{ marginLeft:'auto', display:'flex', gap:16, fontSize:11 }}>
+                <span style={{ color:'#22c55e', fontWeight:700 }}>
+                  +{fC(lancamentos.filter(r=>r.tipo==='entrada').reduce((a,c)=>a+Number(c.valor),0))}
+                </span>
+                <span style={{ color:'#ef4444', fontWeight:700 }}>
+                  -{fC(lancamentos.filter(r=>r.tipo==='saida').reduce((a,c)=>a+Number(c.valor),0))}
+                </span>
               </div>
             </div>
-          )
-        })}
+
+            {/* Lançamentos do dia */}
+            {lancamentos.map((r, li) => {
+              const isEntrada = r.tipo === 'entrada'
+              const isSel     = selected.has(r.id)
+              const isLast    = li === lancamentos.length - 1
+              return (
+                <div key={r.id}
+                  style={{ display:'grid', gridTemplateColumns:'40px 1fr 150px 100px 120px 130px 48px', gap:8, padding:'10px 16px',
+                    borderBottom: isLast ? 'none' : '1px solid rgba(var(--fs-border-rgb,55,65,81),0.5)',
+                    background: isSel ? 'rgba(59,130,246,0.06)' : 'transparent',
+                    alignItems:'center', transition:'background 0.1s',
+                  }}
+                  onMouseEnter={e=>{ if(!isSel) e.currentTarget.style.background='rgba(255,255,255,0.02)' }}
+                  onMouseLeave={e=>{ if(!isSel) e.currentTarget.style.background='transparent' }}
+                >
+                  <div><input type="checkbox" checked={isSel} onChange={()=>toggleSelect(r.id)} style={{ cursor:'pointer', accentColor:'#3b82f6', width:14, height:14 }} /></div>
+
+                  {/* Descrição */}
+                  <div style={{ fontSize:13, color:'var(--fs-text-1)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    <span style={{ color: isEntrada ? '#22c55e' : '#ef4444', marginRight:6, fontSize:11 }}>{isEntrada ? '↑' : '↓'}</span>
+                    {r.descricao || <span style={{ color:'var(--fs-text-4)', fontStyle:'italic' }}>sem descrição</span>}
+                  </div>
+
+                  {/* Categoria */}
+                  <div style={{ fontSize:12, color:'var(--fs-text-4)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.categoria || '—'}</div>
+
+                  {/* Tipo */}
+                  <div><Badge tipo={r.tipo} /></div>
+
+                  {/* Valor */}
+                  <div style={{ fontSize:13, fontWeight:700, color: isEntrada ? '#22c55e' : '#ef4444', textAlign:'right', fontVariantNumeric:'tabular-nums' }}>
+                    {isEntrada ? '+' : '-'}{fC(Math.abs(Number(r.valor)))}
+                  </div>
+
+                  {/* Saldo do dia (só na última linha do grupo) */}
+                  <div style={{ textAlign:'right', fontVariantNumeric:'tabular-nums' }}>
+                    {isLast ? (
+                      <div style={{ background: saldoDia >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border:`1px solid ${saldoDia>=0?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)'}`, borderRadius:6, padding:'3px 8px', display:'inline-block' }}>
+                        <span style={{ fontSize:12, fontWeight:800, color: saldoDia >= 0 ? '#22c55e' : '#ef4444' }}>
+                          {fC(saldoDia)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize:11, color:'var(--fs-border)' }}>·</span>
+                    )}
+                  </div>
+
+                  {/* Excluir */}
+                  <div style={{ display:'flex', justifyContent:'center' }}>
+                    <button onClick={()=>setDelItem(r)} title="Excluir"
+                      style={{ background:'transparent', border:'1px solid transparent', borderRadius:6, padding:'5px 6px', cursor:'pointer', color:'var(--fs-text-4)', transition:'all 0.15s', display:'flex', alignItems:'center' }}
+                      onMouseEnter={e=>{ e.currentTarget.style.background='rgba(239,68,68,0.1)'; e.currentTarget.style.color='#ef4444'; e.currentTarget.style.borderColor='rgba(239,68,68,0.2)' }}
+                      onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--fs-text-4)'; e.currentTarget.style.borderColor='transparent' }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ))}
       </div>
 
       {/* ── Paginação ──────────────────────────────────────────────────────────── */}

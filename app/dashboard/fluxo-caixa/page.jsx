@@ -319,12 +319,7 @@ export default function FluxoCaixaPage() {
               <span style={{ background:'rgba(59,130,246,0.12)', color:'#60a5fa', border:'1px solid rgba(59,130,246,0.25)', padding:'3px 11px', borderRadius:20, fontSize:12, fontWeight:700 }}>Consolidado</span>
             )}
           </div>
-          <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:4, display:'flex', alignItems:'center', gap:6 }}>
-            <span>📅</span>
-            <span>{fDateFull(startDate)} → {fDateFull(endDate)}</span>
-            <span>·</span>
-            <span>vs período anterior</span>
-          </div>
+
         </div>
 
         {/* Ações */}

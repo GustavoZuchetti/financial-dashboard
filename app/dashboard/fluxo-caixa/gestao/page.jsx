@@ -168,6 +168,11 @@ export default function GestaoFluxoCaixaPage() {
   const [totalGlobalE,    setTotalGlobalE]    = useState(0)
   const [totalGlobalS,    setTotalGlobalS]    = useState(0)
 
+  // Modal edição
+  const [editItem,     setEditItem]     = useState(null)   // registro sendo editado
+  const [editForm,     setEditForm]     = useState({})
+  const [editLoading,  setEditLoading]  = useState(false)
+
   // Modal novo lançamento
   const [novoModal,    setNovoModal]    = useState(false)
   const [novoForm,     setNovoForm]     = useState({ data: today, descricao:'', tipo:'saida', valor:'', categoria:'' })
@@ -336,6 +341,39 @@ export default function GestaoFluxoCaixaPage() {
     load()
   }
 
+  // ─── Abrir modal de edição ───────────────────────────────────────────────────
+  const openEdit = (r) => {
+    setEditItem(r)
+    setEditForm({
+      data:      r.data,
+      descricao: r.descricao || '',
+      tipo:      r.tipo,
+      valor:     String(Number(r.valor).toFixed(2)).replace('.', ','),
+      categoria: r.categoria || '',
+    })
+  }
+
+  // ─── Salvar edição ────────────────────────────────────────────────────────────
+  const handleSaveEdit = async () => {
+    const val = parseFloat(String(editForm.valor).replace(/\./g,'').replace(',','.'))
+    if (!editForm.data || !editForm.descricao.trim() || !val || val <= 0) {
+      showToast('Preencha data, descrição e valor.', 'error'); return
+    }
+    setEditLoading(true)
+    const { error } = await supabase.from('fluxo_caixa').update({
+      data:      editForm.data,
+      descricao: editForm.descricao.trim(),
+      tipo:      editForm.tipo,
+      valor:     val,
+      categoria: editForm.categoria.trim() || null,
+    }).eq('id', editItem.id)
+    setEditLoading(false)
+    if (error) { showToast('Erro ao salvar: ' + error.message, 'error'); return }
+    showToast('Lançamento atualizado!', 'success')
+    setEditItem(null)
+    load()
+  }
+
   // ─── Filtro local por busca ──────────────────────────────────────────────────
   const filtrados = registros.filter(r => {
     if (!busca) return true
@@ -401,6 +439,59 @@ export default function GestaoFluxoCaixaPage() {
 
       {/* Toasts */}
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)} />}
+
+      {/* Modal Edição */}
+      {editItem && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:500, padding:24 }}>
+          <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:16, padding:28, width:'100%', maxWidth:440, boxShadow:'0 8px 32px rgba(0,0,0,0.4)' }}>
+            <div style={{ fontSize:16, fontWeight:800, color:'var(--fs-text-1)', marginBottom:4 }}>Editar Lançamento</div>
+            <div style={{ fontSize:12, color:'var(--fs-text-4)', marginBottom:20 }}>ID: {editItem.id?.substring(0,8)}...</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              {/* Tipo */}
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Tipo *</div>
+                <div style={{ display:'flex', gap:8 }}>
+                  {[['entrada','↑ Entrada','#22c55e'],['saida','↓ Saída','#ef4444']].map(([v,l,clr])=>(
+                    <button key={v} onClick={()=>setEditForm(f=>({...f,tipo:v}))} style={{ flex:1, padding:'8px', borderRadius:8, fontWeight:700, fontSize:13, cursor:'pointer', transition:'all 0.15s', border: editForm.tipo===v ? `2px solid ${clr}` : '2px solid var(--fs-border)', background: editForm.tipo===v ? `rgba(${v==='entrada'?'34,197,94':'239,68,68'},0.12)` : 'var(--fs-bg)', color: editForm.tipo===v ? clr : 'var(--fs-text-3)' }}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Data */}
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Data *</div>
+                <input type="date" value={editForm.data} onChange={e=>setEditForm(f=>({...f,data:e.target.value}))}
+                  style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'8px 10px', fontSize:13, outline:'none', colorScheme:'dark', width:'100%' }} />
+              </div>
+              {/* Descrição */}
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Descrição *</div>
+                <input value={editForm.descricao} onChange={e=>setEditForm(f=>({...f,descricao:e.target.value}))}
+                  style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'8px 10px', fontSize:13, outline:'none', width:'100%' }} />
+              </div>
+              {/* Valor */}
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Valor (R$) *</div>
+                <input value={editForm.valor} onChange={e=>setEditForm(f=>({...f,valor:e.target.value}))}
+                  style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'8px 10px', fontSize:13, outline:'none', width:'100%' }} />
+              </div>
+              {/* Categoria */}
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Categoria</div>
+                <input value={editForm.categoria} onChange={e=>setEditForm(f=>({...f,categoria:e.target.value}))}
+                  style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'8px 10px', fontSize:13, outline:'none', width:'100%' }} />
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:8, marginTop:20, justifyContent:'flex-end' }}>
+              <button onClick={()=>setEditItem(null)} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-2)', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
+              <button onClick={handleSaveEdit} disabled={editLoading} style={{ background:editLoading?'rgba(59,130,246,0.5)':'#3b82f6', border:'none', color:'#fff', borderRadius:8, padding:'8px 20px', fontSize:13, fontWeight:700, cursor:editLoading?'default':'pointer' }}>
+                {editLoading ? 'Salvando...' : '✓ Salvar Alterações'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Novo Lançamento */}
       {novoModal && (
@@ -598,7 +689,7 @@ export default function GestaoFluxoCaixaPage() {
       <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, overflow:'hidden' }}>
 
         {/* Cabeçalho */}
-        <div style={{ display:'grid', gridTemplateColumns:'40px 1fr 150px 100px 120px 130px 48px', gap:8, padding:'11px 16px', borderBottom:'2px solid var(--fs-border)', background:'var(--fs-bg)' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'40px 1fr 150px 100px 120px 130px 72px', gap:8, padding:'11px 16px', borderBottom:'2px solid var(--fs-border)', background:'var(--fs-bg)' }}>
           <div><input type="checkbox" checked={registros.length > 0 && selected.size === registros.length} onChange={toggleAll} style={{ cursor:'pointer', accentColor:'#3b82f6', width:14, height:14 }} /></div>
           {['Descrição','Categoria','Tipo','Valor','Saldo do Dia',''].map(h=>(
             <div key={h} style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', display:'flex', alignItems:'center', justifyContent: h==='Valor'||h==='Saldo do Dia' ? 'flex-end' : 'flex-start' }}>{h}</div>
@@ -636,7 +727,7 @@ export default function GestaoFluxoCaixaPage() {
               const isLast    = li === lancamentos.length - 1
               return (
                 <div key={r.id}
-                  style={{ display:'grid', gridTemplateColumns:'40px 1fr 150px 100px 120px 130px 48px', gap:8, padding:'10px 16px',
+                  style={{ display:'grid', gridTemplateColumns:'40px 1fr 150px 100px 120px 130px 72px', gap:8, padding:'10px 16px',
                     borderBottom: isLast ? 'none' : '1px solid rgba(var(--fs-border-rgb,55,65,81),0.5)',
                     background: isSel ? 'rgba(59,130,246,0.06)' : 'transparent',
                     alignItems:'center', transition:'background 0.1s',
@@ -676,14 +767,21 @@ export default function GestaoFluxoCaixaPage() {
                     )}
                   </div>
 
-                  {/* Excluir */}
-                  <div style={{ display:'flex', justifyContent:'center' }}>
+                  {/* Editar + Excluir */}
+                  <div style={{ display:'flex', justifyContent:'center', gap:4 }}>
+                    <button onClick={()=>openEdit(r)} title="Editar"
+                      style={{ background:'transparent', border:'1px solid transparent', borderRadius:6, padding:'5px 6px', cursor:'pointer', color:'var(--fs-text-4)', transition:'all 0.15s', display:'flex', alignItems:'center' }}
+                      onMouseEnter={e=>{ e.currentTarget.style.background='rgba(59,130,246,0.1)'; e.currentTarget.style.color='#60a5fa'; e.currentTarget.style.borderColor='rgba(59,130,246,0.2)' }}
+                      onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--fs-text-4)'; e.currentTarget.style.borderColor='transparent' }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
                     <button onClick={()=>setDelItem(r)} title="Excluir"
                       style={{ background:'transparent', border:'1px solid transparent', borderRadius:6, padding:'5px 6px', cursor:'pointer', color:'var(--fs-text-4)', transition:'all 0.15s', display:'flex', alignItems:'center' }}
                       onMouseEnter={e=>{ e.currentTarget.style.background='rgba(239,68,68,0.1)'; e.currentTarget.style.color='#ef4444'; e.currentTarget.style.borderColor='rgba(239,68,68,0.2)' }}
                       onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--fs-text-4)'; e.currentTarget.style.borderColor='transparent' }}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
                     </button>
                   </div>
                 </div>

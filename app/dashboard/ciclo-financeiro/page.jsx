@@ -72,7 +72,9 @@ export default function CicloFinanceiroPage() {
 
   const [empresaId, setEmpresaId] = useState(null)
   const [empNome,   setEmpNome]   = useState('')
-  const [loading,   setLoading]   = useState(true)
+  const [loading,     setLoading]     = useState(true)
+  const [recalcLoading, setRecalcLoading] = useState(false)
+  const [recalcMsg,     setRecalcMsg]     = useState(null)
 
   // Filtro de período
   const [anoSel,  setAnoSel]  = useState(curYear)
@@ -83,6 +85,27 @@ export default function CicloFinanceiroPage() {
   const [cicloAtual, setCicloAtual] = useState(null)   // {pmr, pmp, pme, ano, mes}
   const [historico,  setHistorico]  = useState([])     // array de meses
   const [fcMes,      setFcMes]      = useState(null)   // entradas/saídas do mês selecionado
+
+  const recalcular = async () => {
+    if (!empresaId || empresaId === 'todas') return
+    setRecalcLoading(true)
+    setRecalcMsg(null)
+    try {
+      const r = await fetch('/api/recalcular-ciclo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresa_id: empresaId })
+      })
+      const data = await r.json()
+      if (data.ok) {
+        setRecalcMsg(`✓ ${data.meses} meses recalculados (${data.total} lançamentos)`)
+        await load()
+      } else {
+        setRecalcMsg(`Erro: ${data.error}`)
+      }
+    } catch(e) { setRecalcMsg('Erro na requisição') }
+    finally { setRecalcLoading(false) }
+  }
 
   useEffect(() => {
     const id = localStorage.getItem('empresa_id') || ''
@@ -157,6 +180,27 @@ export default function CicloFinanceiroPage() {
     finally { setLoading(false) }
   }, [empresaId, anoSel, mesSel, mesesHist])
 
+  const recalcular = async () => {
+    if (!empresaId || empresaId === 'todas') return
+    setRecalcLoading(true)
+    setRecalcMsg(null)
+    try {
+      const r = await fetch('/api/recalcular-ciclo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresa_id: empresaId })
+      })
+      const data = await r.json()
+      if (data.ok) {
+        setRecalcMsg(`✓ ${data.meses} meses recalculados (${data.total} lançamentos)`)
+        await load()
+      } else {
+        setRecalcMsg(`Erro: ${data.error}`)
+      }
+    } catch(e) { setRecalcMsg('Erro na requisição') }
+    finally { setRecalcLoading(false) }
+  }
+
   useEffect(() => { if (empresaId) load() }, [load, empresaId])
 
   // Derivados
@@ -195,11 +239,26 @@ export default function CicloFinanceiroPage() {
           <select value={anoSel} onChange={e=>setAnoSel(Number(e.target.value))} style={IS}>
             {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
+          <button
+            onClick={recalcular}
+            disabled={recalcLoading}
+            style={{ background: recalcLoading ? 'rgba(59,130,246,0.4)' : '#3b82f6', border:'none', color:'#fff', borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, cursor: recalcLoading ? 'default' : 'pointer', whiteSpace:'nowrap' }}
+          >
+            {recalcLoading ? '⏳ Recalculando...' : '🔄 Recalcular'}
+          </button>
           <select value={mesesHist} onChange={e=>setMesesHist(Number(e.target.value))} style={IS}>
             {[3,6,12].map(n => <option key={n} value={n}>Histórico: {n}m</option>)}
           </select>
         </div>
       </div>
+
+      {/* Feedback do recalculo */}
+      {recalcMsg && (
+        <div style={{ background: recalcMsg.startsWith('✓') ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border:`1px solid ${recalcMsg.startsWith('✓') ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, borderRadius:8, padding:'10px 16px', marginBottom:12, fontSize:13, fontWeight:600, color: recalcMsg.startsWith('✓') ? '#22c55e' : '#ef4444', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          {recalcMsg}
+          <button onClick={()=>setRecalcMsg(null)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'inherit', fontSize:16 }}>✕</button>
+        </div>
+      )}
 
       {/* ── Aviso sem dados ─────────────────────────────────────────────────── */}
       {semDados && !loading && (

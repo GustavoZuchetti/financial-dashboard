@@ -696,17 +696,24 @@ export default function ImportacaoPage() {
           else                      { porMes[key].saidas   += r.valor; porMes[key].cnt_s++ }
         })
         for (const v of Object.values(porMes)) {
-          const pmr = v.cnt_e > 0 ? Math.round(v.entradas / v.cnt_e) : 0
-          const pmp = v.cnt_s > 0 ? Math.round(v.saidas   / v.cnt_s) : 0
+          // PMR = dias úteis do mês / nº de recebimentos (proxy de prazo médio de recebimento)
+          // PMP = dias úteis do mês / nº de pagamentos  (proxy de prazo médio de pagamento)
+          // Fórmula: dias_no_mes / quantidade de transações = frequência média em dias
+          const diasNoMes = new Date(v.ano, v.mes, 0).getDate()
+          const pmr = v.cnt_e > 0 ? Math.round(diasNoMes / v.cnt_e) : 0
+          const pmp = v.cnt_s > 0 ? Math.round(diasNoMes / v.cnt_s) : 0
+          const co  = pmr  // sem PME por ora (estoque não é capturado no FC)
+          const cf  = co - pmp
           const { data: ex } = await supabase.from('ciclo_financeiro')
             .select('id').eq('empresa_id', empresaId).eq('ano', v.ano).eq('mes', v.mes).limit(1)
           if (ex?.length) {
-            await supabase.from('ciclo_financeiro').update({ pmr, pmp })
-              .eq('empresa_id', empresaId).eq('ano', v.ano).eq('mes', v.mes)
+            await supabase.from('ciclo_financeiro').update({
+              pmr, pmp, ciclo_operacional: co, ciclo_financeiro_valor: cf
+            }).eq('empresa_id', empresaId).eq('ano', v.ano).eq('mes', v.mes)
           } else {
             await supabase.from('ciclo_financeiro').insert({
               empresa_id: empresaId, ano: v.ano, mes: v.mes,
-              pmr, pmp, pme: 0, ciclo_operacional: pmr, ciclo_financeiro_valor: pmr - pmp,
+              pmr, pmp, pme: 0, ciclo_operacional: co, ciclo_financeiro_valor: cf,
             })
           }
         }

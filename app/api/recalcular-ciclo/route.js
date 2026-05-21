@@ -48,8 +48,6 @@ export async function POST(req) {
         mes: v.mes,
         pmr, pmp,
         pme: 0,
-        ciclo_operacional: pmr,
-        ciclo_financeiro_valor: pmr - pmp,
       }
     })
 

@@ -708,12 +708,12 @@ export default function ImportacaoPage() {
             .select('id').eq('empresa_id', empresaId).eq('ano', v.ano).eq('mes', v.mes).limit(1)
           if (ex?.length) {
             await supabase.from('ciclo_financeiro').update({
-              pmr, pmp, ciclo_operacional: co, ciclo_financeiro_valor: cf
+              pmr, pmp
             }).eq('empresa_id', empresaId).eq('ano', v.ano).eq('mes', v.mes)
           } else {
             await supabase.from('ciclo_financeiro').insert({
               empresa_id: empresaId, ano: v.ano, mes: v.mes,
-              pmr, pmp, pme: 0, ciclo_operacional: co, ciclo_financeiro_valor: cf,
+              pmr, pmp, pme: 0,
             })
           }
         }

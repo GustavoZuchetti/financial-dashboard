@@ -116,7 +116,7 @@ export default function CicloFinanceiroPage() {
       }
 
       const { data: histData = [] } = await supabase.from('ciclo_financeiro')
-        .select('ano,mes,pmr,pmp,pme,ciclo_operacional,ciclo_financeiro_valor')
+        .select('ano,mes,pmr,pmp,pme')
         .eq('empresa_id', empresaId)
         .in('ano', [...new Set(hist.map(h=>h.ano))])
         .order('ano').order('mes')
@@ -195,7 +195,7 @@ export default function CicloFinanceiroPage() {
         const dias = new Date(v.ano, v.mes, 0).getDate()
         const pmr  = v.cnt_e > 0 ? Math.round(dias / v.cnt_e) : 0
         const pmp  = v.cnt_s > 0 ? Math.round(dias / v.cnt_s) : 0
-        return { empresa_id: empresaId, ano: v.ano, mes: v.mes, pmr, pmp, pme: 0, ciclo_operacional: pmr, ciclo_financeiro_valor: pmr - pmp }
+        return { empresa_id: empresaId, ano: v.ano, mes: v.mes, pmr, pmp, pme: 0 }
       })
 
       const { error } = await supabase.from('ciclo_financeiro')

@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { calcDRE, calcDREMap, DRE_LINES, fmtBRL } from '@/lib/dre-calc'
 
 // ─── Modal de Drill-down ──────────────────────────────────────────────────────
-function DrillModal({ item, lancamentos, onClose, periodo }) {
+function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
   const ref = useRef(null)
 
   useEffect(() => {
@@ -23,10 +23,15 @@ function DrillModal({ item, lancamentos, onClose, periodo }) {
     ? document.documentElement.getAttribute('data-theme') !== 'light' : true
 
   const total = lancamentos.reduce((a, l) => a + Number(l.valor), 0)
+  const [clienteSel, setClienteSel] = useState(null) // drill dentro do modal: cliente selecionado
 
-  // Agrupar por mês quando há múltiplos meses
+  // Se temos clientes, mostrar lista de clientes; se selecionou um cliente, mostrar lançamentos
+  const clienteAtual = clienteSel ? (clientes || []).find(cl => cl.nome === clienteSel) : null
+  const lancAtual = clienteAtual ? clienteAtual.lancamentos : (clientes ? [] : lancamentos)
+
+  // Agrupar por mês para lançamentos individuais
   const byMonth = {}
-  lancamentos.forEach(l => {
+  lancAtual.forEach(l => {
     if (!l.data) return
     const [y, m] = l.data.split('-')
     const key = `${y}-${m}`
@@ -48,15 +53,27 @@ function DrillModal({ item, lancamentos, onClose, periodo }) {
       }}>
         {/* Header do modal */}
         <div style={{ padding:'20px 24px', borderBottom:'1px solid var(--fs-border)', display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12 }}>
-          <div>
+          <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>
-              Detalhamento · {periodo}
+              {clienteSel
+                ? <span style={{ cursor:'pointer', display:'flex', alignItems:'center', gap:6 }} onClick={() => setClienteSel(null)}>
+                    <span style={{ color:'#3b82f6' }}>← {item.nome}</span>
+                    <span style={{ color:'var(--fs-text-4)' }}>· {periodo}</span>
+                  </span>
+                : `Detalhamento · ${periodo}`
+              }
             </div>
-            <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)', marginBottom:4 }}>{item.nome}</div>
+            <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)', marginBottom:4 }}>
+              {clienteSel || item.nome}
+            </div>
             <div style={{ display:'flex', gap:16, alignItems:'center', flexWrap:'wrap' }}>
-              <span style={{ fontSize:22, fontWeight:900, color:'#3b82f6' }}>{fmtBRL(total)}</span>
-              <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>{lancamentos.length} lançamento{lancamentos.length !== 1 ? 's' : ''}</span>
-              {multiMes && <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>· {meses.length} meses</span>}
+              <span style={{ fontSize:22, fontWeight:900, color:'#3b82f6' }}>{fmtBRL(clienteSel ? clienteAtual?.total || 0 : total)}</span>
+              {clientes && !clienteSel
+                ? <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>{clientes.length} cliente{clientes.length !== 1 ? 's' : ''} · {lancamentos.length} lançamentos</span>
+                : <><span style={{ fontSize:12, color:'var(--fs-text-4)' }}>{lancAtual.length} lançamento{lancAtual.length !== 1 ? 's' : ''}</span>
+                    {multiMes && <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>· {meses.length} meses</span>}
+                  </>
+              }
             </div>
           </div>
           <button onClick={onClose} style={{
@@ -68,35 +85,59 @@ function DrillModal({ item, lancamentos, onClose, periodo }) {
 
         {/* Corpo — scroll */}
         <div style={{ overflowY:'auto', flex:1, padding:'0 0 8px' }}>
-          {multiMes ? (
-            // Vista agrupada por mês quando período > 1 mês
-            meses.map(([key, mes]) => (
-              <div key={key}>
-                {/* Separador de mês */}
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 24px 8px', background:'var(--fs-bg)', borderBottom:'1px solid var(--fs-border)', position:'sticky', top:0, zIndex:1 }}>
-                  <span style={{ fontSize:12, fontWeight:800, color:'var(--fs-text-2)', letterSpacing:'0.3px' }}>📅 {mes.label}</span>
-                  <div style={{ display:'flex', gap:12, fontSize:12 }}>
-                    <span style={{ color:'var(--fs-text-4)' }}>{mes.items.length} lançamento{mes.items.length !== 1 ? 's' : ''}</span>
-                    <span style={{ fontWeight:700, color:'#3b82f6' }}>{fmtBRL(mes.total)}</span>
-                  </div>
+          {clientes && !clienteSel ? (
+            // LISTA DE CLIENTES: clicar em um cliente entra no drill de lançamentos
+            clientes.map((cli, i) => (
+              <div key={cli.nome}
+                style={{ display:'grid', gridTemplateColumns:'1fr 130px 80px', gap:12, padding:'13px 24px', borderBottom: i < clientes.length-1 ? '1px solid var(--fs-border)' : 'none', alignItems:'center', cursor:'pointer' }}
+                onMouseEnter={e => { e.currentTarget.style.background='rgba(59,130,246,0.05)'; e.currentTarget.querySelector('.cli-hint').style.opacity='1' }}
+                onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.querySelector('.cli-hint').style.opacity='0' }}
+                onClick={() => setClienteSel(cli.nome)}
+              >
+                <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
+                  <div style={{ width:7, height:7, borderRadius:'50%', background:'#3b82f6', flexShrink:0 }} />
+                  <span style={{ fontSize:14, fontWeight:600, color:'var(--fs-text-1)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{cli.nome}</span>
+                  <span style={{ fontSize:11, color:'var(--fs-text-4)', flexShrink:0 }}>{cli.count}×</span>
+                  <span className="cli-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'#3b82f6', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', padding:'2px 7px', borderRadius:4, whiteSpace:'nowrap', flexShrink:0 }}>ver →</span>
                 </div>
-                {/* Lançamentos do mês */}
-                {mes.items.map((l, i) => (
-                  <LancRow key={l.id || i} l={l} isLast={i === mes.items.length - 1} />
-                ))}
+                <div style={{ textAlign:'right', fontSize:14, fontWeight:700, color:'var(--fs-text-1)', fontVariantNumeric:'tabular-nums' }}>{fmtBRL(cli.total)}</div>
+                <div style={{ textAlign:'right', fontSize:11, color:'var(--fs-text-4)' }}>
+                  {total > 0 ? (Math.abs(cli.total) / Math.abs(total) * 100).toFixed(1) + '%' : '—'}
+                </div>
               </div>
             ))
           ) : (
-            // Vista plana quando é um único mês
-            lancamentos.map((l, i) => (
-              <LancRow key={l.id || i} l={l} isLast={i === lancamentos.length - 1} />
-            ))
+            // LANÇAMENTOS: agrupados por mês quando período > 1 mês
+            multiMes ? (
+              meses.map(([key, mes]) => (
+                <div key={key}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 24px 8px', background:'var(--fs-bg)', borderBottom:'1px solid var(--fs-border)', position:'sticky', top:0, zIndex:1 }}>
+                    <span style={{ fontSize:12, fontWeight:800, color:'var(--fs-text-2)', letterSpacing:'0.3px' }}>📅 {mes.label}</span>
+                    <div style={{ display:'flex', gap:12, fontSize:12 }}>
+                      <span style={{ color:'var(--fs-text-4)' }}>{mes.items.length} lançamento{mes.items.length !== 1 ? 's' : ''}</span>
+                      <span style={{ fontWeight:700, color:'#3b82f6' }}>{fmtBRL(mes.total)}</span>
+                    </div>
+                  </div>
+                  {mes.items.map((l, i) => (
+                    <LancRow key={l.id || i} l={l} isLast={i === mes.items.length - 1} />
+                  ))}
+                </div>
+              ))
+            ) : (
+              lancAtual.map((l, i) => (
+                <LancRow key={l.id || i} l={l} isLast={i === lancAtual.length - 1} />
+              ))
+            )
           )}
         </div>
 
         {/* Footer */}
         <div style={{ padding:'14px 24px', borderTop:'1px solid var(--fs-border)', display:'flex', justifyContent:'space-between', alignItems:'center', background:'var(--fs-bg)', borderRadius:'0 0 16px 16px' }}>
-          <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>Total de {lancamentos.length} lançamentos</span>
+          <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>
+            {clientes && !clienteSel
+              ? `${clientes.length} clientes · ${lancamentos.length} lançamentos`
+              : `${lancAtual.length} lançamento${lancAtual.length !== 1 ? 's' : ''}`}
+          </span>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
             <span style={{ fontSize:14, fontWeight:800, color:'#3b82f6' }}>{fmtBRL(total)}</span>
             <button onClick={onClose} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, padding:'7px 18px', fontSize:13, fontWeight:600, cursor:'pointer', color:'var(--fs-text-2)' }}>Fechar</button>
@@ -169,28 +210,24 @@ export default function DREDetalhado() {
   const v    = calcDRE(data)
   const vMap = calcDREMap(data)
 
+  // Hierarquia: Categoria → Clientes (descricao)
   const buildHierarchy = (tipos) => {
     const relevant = (data || []).filter(l => tipos.includes(l.tipo))
-    const byAccount = {}
+    const byCat = {}
     relevant.forEach(l => {
-      const contaId = l.conta_id || '__sem_conta__'
-      if (!byAccount[contaId]) {
-        const conta = contas.find(c => c.id === contaId)
-        byAccount[contaId] = {
-          contaId, nome: conta ? `${conta.codigo} ${conta.nome}` : '— Sem conta mapeada',
-          items: [], total: 0, lancamentos: []
-        }
-      }
-      byAccount[contaId].lancamentos.push(l)
-      byAccount[contaId].total += Number(l.valor)
+      const cat = (l.categoria || 'Sem categoria').trim()
+      if (!byCat[cat]) byCat[cat] = { nome: cat, clientes: {}, total: 0, lancamentos: [] }
+      byCat[cat].total += Number(l.valor)
+      byCat[cat].lancamentos.push(l)
 
-      const k = (l.descricao || l.categoria || '—').trim()
-      const existing = byAccount[contaId].items.find(i => i.nome === k)
-      if (existing) { existing.total += Number(l.valor); existing.count++; existing.lancamentos.push(l) }
-      else byAccount[contaId].items.push({ nome: k, total: Number(l.valor), count: 1, lancamentos: [l], data: l.data })
+      const cli = (l.descricao || l.categoria || '—').trim()
+      if (!byCat[cat].clientes[cli]) byCat[cat].clientes[cli] = { nome: cli, total: 0, count: 0, lancamentos: [] }
+      byCat[cat].clientes[cli].total += Number(l.valor)
+      byCat[cat].clientes[cli].count++
+      byCat[cat].clientes[cli].lancamentos.push(l)
     })
-    return Object.values(byAccount)
-      .map(a => ({ ...a, items: a.items.sort((a,b) => b.total - a.total) }))
+    return Object.values(byCat)
+      .map(c => ({ ...c, clientes: Object.values(c.clientes).sort((a,b) => b.total - a.total) }))
       .sort((a, b) => b.total - a.total)
   }
 
@@ -219,6 +256,7 @@ export default function DREDetalhado() {
         <DrillModal
           item={modal.item}
           lancamentos={modal.lancamentos}
+          clientes={modal.clientes}
           periodo={periodoLabel}
           onClose={() => setModal(null)}
         />
@@ -273,7 +311,7 @@ export default function DREDetalhado() {
                   )
                 }
 
-                const totalItems = hierarchy.reduce((a,c) => a + c.lancamentos.length, 0)
+                const totalLanc = hierarchy.reduce((a,c) => a + c.lancamentos.length, 0)
                 return [
                   // ── Linha DRE ────────────────────────────────────────
                   <tr key={line.key}
@@ -288,52 +326,29 @@ export default function DREDetalhado() {
                     </td>
                     <td style={{ padding:'12px 16px', textAlign:'right', fontWeight:700, color: lineValue>=0 ? line.color : '#ef4444' }}>{fmtBRL(lineValue)}</td>
                     <td style={{ padding:'12px 16px', textAlign:'right', color:'var(--fs-text-4)' }}>{pct(lineValue)}</td>
-                    <td style={{ padding:'12px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{totalItems > 0 ? totalItems : '—'}</td>
+                    <td style={{ padding:'12px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{totalLanc > 0 ? totalLanc : '—'}</td>
                   </tr>,
 
-                  // ── Contas filhas ────────────────────────────────────
-                  ...(isExpLine ? hierarchy.map(conta => {
-                    const isExpConta = expanded[`${line.key}-${conta.contaId}`]
-                    return [
-                      <tr key={`${line.key}-${conta.contaId}`}
-                        style={{ background:'rgba(255,255,255,0.02)', borderTop:'1px solid var(--fs-border)', cursor:'pointer' }}
-                        onClick={() => toggle(`${line.key}-${conta.contaId}`)}
-                        onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.04)'}
-                        onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.02)'}
-                      >
-                        <td style={{ padding:'10px 16px 10px 36px', color:line.color, fontWeight:600 }}>
-                          <span style={{ marginRight:8, fontSize:11, color:'var(--fs-text-4)' }}>{isExpConta?'▼':'▶'}</span>
-                          {conta.nome}
-                        </td>
-                        <td style={{ padding:'10px 16px', textAlign:'right', fontWeight:700, color:'var(--fs-text-1)' }}>{fmtBRL(conta.total)}</td>
-                        <td style={{ padding:'10px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{pct(conta.total)}</td>
-                        <td style={{ padding:'10px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{conta.lancamentos.length}</td>
-                      </tr>,
-
-                      // ── Clientes/Categorias — CLICÁVEIS → MODAL ──────
-                      ...(isExpConta ? conta.items.map((item, i) => (
-                        <tr key={`${line.key}-${conta.contaId}-${i}`}
-                          style={{ background:'var(--fs-bg)', borderTop:'1px solid rgba(var(--fs-border-rgb,55,65,81),0.5)', cursor:'pointer' }}
-                          onClick={(e) => { e.stopPropagation(); setModal({ item, lancamentos: item.lancamentos }) }}
-                          onMouseEnter={e => { e.currentTarget.style.background='rgba(59,130,246,0.06)'; e.currentTarget.querySelector('.drill-hint').style.opacity='1' }}
-                          onMouseLeave={e => { e.currentTarget.style.background='var(--fs-bg)'; e.currentTarget.querySelector('.drill-hint').style.opacity='0' }}
-                        >
-                          <td style={{ padding:'8px 16px 8px 56px', color:'var(--fs-text-2)', display:'flex', alignItems:'center', gap:8 }}>
-                            <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                              {item.nome.substring(0, 60)}
-                              {item.count > 1 && <span style={{ marginLeft:8, color:'var(--fs-text-4)', fontSize:11 }}>({item.count}×)</span>}
-                            </span>
-                            <span className="drill-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'#3b82f6', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', padding:'2px 7px', borderRadius:4, whiteSpace:'nowrap', flexShrink:0 }}>
-                              ver detalhes →
-                            </span>
-                          </td>
-                          <td style={{ padding:'8px 16px', textAlign:'right', color:'var(--fs-text-1)', fontWeight:600 }}>{fmtBRL(item.total)}</td>
-                          <td style={{ padding:'8px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{pct(item.total)}</td>
-                          <td style={{ padding:'8px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{item.count}</td>
-                        </tr>
-                      )) : [])
-                    ]
-                  }).flat() : [])
+                  // ── Categorias filhas (nível 2) ──────────────────────
+                  ...(isExpLine ? hierarchy.map(cat => (
+                    <tr key={`${line.key}-${cat.nome}`}
+                      style={{ background:'rgba(255,255,255,0.02)', borderTop:'1px solid var(--fs-border)', cursor:'pointer' }}
+                      onClick={(e) => { e.stopPropagation(); setModal({ item: cat, lancamentos: cat.lancamentos, clientes: cat.clientes }) }}
+                      onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.04)'; e.currentTarget.querySelector('.cat-hint').style.opacity='1' }}
+                      onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.02)'; e.currentTarget.querySelector('.cat-hint').style.opacity='0' }}
+                    >
+                      <td style={{ padding:'11px 16px 11px 36px', display:'flex', alignItems:'center', gap:10 }}>
+                        <span style={{ color:line.color, fontWeight:700, fontSize:13 }}>{cat.nome}</span>
+                        <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{cat.clientes.length} cliente{cat.clientes.length !== 1 ? 's' : ''}</span>
+                        <span className="cat-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'#3b82f6', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', padding:'2px 8px', borderRadius:4, whiteSpace:'nowrap' }}>
+                          ver clientes →
+                        </span>
+                      </td>
+                      <td style={{ padding:'11px 16px', textAlign:'right', fontWeight:700, color:'var(--fs-text-1)' }}>{fmtBRL(cat.total)}</td>
+                      <td style={{ padding:'11px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{pct(cat.total)}</td>
+                      <td style={{ padding:'11px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{cat.lancamentos.length}</td>
+                    </tr>
+                  )) : [])
                 ]
               })}
             </tbody>

@@ -313,7 +313,7 @@ export default function DREGeral() {
                       tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fmt}
                       domain={[domMin - pad, domMax + pad]} />
                     <ReferenceLine y={0} stroke="var(--fs-border-2)" strokeWidth={1.5} />
-                    <Tooltip content={<CustomTooltip lancamentos={data} />} cursor={{fill:'transparent'}} />
+                    <Tooltip content={<CustomTooltip lancamentos={data} cursor={false} />} cursor={{fill:'transparent'}} />
                     <Bar dataKey="spacer" stackId="wf" fill="transparent" isAnimationActive={false} />
                     <Bar dataKey="barHeight" stackId="wf" radius={[3,3,0,0]} isAnimationActive={false}>
                       {wf.map((e,i) => (
@@ -408,7 +408,7 @@ export default function DREGeral() {
                         tick={{fill:'var(--fs-text-4)',fontSize:11}} tickFormatter={fmt} width={72}
                         domain={[domMin - pad, domMax + pad]} />
                       <ReferenceLine y={0} stroke="var(--fs-border-2)" strokeWidth={1.5} />
-                      <Tooltip content={<CustomTooltip lancamentos={data} />} cursor={{fill:'rgba(255,255,255,0.03)'}} />
+                      <Tooltip content={<CustomTooltip lancamentos={data} cursor={false} />} cursor={{fill:'rgba(255,255,255,0.03)'}} />
                       {/* Spacer invisível — posiciona a barra colorida */}
                       <Bar dataKey="spacer" stackId="wf" fill="transparent" isAnimationActive={false} />
                       {/* Barra colorida — a magnitude visível */}

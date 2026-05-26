@@ -324,6 +324,7 @@ export default function OrcamentoPage() {
                     <Tooltip
                       contentStyle={{ backgroundColor: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: '8px', fontSize: '12px' }}
                       formatter={(v, name) => [fmtFull(v), name === 'orcado' ? 'Orçado' : 'Realizado']}
+                      cursor={false}
                     />
                     <Legend formatter={(v) => v === 'orcado' ? 'Orçado' : 'Realizado'} />
                     <Bar dataKey="orcado"    fill="#2563eb" opacity={0.6} radius={[3,3,0,0]} barSize={20} />

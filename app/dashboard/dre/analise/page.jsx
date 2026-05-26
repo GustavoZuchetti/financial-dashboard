@@ -80,7 +80,7 @@ export default function DREAnalise() {
   useEffect(() => { fetchData() }, [fetchData])
 
   const v = calcDRE(data)
-  const tt = { contentStyle:{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8 }, formatter:(val)=>fmtBRL(val) }
+  const tt = { contentStyle:{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8 }, formatter:(val)=>fmtBRL(val), cursor: false }
 
   return (
     <div style={{ color:'var(--fs-text-1)' }}>
@@ -123,7 +123,7 @@ export default function DREAnalise() {
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} />
               <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fmtCompact} width={65} />
               <ReferenceLine y={0} stroke="var(--fs-border-2)" strokeWidth={1} />
-              <Tooltip {...tt} />
+              <Tooltip {...tt} cursor={false} />
               <Legend iconType="circle" wrapperStyle={{fontSize:11}} />
               <Line type="monotone" dataKey="receita"    stroke="#22c55e" strokeWidth={2} dot={false} name="Receita Bruta" />
               <Line type="monotone" dataKey="ebitda"     stroke="#14b8a6" strokeWidth={2} dot={false} name="EBITDA" />

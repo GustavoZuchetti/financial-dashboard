@@ -182,7 +182,7 @@ export default function FluxoComparativo() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
                   <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} />
                   <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fC} width={68} />
-                  <Tooltip content={<TT />} />
+                  <Tooltip content={<TT />} cursor={false} />
                   <Legend iconType="circle" wrapperStyle={{fontSize:11,paddingTop:8}} />
                   <Bar dataKey="entradas1" fill="#3b82f6" radius={[3,3,0,0]} name="Entradas P1" barSize={12} />
                   <Bar dataKey="entradas2" fill="rgba(59,130,246,0.35)" radius={[3,3,0,0]} name="Entradas P2" barSize={12} />

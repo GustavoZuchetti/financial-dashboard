@@ -435,7 +435,7 @@ export default function FluxoCaixaPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:12}} />
                   <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} tickFormatter={fC} width={68} />
-                  <Tooltip content={<TT />} cursor={{ fill:'rgba(255,255,255,0.04)' }} />
+                  <Tooltip content={<TT />} cursor={false} />
                   <Bar dataKey="entradas" fill="url(#gradEntradas)" radius={[4,4,0,0]} name="Entradas" barSize={28} />
                   <Bar dataKey="saidas"   fill="rgba(239,68,68,0.55)" radius={[4,4,0,0]} name="Saídas" barSize={28} />
                   <Line type="monotone" dataKey="saldo" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r:4, fill:'#8b5cf6', strokeWidth:0 }} name="Saldo" />

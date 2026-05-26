@@ -105,7 +105,7 @@ const DREColumn = ({ label, startDate, endDate, waterfallData, kpis, onDateChang
               tickFormatter={fmt} width={72}
             />
             {/* Tooltip custom — sem NaN, adaptado ao tema */}
-            <Tooltip content={<CustomTooltip />} cursor={{ fill:'rgba(255,255,255,0.04)' }} />
+            <Tooltip content={<CustomTooltip />} cursor={false} />
 
             {/* Barra transparente de base (offset) — cria o efeito waterfall */}
             <Bar dataKey="base" stackId="wf" fill="transparent" />

@@ -527,7 +527,7 @@ export default function OverviewPage() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} />
                     <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fC} width={62} />
-                    <Tooltip content={<TT />} />
+                    <Tooltip content={<TT />} cursor={false} />
                     <Legend iconType="circle" wrapperStyle={{fontSize:11,paddingTop:8}} />
                     <Bar dataKey="entradas" fill="#3b82f6" radius={[3,3,0,0]} name="Entradas" barSize={12} />
                     <Bar dataKey="saidas"   fill="rgba(239,68,68,0.6)" radius={[3,3,0,0]} name="Saídas" barSize={12} />
@@ -582,7 +582,7 @@ export default function OverviewPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} />
                   <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fC} width={62} />
-                  <Tooltip content={<TT />} />
+                  <Tooltip content={<TT />} cursor={false} />
                   <Legend iconType="circle" wrapperStyle={{fontSize:11,paddingTop:8}} />
                   <Bar dataKey="receita" fill="#22c55e" name="Receita Bruta" radius={[3,3,0,0]} barSize={14} />
                   <Bar dataKey="ebitda"  fill="#3b82f6" name="EBITDA"        radius={[3,3,0,0]} barSize={14} />

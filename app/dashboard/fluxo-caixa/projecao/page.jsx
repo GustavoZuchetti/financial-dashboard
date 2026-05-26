@@ -190,7 +190,7 @@ export default function FluxoProjecao() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fC} width={72} />
-                <Tooltip content={<TT />} />
+                <Tooltip content={<TT />} cursor={false} />
                 <Bar dataKey="entradas_real" fill="#22c55e"                    name="Entradas (real)"     barSize={14} radius={[3,3,0,0]} />
                 <Bar dataKey="saidas_real"   fill="rgba(239,68,68,0.7)"        name="Saídas (real)"       barSize={14} radius={[3,3,0,0]} />
                 <Bar dataKey="entradas_proj" fill="rgba(34,197,94,0.35)"       name="Entradas (proj)"     barSize={14} radius={[3,3,0,0]} />

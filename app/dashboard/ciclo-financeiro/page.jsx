@@ -358,7 +358,7 @@ export default function CicloFinanceiroPage() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} />
                     <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={v=>v+'d'} width={38} />
-                    <Tooltip content={<TT />} />
+                    <Tooltip content={<TT />} cursor={false} />
                     <Legend iconType="circle" wrapperStyle={{fontSize:11,paddingTop:8}} />
                     <Line type="monotone" dataKey="pmr" stroke="#3b82f6" strokeWidth={2.5} dot={{r:4}} name="PMR" connectNulls />
                     <Line type="monotone" dataKey="pmp" stroke="#22c55e" strokeWidth={2.5} dot={{r:4}} name="PMP" connectNulls />
@@ -382,7 +382,7 @@ export default function CicloFinanceiroPage() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} />
                     <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={v=>v+'d'} width={38} />
-                    <Tooltip content={<TT />} />
+                    <Tooltip content={<TT />} cursor={false} />
                     <ReferenceLine y={0} stroke="var(--fs-border)" strokeWidth={2} />
                     <Bar dataKey="cicloCF" radius={[4,4,0,0]} name="Ciclo Financeiro">
                       {historico.map((entry, i) => (

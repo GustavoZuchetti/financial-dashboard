@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 const inp = {
@@ -28,7 +29,8 @@ const label = {
 }
 
 export default function ConfiguracoesPage() {
-  const [tab,      setTab]      = useState('perfil')
+  const searchParams = useSearchParams()
+  const [tab,      setTab]      = useState(() => searchParams.get('tab') || 'perfil')
   const [perfil,   setPerfil]   = useState({ nome: '', email: '' })
   const [senha,    setSenha]    = useState('')
   const [empresa,  setEmpresa]  = useState({ nome: '', cnpj: '' })
@@ -259,7 +261,20 @@ export default function ConfiguracoesPage() {
                       <tr key={u.id} style={{ borderBottom: '1px solid var(--fs-border)' }}>
                         <td style={{ padding: '10px', color: 'var(--fs-text-1)', fontWeight: 500 }}>{u.email || '—'}</td>
                         <td style={{ padding: '10px' }}>
-                          <span style={{ background: u.role === 'super_admin' ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)', color: u.role === 'super_admin' ? 'var(--fs-danger)' : 'var(--fs-brand)', border: '1px solid', borderColor: u.role === 'super_admin' ? 'rgba(239,68,68,0.2)' : 'rgba(59,130,246,0.2)', padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{u.role}</span>
+                          <select
+                            value={u.role}
+                            onChange={async e => {
+                              const newRole = e.target.value
+                              const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', u.id)
+                              if (!error) setUsuarios(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x))
+                              else toast('Erro: ' + error.message, 'error')
+                            }}
+                            style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:6, color:'var(--fs-text-1)', padding:'3px 8px', fontSize:11, fontWeight:700, cursor:'pointer', outline:'none' }}
+                          >
+                            <option value="super_admin">Super Admin</option>
+                            <option value="org_admin">Administrador</option>
+                            <option value="user">Usuário</option>
+                          </select>
                         </td>
                         <td style={{ padding: '10px', color: 'var(--fs-text-4)', fontSize: 12 }}>{u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '—'}</td>
                       </tr>
@@ -287,6 +302,7 @@ export default function ConfiguracoesPage() {
                 <div>
                   <label style={label}>Perfil de Acesso</label>
                   <select style={{ ...inp }} value={invite.role} onChange={e => setInvite({ ...invite, role: e.target.value })}>
+                    <option value="super_admin">Super Admin</option>
                     <option value="org_admin">Administrador</option>
                     <option value="user">Usuário</option>
                   </select>

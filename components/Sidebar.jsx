@@ -51,8 +51,8 @@ const navItems = [
     { label: 'Layouts',          href: '/dashboard/importacao/layout', adminOnly: true },
   ]},
   { label: 'Configurações',    href: '/dashboard/configuracoes',    icon: 'config', children: [
-    { label: 'Empresas',      href: '/dashboard/configuracoes' },
-    { label: 'Perfil',        href: '/dashboard/configuracoes/perfil' },
+    { label: 'Empresas',      href: '/dashboard/configuracoes?tab=empresas' },
+    { label: 'Perfil',        href: '/dashboard/configuracoes?tab=perfil' },
   ]},
 ]
 

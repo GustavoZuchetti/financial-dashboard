@@ -8,8 +8,30 @@ const supabaseAdmin = createClient(
 
 export async function POST(req) {
   try {
+    // ─── Autenticação obrigatória ──────────────────────────────────
+    const token = (req.headers.get('authorization') || '').replace('Bearer ', '')
+    if (!token) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token)
+    if (authErr || !user) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    // ──────────────────────────────────────────────────────────────
+
     const { empresa_id } = await req.json()
     if (!empresa_id) return NextResponse.json({ error: 'empresa_id obrigatório' }, { status: 400 })
+
+    // Verificar se o usuário tem acesso à empresa solicitada
+    const [{ data: profile }, { data: empresa }] = await Promise.all([
+      supabaseAdmin.from('profiles').select('organization_id').eq('id', user.id).single(),
+      supabaseAdmin.from('empresas').select('id,user_id,organization_id').eq('id', empresa_id).single(),
+    ])
+
+    if (!empresa) return NextResponse.json({ error: 'Empresa não encontrada' }, { status: 404 })
+
+    const temAcesso =
+      empresa.user_id === user.id ||
+      (profile?.organization_id && empresa.organization_id === profile.organization_id)
+
+    if (!temAcesso) return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
     // Buscar todos os registros com paginação
     let all = [], pg = 0
@@ -37,21 +59,13 @@ export async function POST(req) {
       else porMes[key].cnt_s++
     })
 
-    // Montar payload de upsert em lote (1 chamada)
     const upsertPayload = Object.values(porMes).map(v => {
       const diasNoMes = new Date(v.ano, v.mes, 0).getDate()
       const pmr = v.cnt_e > 0 ? Math.round(diasNoMes / v.cnt_e) : 0
       const pmp = v.cnt_s > 0 ? Math.round(diasNoMes / v.cnt_s) : 0
-      return {
-        empresa_id,
-        ano: v.ano,
-        mes: v.mes,
-        pmr, pmp,
-        pme: 0,
-      }
+      return { empresa_id, ano: v.ano, mes: v.mes, pmr, pmp, pme: 0 }
     })
 
-    // Upsert em lote único
     const { error } = await supabaseAdmin
       .from('ciclo_financeiro')
       .upsert(upsertPayload, { onConflict: 'empresa_id,ano,mes' })

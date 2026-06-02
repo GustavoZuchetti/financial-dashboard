@@ -57,11 +57,30 @@ const FDBadge = ({ favorable, size = 'sm' }) => {
 }
 
 // ─── Linha da tabela DRE ────────────────────────────────────────────────────────
-const DRERow = ({ label, orcado, realizado, isExpense, isSubtotal, isTotal, isGroupHeader, indent = false }) => {
+const DRERow = ({ label, orcado, realizado, isExpense, isSubtotal, isTotal, isGroupHeader, indent = false,
+                  editMode, editKey, editValue, onEdit }) => {
   const fd = calcFD(realizado, orcado, isExpense)
   const rowStyle = isTotal ? S.total : isSubtotal ? S.subtotal : isGroupHeader ? S.groupHeader : {}
   const labelColor = isTotal ? 'var(--fs-text-1)' : isSubtotal ? 'var(--fs-text-1)' : isGroupHeader ? 'var(--fs-text-3)' : 'var(--fs-text-2)'
   const fontSize = isTotal ? '14px' : isSubtotal ? '13px' : isGroupHeader ? '11px' : '13px'
+
+  const orcDisplay = editMode && editKey && !isGroupHeader && !isSubtotal && !isTotal ? (
+    <input
+      type="number"
+      value={editValue ?? ''}
+      onChange={e => onEdit(editKey, e.target.value)}
+      style={{
+        width: '130px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.4)',
+        borderRadius: 6, color: 'var(--fs-text-1)', padding: '4px 8px', fontSize: 13,
+        textAlign: 'right', outline: 'none',
+      }}
+      placeholder="0,00"
+    />
+  ) : (
+    <span style={{ color: isGroupHeader ? 'transparent' : 'var(--fs-text-3)' }}>
+      {isGroupHeader ? '' : fmtFull(orcado)}
+    </span>
+  )
 
   return (
     <tr style={rowStyle}>
@@ -69,7 +88,7 @@ const DRERow = ({ label, orcado, realizado, isExpense, isSubtotal, isTotal, isGr
         {isGroupHeader ? label.toUpperCase() : label}
       </td>
       <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : 'var(--fs-text-3)' }}>
-        {isGroupHeader ? '' : fmtFull(orcado)}
+        {orcDisplay}
       </td>
       <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : '#fff', fontWeight: isTotal || isSubtotal ? 700 : 400 }}>
         {isGroupHeader ? '' : fmtFull(realizado)}
@@ -81,7 +100,7 @@ const DRERow = ({ label, orcado, realizado, isExpense, isSubtotal, isTotal, isGr
         {isGroupHeader ? '' : (fd ? (fd.deltaPct >= 0 ? '+' : '') + fd.deltaPct.toFixed(1) + '%' : '—')}
       </td>
       <td style={{ ...S.td, textAlign: 'center' }}>
-        {isGroupHeader ? '' : <FDBadge favorable={fd?.favorable ?? null} size={isTotal ? 'lg' : 'sm'} />}
+        {isGroupHeader ? '' : <FDBadge favorable={editMode ? null : (fd?.favorable ?? null)} size={isTotal ? 'lg' : 'sm'} />}
       </td>
     </tr>
   )
@@ -119,6 +138,11 @@ export default function OrcamentoPage() {
   const [orcado, setOrcado] = useState([])
   const [loading, setLoading] = useState(true)
   const [empresaId, setEmpresaId] = useState(null)
+  // ─── Estados de edição de orçamento ───────────────────────────────────────
+  const [editMode, setEditMode]     = useState(false)
+  const [orcEdits, setOrcEdits]     = useState({}) // chave: "tipo|categoria" → valor numérico
+  const [savingOrc, setSavingOrc]   = useState(false)
+  const [orcMsg, setOrcMsg]         = useState(null)
 
   useEffect(() => {
     const savedId = localStorage.getItem('empresa_id')
@@ -185,6 +209,52 @@ export default function OrcamentoPage() {
   const totCus  = { r: custoRows.reduce((a, c) => a + c.realizado, 0),    o: custoRows.reduce((a, c) => a + c.orcado, 0)    }
   const totDesp = { r: despesaRows.reduce((a, c) => a + c.realizado, 0),  o: despesaRows.reduce((a, c) => a + c.orcado, 0)  }
 
+  // ─── Edição de orçamento ───────────────────────────────────────────────────
+  const startEditMode = () => {
+    // pré-preencher com valores atuais
+    const initial = {}
+    ;[...receitaRows.map(r => ({...r, tipo:'receita'})),
+      ...custoRows.map(r => ({...r, tipo:'custo'})),
+      ...despesaRows.map(r => ({...r, tipo:'despesa'}))
+    ].forEach(row => { initial[`${row.tipo}|${row.categoria}`] = row.orcado })
+    setOrcEdits(initial)
+    setEditMode(true)
+    setOrcMsg(null)
+  }
+
+  const cancelEditMode = () => { setEditMode(false); setOrcEdits({}) }
+
+  const saveOrcamento = async () => {
+    if (!empresaId || empresaId === 'todas') {
+      setOrcMsg({ t: 'error', m: 'Selecione uma empresa específica para editar o orçamento.' }); return
+    }
+    setSavingOrc(true)
+    try {
+      const upsertRows = Object.entries(orcEdits)
+        .filter(([, val]) => val !== '' && val !== null && val !== undefined)
+        .map(([key, val]) => {
+          const idx = key.indexOf('|')
+          const tipo      = key.substring(0, idx)
+          const categoria = key.substring(idx + 1)
+          return { empresa_id: empresaId, ano, mes, categoria, tipo, valor_orcado: parseFloat(String(val).replace(',', '.')) || 0 }
+        })
+      if (upsertRows.length > 0) {
+        const { error } = await supabase.from('orcamentos')
+          .upsert(upsertRows, { onConflict: 'empresa_id,ano,mes,categoria,tipo' })
+        if (error) { setOrcMsg({ t: 'error', m: 'Erro ao salvar: ' + error.message }); return }
+      }
+      setOrcMsg({ t: 'ok', m: `✓ Orçamento de ${MESES[mes-1]}/${ano} salvo com sucesso.` })
+      setEditMode(false); setOrcEdits({})
+      // recarregar dados
+      const startDate = `${ano}-${String(mes).padStart(2,'0')}-01`
+      const endDate   = new Date(ano, mes, 0).toISOString().split('T')[0]
+      const { data: orc } = await supabase.from('orcamentos').select('*')
+        .eq('empresa_id', empresaId).eq('ano', ano).eq('mes', mes)
+      setOrcado(orc || [])
+    } finally { setSavingOrc(false) }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   const lucroBrutoR = totRec.r - totCus.r
   const lucroBrutoO = totRec.o - totCus.o
   const ebitdaR = lucroBrutoR - totDesp.r
@@ -208,12 +278,36 @@ export default function OrcamentoPage() {
   return (
     <div style={S.page}>
       {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 }}>Budget vs. Realizado</h1>
-        <p style={{ color: 'var(--fs-text-4)', fontSize: '14px', margin: '4px 0 0' }}>
-          Análise de atingimento orçamentário com indicadores F/D (Favorável / Desfavorável)
-        </p>
+      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 }}>Budget vs. Realizado</h1>
+          <p style={{ color: 'var(--fs-text-4)', fontSize: '14px', margin: '4px 0 0' }}>
+            Análise de atingimento orçamentário com indicadores F/D (Favorável / Desfavorável)
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {editMode ? (
+            <>
+              <button onClick={cancelEditMode} style={{ background: 'transparent', color: 'var(--fs-text-2)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                ✕ Cancelar
+              </button>
+              <button onClick={saveOrcamento} disabled={savingOrc} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: savingOrc ? 0.6 : 1 }}>
+                {savingOrc ? 'Salvando...' : '💾 Salvar Orçamento'}
+              </button>
+            </>
+          ) : (
+            <button onClick={startEditMode} style={{ background: 'var(--fs-surface)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              ✏️ Editar Orçamento
+            </button>
+          )}
+        </div>
       </div>
+
+      {orcMsg && (
+        <div style={{ background: orcMsg.t === 'ok' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${orcMsg.t === 'ok' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`, borderRadius: 8, padding: '10px 16px', color: orcMsg.t === 'ok' ? '#10b981' : '#f87171', fontSize: 13, marginBottom: 16 }}>
+          {orcMsg.m}
+        </div>
+      )}
 
       {/* Filtros */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -281,7 +375,9 @@ export default function OrcamentoPage() {
                   <DRERow label="Receitas" isGroupHeader />
                   {receitaRows.length === 0
                     ? <tr><td colSpan={6} style={{ ...S.tdLeft, color: 'var(--fs-text-4)', padding: '10px 28px', fontStyle: 'italic' }}>Sem lançamentos de receita neste período</td></tr>
-                    : receitaRows.map((r, i) => <DRERow key={i} label={r.categoria} orcado={r.orcado} realizado={r.realizado} isExpense={false} indent />)
+                    : receitaRows.map((r, i) => <DRERow key={i} label={r.categoria} orcado={r.orcado} realizado={r.realizado} isExpense={false} indent
+                        editMode={editMode} editKey={`receita|${r.categoria}`} editValue={orcEdits[`receita|${r.categoria}`] ?? r.orcado}
+                        onEdit={(k, v) => setOrcEdits(p => ({...p, [k]: v}))} />)
                   }
                   <DRERow label="(=) Receita Bruta" orcado={totRec.o} realizado={totRec.r} isExpense={false} isSubtotal />
 
@@ -289,7 +385,9 @@ export default function OrcamentoPage() {
                   <DRERow label="Custos" isGroupHeader />
                   {custoRows.length === 0
                     ? <tr><td colSpan={6} style={{ ...S.tdLeft, color: 'var(--fs-text-4)', padding: '10px 28px', fontStyle: 'italic' }}>Sem lançamentos de custo neste período</td></tr>
-                    : custoRows.map((r, i) => <DRERow key={i} label={r.categoria} orcado={r.orcado} realizado={r.realizado} isExpense={true} indent />)
+                    : custoRows.map((r, i) => <DRERow key={i} label={r.categoria} orcado={r.orcado} realizado={r.realizado} isExpense={true} indent
+                        editMode={editMode} editKey={`custo|${r.categoria}`} editValue={orcEdits[`custo|${r.categoria}`] ?? r.orcado}
+                        onEdit={(k, v) => setOrcEdits(p => ({...p, [k]: v}))} />)
                   }
                   <DRERow label="(–) Total Custos" orcado={totCus.o} realizado={totCus.r} isExpense={true} isSubtotal />
 
@@ -300,7 +398,9 @@ export default function OrcamentoPage() {
                   <DRERow label="Despesas Operacionais" isGroupHeader />
                   {despesaRows.length === 0
                     ? <tr><td colSpan={6} style={{ ...S.tdLeft, color: 'var(--fs-text-4)', padding: '10px 28px', fontStyle: 'italic' }}>Sem lançamentos de despesa neste período</td></tr>
-                    : despesaRows.map((r, i) => <DRERow key={i} label={r.categoria} orcado={r.orcado} realizado={r.realizado} isExpense={true} indent />)
+                    : despesaRows.map((r, i) => <DRERow key={i} label={r.categoria} orcado={r.orcado} realizado={r.realizado} isExpense={true} indent
+                        editMode={editMode} editKey={`despesa|${r.categoria}`} editValue={orcEdits[`despesa|${r.categoria}`] ?? r.orcado}
+                        onEdit={(k, v) => setOrcEdits(p => ({...p, [k]: v}))} />)
                   }
                   <DRERow label="(–) Total Despesas" orcado={totDesp.o} realizado={totDesp.r} isExpense={true} isSubtotal />
 

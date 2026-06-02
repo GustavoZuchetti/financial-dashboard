@@ -69,7 +69,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
             <div style={{ display:'flex', gap:16, alignItems:'center', flexWrap:'wrap' }}>
               <span style={{ fontSize:22, fontWeight:900, color:'#3b82f6' }}>{fmtBRL(clienteSel ? clienteAtual?.total || 0 : total)}</span>
               {clientes && !clienteSel
-                ? <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>{clientes.length} cliente{clientes.length !== 1 ? 's' : ''} · {lancamentos.length} lançamentos</span>
+                ? <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>{clientes.length} conta{clientes.length !== 1 ? 's' : ''} · {lancamentos.length} lançamentos</span>
                 : <><span style={{ fontSize:12, color:'var(--fs-text-4)' }}>{lancAtual.length} lançamento{lancAtual.length !== 1 ? 's' : ''}</span>
                     {multiMes && <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>· {meses.length} meses</span>}
                   </>
@@ -135,7 +135,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
         <div style={{ padding:'14px 24px', borderTop:'1px solid var(--fs-border)', display:'flex', justifyContent:'space-between', alignItems:'center', background:'var(--fs-bg)', borderRadius:'0 0 16px 16px' }}>
           <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>
             {clientes && !clienteSel
-              ? `${clientes.length} clientes · ${lancamentos.length} lançamentos`
+              ? `${clientes.length} contas · ${lancamentos.length} lançamentos`
               : `${lancAtual.length} lançamento${lancAtual.length !== 1 ? 's' : ''}`}
           </span>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
@@ -267,7 +267,7 @@ export default function DREDetalhado() {
         <div>
           <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>Demonstrativos · Drill-down</div>
           <h1 style={{ fontSize:26, fontWeight:900, color:'var(--fs-text-1)', margin:0 }}>DRE Detalhado</h1>
-          <p style={{ color:'var(--fs-text-4)', fontSize:12, margin:'3px 0 0' }}>Clique em qualquer linha ou cliente para ver os lançamentos individuais</p>
+          <p style={{ color:'var(--fs-text-4)', fontSize:12, margin:'3px 0 0' }}>Clique em qualquer linha ou conta para ver os lançamentos individuais</p>
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center', background:'var(--fs-surface)', padding:'8px 14px', borderRadius:10, border:'1px solid var(--fs-border)' }}>
           <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>Período:</span>
@@ -339,9 +339,9 @@ export default function DREDetalhado() {
                     >
                       <td style={{ padding:'11px 16px 11px 36px', display:'flex', alignItems:'center', gap:10 }}>
                         <span style={{ color:line.color, fontWeight:700, fontSize:13 }}>{cat.nome}</span>
-                        <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{cat.clientes.length} cliente{cat.clientes.length !== 1 ? 's' : ''}</span>
+                        <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{cat.clientes.length} conta{cat.clientes.length !== 1 ? 's' : ''}</span>
                         <span className="cat-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'#3b82f6', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', padding:'2px 8px', borderRadius:4, whiteSpace:'nowrap' }}>
-                          ver clientes →
+                          ver contas →
                         </span>
                       </td>
                       <td style={{ padding:'11px 16px', textAlign:'right', fontWeight:700, color:'var(--fs-text-1)' }}>{fmtBRL(cat.total)}</td>

@@ -97,12 +97,18 @@ export default function PlanoContasPage() {
   const salvar = async () => {
     if (!nova.codigo || !nova.nome || !empresaId) return
     setLoading(true)
+    const payload = {
+      codigo:    nova.codigo.toUpperCase().trim(),
+      nome:      nova.nome.toUpperCase().trim(),
+      tipo:      nova.tipo,
+      descricao: nova.descricao.trim(),
+    }
     if (editando) {
-      await supabase.from('plano_contas').update({ codigo: nova.codigo, nome: nova.nome, tipo: nova.tipo, descricao: nova.descricao }).eq('id', editando)
+      await supabase.from('plano_contas').update(payload).eq('id', editando)
       toast('Conta atualizada')
     } else {
       const { data: { user } } = await supabase.auth.getUser()
-      await supabase.from('plano_contas').insert([{ ...nova, empresa_id: empresaId, user_id: user.id }])
+      await supabase.from('plano_contas').insert([{ ...payload, empresa_id: empresaId, user_id: user.id }])
       toast('Conta adicionada')
     }
     setNova({ codigo:'', nome:'', tipo:'receita', descricao:'' }); setEditando(null); setShowAdd(false)
@@ -167,11 +173,11 @@ export default function PlanoContasPage() {
       <div style={{ display:'grid',gridTemplateColumns:'1fr 2fr 1fr',gap:12,marginBottom:12 }}>
         <div>
           <label style={{ display:'block',fontSize:11,color:'var(--fs-text-4)',fontWeight:700,textTransform:'uppercase',marginBottom:5 }}>Código</label>
-          <input style={inp} value={nova.codigo} onChange={e=>setNova({...nova,codigo:e.target.value})} placeholder="1.1" />
+          <input style={inp} value={nova.codigo} onChange={e=>setNova({...nova,codigo:e.target.value.toUpperCase()})} placeholder="1.1" />
         </div>
         <div>
           <label style={{ display:'block',fontSize:11,color:'var(--fs-text-4)',fontWeight:700,textTransform:'uppercase',marginBottom:5 }}>Nome da Conta</label>
-          <input style={inp} value={nova.nome} onChange={e=>setNova({...nova,nome:e.target.value})} placeholder="Ex: Receita de Serviços" />
+          <input style={inp} value={nova.nome} onChange={e=>setNova({...nova,nome:e.target.value.toUpperCase()})} placeholder="Ex: RECEITA DE SERVIÇOS" />
         </div>
         <div>
           <label style={{ display:'block',fontSize:11,color:'var(--fs-text-4)',fontWeight:700,textTransform:'uppercase',marginBottom:5 }}>Tipo</label>

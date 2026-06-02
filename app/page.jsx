@@ -10,9 +10,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [mounted, setMounted] = useState(false)
+  const [orgLogo, setOrgLogo] = useState(null)
 
   useEffect(() => {
     setMounted(true)
+    // Buscar logo da organização (leitura pública — não requer auth)
+    supabase.from('org_settings').select('logo_url').not('logo_url', 'is', null).limit(1).maybeSingle()
+      .then(({ data }) => { if (data?.logo_url) setOrgLogo(data.logo_url) })
+      .catch(() => {}) // tabela pode não existir ainda — falha silenciosa
   }, [])
 
   const handleLogin = async (e) => {
@@ -226,21 +231,26 @@ export default function LoginPage() {
 
             {/* Logo */}
             <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:56 }}>
-              <div style={{
-                width:42, height:42,
-                background:'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)',
-                borderRadius:12,
-                display:'flex', alignItems:'center', justifyContent:'center',
-                fontWeight:800, color:'#fff', fontSize:16,
-                letterSpacing:'-0.5px',
-                boxShadow:'0 4px 16px rgba(59,130,246,0.35)',
-                fontFamily:"'DM Sans', sans-serif",
-              }}>FS</div>
-              <span style={{
-                fontSize:18, fontWeight:700, color:'rgba(255,255,255,0.9)',
-                letterSpacing:'-0.3px',
-                fontFamily:"'DM Sans', sans-serif",
-              }}>Facesign</span>
+              {orgLogo
+                ? <img src={orgLogo} alt="Logo" style={{ height:42, maxWidth:160, objectFit:'contain' }} />
+                : <>
+                    <div style={{
+                      width:42, height:42,
+                      background:'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)',
+                      borderRadius:12,
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      fontWeight:800, color:'#fff', fontSize:16,
+                      letterSpacing:'-0.5px',
+                      boxShadow:'0 4px 16px rgba(59,130,246,0.35)',
+                      fontFamily:"'DM Sans', sans-serif",
+                    }}>FS</div>
+                    <span style={{
+                      fontSize:18, fontWeight:700, color:'rgba(255,255,255,0.9)',
+                      letterSpacing:'-0.3px',
+                      fontFamily:"'DM Sans', sans-serif",
+                    }}>Facesign</span>
+                  </>
+              }
             </div>
 
             {/* Headline */}

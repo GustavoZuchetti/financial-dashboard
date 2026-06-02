@@ -164,45 +164,19 @@ export default function CicloFinanceiroPage() {
     setRecalcLoading(true)
     setRecalcMsg(null)
     try {
-      // Buscar todos os lançamentos do FC com paginação
-      let all = [], pg = 0
-      while (true) {
-        const { data: batch } = await supabase
-          .from('fluxo_caixa').select('tipo,data')
-          .eq('empresa_id', empresaId)
-          .range(pg * 1000, (pg + 1) * 1000 - 1)
-        if (!batch || batch.length === 0) break
-        all = all.concat(batch)
-        if (batch.length < 1000) break
-        pg++
-      }
-
-      if (!all.length) { setRecalcMsg('Nenhum lançamento encontrado.'); setRecalcLoading(false); return }
-
-      // Agrupar por mês
-      const porMes = {}
-      all.forEach(f => {
-        if (!f.data) return
-        const d = new Date(f.data + 'T00:00:00')
-        const key = `${d.getFullYear()}-${d.getMonth()+1}`
-        if (!porMes[key]) porMes[key] = { ano: d.getFullYear(), mes: d.getMonth()+1, cnt_e:0, cnt_s:0 }
-        if (f.tipo === 'entrada') porMes[key].cnt_e++
-        else porMes[key].cnt_s++
+      // Usa a API route com Service Role (bypassa RLS) — resolve o erro de policy
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/recalcular-ciclo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ empresa_id: empresaId }),
       })
-
-      // Calcular e fazer upsert em lote
-      const payload = Object.values(porMes).map(v => {
-        const dias = new Date(v.ano, v.mes, 0).getDate()
-        const pmr  = v.cnt_e > 0 ? Math.round(dias / v.cnt_e) : 0
-        const pmp  = v.cnt_s > 0 ? Math.round(dias / v.cnt_s) : 0
-        return { empresa_id: empresaId, ano: v.ano, mes: v.mes, pmr, pmp, pme: 0 }
-      })
-
-      const { error } = await supabase.from('ciclo_financeiro')
-        .upsert(payload, { onConflict: 'empresa_id,ano,mes' })
-
-      if (error) { setRecalcMsg(`Erro: ${error.message}`); return }
-      setRecalcMsg(`✓ ${payload.length} meses recalculados (${all.length} lançamentos)`)
+      const json = await res.json()
+      if (!res.ok) { setRecalcMsg(`Erro: ${json.error}`); return }
+      setRecalcMsg(`✓ ${json.meses} meses recalculados (${json.total} lançamentos)`)
       await load()
     } catch(e) { setRecalcMsg('Erro: ' + e.message) }
     finally { setRecalcLoading(false) }

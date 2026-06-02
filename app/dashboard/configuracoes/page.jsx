@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -42,6 +42,11 @@ export default function ConfiguracoesPage() {
   const [orgId,    setOrgId]    = useState(null)
   const [msg,      setMsg]      = useState({ text: '', tipo: '' })
   const [loading,  setLoading]  = useState(false)
+  // ─── Logo da organização ───────────────────────────────────────
+  const [logoUrl,      setLogoUrl]      = useState(null)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const logoInputRef = React.useRef(null)
+  // ──────────────────────────────────────────────────────────────
 
   const toast = (text, tipo = 'success') => {
     setMsg({ text, tipo })
@@ -57,12 +62,14 @@ export default function ConfiguracoesPage() {
         const { data: p } = await supabase.from('profiles').select('organization_id, role').eq('id', user.id).single()
         if (p?.organization_id) {
           setOrgId(p.organization_id)
-          const [{ data: emps }, { data: users }] = await Promise.all([
+          const [{ data: emps }, { data: users }, { data: settings }] = await Promise.all([
             supabase.from('empresas').select('id,nome,cnpj').eq('organization_id', p.organization_id).order('nome'),
             supabase.from('profiles').select('id,email,role,created_at').eq('organization_id', p.organization_id),
+            supabase.from('org_settings').select('logo_url').eq('organization_id', p.organization_id).maybeSingle(),
           ])
           setEmpresas(emps || [])
           setUsuarios(users || [])
+          if (settings?.logo_url) setLogoUrl(settings.logo_url)
         } else {
           const { data: emps } = await supabase.from('empresas').select('id,nome,cnpj').order('nome')
           setEmpresas(emps || [])
@@ -71,6 +78,38 @@ export default function ConfiguracoesPage() {
     }
     load()
   }, [])
+
+  // ─── Upload de logo ────────────────────────────────────────────
+  const uploadLogo = async (file) => {
+    if (!file || !orgId) return
+    setLogoUploading(true)
+    try {
+      const ext  = file.name.split('.').pop().toLowerCase()
+      const path = `logos/${orgId}/logo.${ext}`
+      const { error: upErr } = await supabase.storage.from('org-assets').upload(path, file, { upsert: true, contentType: file.type })
+      if (upErr) { toast('Erro no upload: ' + upErr.message, 'error'); return }
+      const { data: { publicUrl } } = supabase.storage.from('org-assets').getPublicUrl(path)
+      // Salvar URL na tabela org_settings
+      const { error: dbErr } = await supabase.from('org_settings').upsert(
+        { organization_id: orgId, logo_url: publicUrl + `?v=${Date.now()}`, updated_at: new Date().toISOString() },
+        { onConflict: 'organization_id' }
+      )
+      if (dbErr) { toast('Erro ao salvar logo: ' + dbErr.message, 'error'); return }
+      setLogoUrl(publicUrl + `?v=${Date.now()}`)
+      toast('✓ Logo atualizada com sucesso!')
+    } finally { setLogoUploading(false) }
+  }
+
+  const removerLogo = async () => {
+    if (!orgId || !confirm('Remover a logo da organização?')) return
+    await supabase.from('org_settings').upsert(
+      { organization_id: orgId, logo_url: null, updated_at: new Date().toISOString() },
+      { onConflict: 'organization_id' }
+    )
+    setLogoUrl(null)
+    toast('Logo removida.')
+  }
+  // ──────────────────────────────────────────────────────────────
 
   const salvarPerfil = async (e) => {
     e.preventDefault(); setLoading(true)
@@ -120,9 +159,10 @@ export default function ConfiguracoesPage() {
   }
 
   const TABS = [
-    { v: 'perfil',   l: '👤 Perfil'   },
-    { v: 'empresas', l: '🏢 Empresas' },
-    { v: 'usuarios', l: '👥 Usuários' },
+    { v: 'perfil',      l: '👤 Perfil'            },
+    { v: 'empresas',    l: '🏢 Empresas'          },
+    { v: 'usuarios',    l: '👥 Usuários'          },
+    { v: 'identidade',  l: '🎨 Identidade Visual' },
   ]
 
   return (
@@ -322,6 +362,70 @@ export default function ConfiguracoesPage() {
                 </button>
               </div>
             )}
+          </div>
+        </>
+      )}
+
+      {/* ─── Tab: Identidade Visual ───────────────────────────── */}
+      {tab === 'identidade' && (
+        <>
+          <div style={card}>
+            <div style={cardTitle}>Logo da Organização</div>
+            <p style={{ fontSize: 13, color: 'var(--fs-text-4)', marginBottom: 20, lineHeight: 1.6 }}>
+              A logo será exibida na tela de login e no cabeçalho do sistema.
+              Formatos aceitos: PNG, JPG ou SVG. Tamanho recomendado: 200×60px.
+            </p>
+
+            {/* Preview da logo atual */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 12, color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
+                Logo Atual
+              </div>
+              <div style={{ width: 280, height: 90, background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                {logoUrl
+                  ? <img src={logoUrl} alt="Logo da organização" style={{ maxWidth: '90%', maxHeight: '80px', objectFit: 'contain' }} />
+                  : <span style={{ fontSize: 12, color: 'var(--fs-text-4)' }}>Sem logo cadastrada</span>
+                }
+              </div>
+            </div>
+
+            {/* Upload */}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                style={{ display: 'none' }}
+                onChange={e => { if (e.target.files?.[0]) uploadLogo(e.target.files[0]) }}
+              />
+              <button
+                onClick={() => logoInputRef.current?.click()}
+                disabled={logoUploading || !orgId}
+                style={{ ...btn('primary'), opacity: (logoUploading || !orgId) ? 0.6 : 1 }}
+              >
+                {logoUploading ? '⏳ Enviando...' : '📁 Selecionar Logo'}
+              </button>
+              {logoUrl && (
+                <button onClick={removerLogo} style={{ ...btn('ghost'), color: 'var(--fs-danger)', borderColor: 'rgba(248,113,113,0.3)' }}>
+                  🗑 Remover Logo
+                </button>
+              )}
+            </div>
+
+            {!orgId && (
+              <p style={{ marginTop: 12, fontSize: 12, color: 'var(--fs-warning)' }}>
+                ⚠️ Sua conta não está associada a uma organização. A logo requer uma organização configurada.
+              </p>
+            )}
+
+            <div style={{ marginTop: 20, padding: '12px 16px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 8 }}>
+              <div style={{ fontSize: 12, color: 'var(--fs-brand)', fontWeight: 700, marginBottom: 6 }}>⚙️ Pré-requisito de infraestrutura</div>
+              <div style={{ fontSize: 12, color: 'var(--fs-text-3)', lineHeight: 1.7 }}>
+                Esta funcionalidade requer um bucket público <strong>org-assets</strong> no Supabase Storage
+                e a migration <code>20260601_org_settings.sql</code> executada no banco.
+                Consulte o arquivo <code>supabase/migrations/</code> para os scripts necessários.
+              </div>
+            </div>
           </div>
         </>
       )}

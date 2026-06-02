@@ -54,7 +54,7 @@ const Step = ({ n }) => <span style={{ background:'rgba(59,130,246,0.15)', color
 const EMPTY_FORM = { nome:'', descricao:'', separador:';', formato_data:'DD/MM/YYYY', linha_header:1, colunas:{}, tipo_regras:[], is_default:false }
 
 export default function LayoutImportacao() {
-  const { isSuperAdmin, profile } = useOrg()
+  const { isSuperAdmin, profile, loading: orgLoading } = useOrg()
   const isAdmin = isSuperAdmin || profile?.role === 'org_admin'
 
   const [layouts,    setLayouts]    = useState([])
@@ -145,6 +145,12 @@ export default function LayoutImportacao() {
   const addRegra = () => setForm(f=>({...f, tipo_regras:[...f.tipo_regras,{valor_csv:'',tipo_destino:'despesa',modulo:'ambos'}]}))
   const updRegra = (i,k,v) => setForm(f=>{ const r=[...f.tipo_regras]; r[i]={...r[i],[k]:v}; return {...f,tipo_regras:r} })
   const delRegra = (i) => setForm(f=>({...f,tipo_regras:f.tipo_regras.filter((_,j)=>j!==i)}))
+
+  if (orgLoading) return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'40vh', color:'var(--fs-text-4)', fontSize:14 }}>
+      Carregando...
+    </div>
+  )
 
   if (!isAdmin) return (
     <div style={{textAlign:'center',padding:80,color:'var(--fs-text-4)'}}>

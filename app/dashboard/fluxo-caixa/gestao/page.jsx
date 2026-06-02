@@ -131,7 +131,7 @@ const BulkModal = ({ count, periodo, onConfirm, onCancel, loading }) => (
 // COMPONENTE PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function GestaoFluxoCaixaPage() {
-  const { profile, isSuperAdmin } = useOrg()
+  const { profile, isSuperAdmin, loading: orgLoading } = useOrg()
 
   // Verificar se é admin (super_admin ou org_admin)
   const isAdmin = isSuperAdmin || profile?.role === 'org_admin'
@@ -421,7 +421,14 @@ export default function GestaoFluxoCaixaPage() {
     return `${s[2]}/${s[1]}/${s[0]} – ${e[2]}/${e[1]}/${e[0]}`
   })()
 
-  // ─── Render: acesso negado ───────────────────────────────────────────────────
+  // ─── Guards de acesso ─────────────────────────────────────────────────────
+  // Aguarda o perfil carregar antes de avaliar isAdmin — evita bloqueio indevido
+  if (orgLoading) return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'40vh', color:'var(--fs-text-4)', fontSize:14 }}>
+      Carregando...
+    </div>
+  )
+
   if (!isAdmin) return (
     <div style={{ textAlign:'center', padding:'80px 24px', color:'var(--fs-text-4)' }}>
       <div style={{ fontSize:32, marginBottom:16, color:'var(--fs-text-4)' }}>—</div>

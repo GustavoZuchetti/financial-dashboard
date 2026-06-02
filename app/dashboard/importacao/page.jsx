@@ -383,7 +383,7 @@ export default function ImportacaoPage() {
   const fileRefFluxo = useRef(null)
 
   const router   = useRouter()
-  const { isSuperAdmin, profile } = useOrg()
+  const { isSuperAdmin, profile, loading: orgLoading } = useOrg()
   const isAdmin  = isSuperAdmin || profile?.role === 'org_admin'
   const showToast = useCallback((msg, type = 'info') => setToast({ msg, type }), [])
 

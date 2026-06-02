@@ -24,6 +24,9 @@ const card = {
   background: 'var(--fs-surface)', border: '1px solid var(--fs-border)',
   borderRadius: 12, padding: '24px', marginBottom: 16,
 }
+const cardTitle = {
+  fontSize: 15, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 16,
+}
 const label = {
   display: 'block', color: 'var(--fs-text-2)', fontSize: 12,
   fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6,

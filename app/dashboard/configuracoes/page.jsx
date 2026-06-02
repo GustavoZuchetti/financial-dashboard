@@ -428,14 +428,6 @@ export default function ConfiguracoesPage() {
               </p>
             )}
 
-            <div style={{ marginTop: 20, padding: '12px 16px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 8 }}>
-              <div style={{ fontSize: 12, color: 'var(--fs-brand)', fontWeight: 700, marginBottom: 6 }}>Pré-requisito de infraestrutura</div>
-              <div style={{ fontSize: 12, color: 'var(--fs-text-3)', lineHeight: 1.7 }}>
-                Esta funcionalidade requer um bucket público <strong>org-assets</strong> no Supabase Storage
-                e a migration <code>20260601_org_settings.sql</code> executada no banco.
-                Consulte o arquivo <code>supabase/migrations/</code> para os scripts necessários.
-              </div>
-            </div>
           </div>
         </>
       )}

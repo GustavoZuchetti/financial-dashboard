@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import SvgIcon from '@/components/SvgIcon'
 
 const inp = {
   width: '100%', background: 'var(--fs-input-bg)',
@@ -159,10 +160,10 @@ export default function ConfiguracoesPage() {
   }
 
   const TABS = [
-    { v: 'perfil',      l: 'Perfil'            },
-    { v: 'empresas',    l: 'Empresas'          },
-    { v: 'usuarios',    l: 'Usuários'          },
-    { v: 'identidade',  l: 'Identidade Visual' },
+    { v: 'perfil',      l: 'Perfil',           icon: 'user'       },
+    { v: 'empresas',    l: 'Empresas',          icon: 'building'   },
+    { v: 'usuarios',    l: 'Usuários',          icon: 'users'      },
+    { v: 'identidade',  l: 'Identidade Visual', icon: 'paintBrush' },
   ]
 
   return (
@@ -174,14 +175,18 @@ export default function ConfiguracoesPage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--fs-surface)', borderRadius: 10, padding: 4, width: 'fit-content', border: '1px solid var(--fs-border)' }}>
-        {TABS.map(({ v, l }) => (
+        {TABS.map(({ v, l, icon }) => (
           <button key={v} onClick={() => setTab(v)} style={{
-            padding: '8px 20px', borderRadius: 7, fontSize: 13, fontWeight: tab === v ? 700 : 400,
+            display: 'flex', alignItems: 'center', gap: 7,
+            padding: '8px 16px', borderRadius: 7, fontSize: 13, fontWeight: tab === v ? 700 : 400,
             color: tab === v ? 'var(--fs-text-1)' : 'var(--fs-text-4)',
             background: tab === v ? 'var(--fs-surface-2)' : 'transparent',
             border: tab === v ? '1px solid var(--fs-border)' : '1px solid transparent',
             cursor: 'pointer',
-          }}>{l}</button>
+          }}>
+            <SvgIcon name={icon} size={14} color={tab === v ? 'var(--fs-brand)' : 'currentColor'} />
+            {l}
+          </button>
         ))}
       </div>
 
@@ -349,7 +354,7 @@ export default function ConfiguracoesPage() {
                 </div>
               </div>
               <button type="submit" style={btn('primary')} disabled={loading || !invite.email.trim()}>
-                {loading ? 'Gerando...' : 'Gerar Link de Convite'}
+                {loading ? 'Gerando...' : <><SvgIcon name="link" size={13} style={{marginRight:6}} />Gerar Link de Convite</>}
               </button>
             </form>
 
@@ -357,8 +362,8 @@ export default function ConfiguracoesPage() {
               <div style={{ marginTop: 16, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10, padding: '14px 16px' }}>
                 <div style={{ fontSize: 12, color: 'var(--fs-success)', fontWeight: 700, marginBottom: 8 }}>Link gerado — válido por 7 dias:</div>
                 <div style={{ fontSize: 12, color: 'var(--fs-text-2)', wordBreak: 'break-all', marginBottom: 8 }}>{inviteLink}</div>
-                <button onClick={() => { navigator.clipboard.writeText(inviteLink); toast('✓ Link copiado!') }} style={{ ...btn('ghost'), padding: '6px 14px', fontSize: 12 }}>
-                  Copiar Link
+                <button onClick={() => { navigator.clipboard.writeText(inviteLink); toast('Link copiado!') }} style={{ ...btn('ghost'), padding: '6px 14px', fontSize: 12, display:'flex', alignItems:'center', gap:6 }}>
+                  <SvgIcon name="copy" size={13} /> Copiar Link
                 </button>
               </div>
             )}
@@ -401,12 +406,14 @@ export default function ConfiguracoesPage() {
               <button
                 onClick={() => logoInputRef.current?.click()}
                 disabled={logoUploading || !orgId}
-                style={{ ...btn('primary'), opacity: (logoUploading || !orgId) ? 0.6 : 1 }}
+                style={{ ...btn('primary'), opacity: (logoUploading || !orgId) ? 0.6 : 1, display:'flex', alignItems:'center', gap:7 }}
               >
+                <SvgIcon name="upload" size={14} color="#fff" />
                 {logoUploading ? 'Enviando...' : 'Selecionar Logo'}
               </button>
               {logoUrl && (
-                <button onClick={removerLogo} style={{ ...btn('ghost'), color: 'var(--fs-danger)', borderColor: 'rgba(248,113,113,0.3)' }}>
+                <button onClick={removerLogo} style={{ ...btn('ghost'), color: 'var(--fs-danger)', borderColor: 'rgba(248,113,113,0.3)', display:'flex', alignItems:'center', gap:7 }}>
+                  <SvgIcon name="trash" size={14} color="var(--fs-danger)" />
                   Remover Logo
                 </button>
               )}

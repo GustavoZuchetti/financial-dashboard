@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts'
 import { supabase } from '@/lib/supabase'
+import SvgIcon from '@/components/SvgIcon'
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -288,16 +289,16 @@ export default function OrcamentoPage() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {editMode ? (
             <>
-              <button onClick={cancelEditMode} style={{ background: 'transparent', color: 'var(--fs-text-2)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                Cancelar
+              <button onClick={cancelEditMode} style={{ background: 'transparent', color: 'var(--fs-text-2)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                <SvgIcon name="close" size={13} /> Cancelar
               </button>
-              <button onClick={saveOrcamento} disabled={savingOrc} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: savingOrc ? 0.6 : 1 }}>
-                {savingOrc ? 'Salvando...' : 'Salvar Orçamento'}
+              <button onClick={saveOrcamento} disabled={savingOrc} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: savingOrc ? 0.6 : 1, display:'flex', alignItems:'center', gap:7 }}>
+                <SvgIcon name="save" size={14} color="#fff" /> {savingOrc ? 'Salvando...' : 'Salvar Orçamento'}
               </button>
             </>
           ) : (
-            <button onClick={startEditMode} style={{ background: 'var(--fs-surface)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-              Editar Orçamento
+            <button onClick={startEditMode} style={{ background: 'var(--fs-surface)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+              <SvgIcon name="edit" size={14} color="var(--fs-brand)" /> Editar Orçamento
             </button>
           )}
         </div>
@@ -324,12 +325,14 @@ export default function OrcamentoPage() {
               key={mode}
               onClick={() => setViewMode(mode)}
               style={{
+                display:'flex', alignItems:'center', gap:6,
                 padding: '8px 16px', fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer',
                 background: viewMode === mode ? '#1d4ed8' : 'transparent',
                 color: viewMode === mode ? '#fff' : 'var(--fs-text-4)',
                 transition: 'all 0.2s'
               }}
             >
+              <SvgIcon name={mode === 'mensal' ? 'calendar' : 'chartBar'} size={13} color={viewMode === mode ? '#fff' : 'currentColor'} />
               {mode === 'mensal' ? 'Mensal' : 'Acumulado'}
             </button>
           ))}

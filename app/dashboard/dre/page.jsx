@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import SvgIcon from '@/components/SvgIcon'
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
 
 // ─── Paleta ──────────────────────────────────────────────────────────────────
@@ -275,7 +276,7 @@ export default function DREGeral() {
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <div style={{ width:40,height:40,background:'linear-gradient(135deg,#1d4ed8,#3b82f6)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,color:'#fff',fontSize:16 }}>FS</div>
               <div>
-                <div style={{ fontWeight:800, fontSize:18, color:'var(--fs-text-1)' }}>Facesign {isConsol&&<span style={badge}>Consolidado</span>}</div>
+                <div style={{ fontWeight:800, fontSize:18, color:'var(--fs-text-1)' }}>Facesign {isConsol&&<span style={{...badge,display:'inline-flex',alignItems:'center',gap:5}}><SvgIcon name="layers" size={11} color="currentColor" />Consolidado</span>}</div>
                 <div style={{ fontSize:12, color:'var(--fs-text-4)' }}>DRE — {formatPeriod(startDate,endDate)}</div>
               </div>
             </div>
@@ -334,7 +335,7 @@ export default function DREGeral() {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexWrap:'wrap', gap:12 }}>
           <h1 style={{ fontSize:24, fontWeight:800, color:'var(--fs-text-1)', display:'flex', alignItems:'center' }}>
             Demonstrativos Executivos
-            {isConsol && <span style={badge}>Consolidado</span>}
+            {isConsol && <span style={{...badge,display:'inline-flex',alignItems:'center',gap:5}}><SvgIcon name="layers" size={11} color="currentColor" />Consolidado</span>}
           </h1>
           <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--fs-surface)', padding:'7px 14px', borderRadius:8, border:'1px solid var(--fs-border)' }}>
@@ -344,7 +345,7 @@ export default function DREGeral() {
               <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
             </div>
             <button onClick={()=>setShowPres(true)} style={{ background:'linear-gradient(135deg,#1e3a5f,#1d4ed8)',border:'1px solid #2563eb',color:'#bfdbfe',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:700 }}>
-              Apresentação
+              <span style={{display:'inline-flex',alignItems:'center',gap:6}}><SvgIcon name="presentation" size={13} color="currentColor" />Apresentação</span>
             </button>
           </div>
         </div>

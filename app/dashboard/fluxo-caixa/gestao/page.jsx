@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import SvgIcon from '@/components/SvgIcon'
 import { useOrg } from '@/lib/org-context'
 
 // ─── Formatadores ─────────────────────────────────────────────────────────────
@@ -568,7 +569,7 @@ export default function GestaoFluxoCaixaPage() {
         <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:6 }}>
           <h1 style={{ fontSize:28, fontWeight:900, margin:0 }}>Gestão de Registros</h1>
           <span style={{ background:'rgba(239,68,68,0.1)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.2)', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700 }}>
-            Admin only
+            <span style={{display:'inline-flex',alignItems:'center',gap:5}}><SvgIcon name="lock" size={12} color="currentColor" />Admin only</span>
           </span>
         </div>
         <div style={{ fontSize:12, color:'var(--fs-text-4)' }}>
@@ -644,7 +645,7 @@ export default function GestaoFluxoCaixaPage() {
         {/* Saldo corrente real */}
         <div style={{ background: saldoCorrente >= 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border:`1px solid ${saldoCorrente>=0?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)'}`, borderRadius:10, padding:'12px 18px', flex:2 }}>
           <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>
-            Saldo Corrente (todas as movimentações)
+            <span style={{display:'flex',alignItems:'center',gap:7}}><SvgIcon name="wallet" size={14} color="var(--fs-brand)" />Saldo Corrente (todas as movimentações)</span>
           </div>
           <div style={{ display:'flex', alignItems:'baseline', gap:12 }}>
             <div style={{ fontSize:24, fontWeight:900, color: saldoCorrente >= 0 ? '#22c55e' : '#ef4444' }}>
@@ -659,7 +660,7 @@ export default function GestaoFluxoCaixaPage() {
         {/* Saldo inicial configurável */}
         <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 18px', flex:1, minWidth:220 }}>
           <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:6 }}>
-            Saldo Inicial
+            <span style={{display:'flex',alignItems:'center',gap:7}}><SvgIcon name="bank" size={14} color="var(--fs-brand)" />Saldo Inicial</span>
           </div>
           {editSaldo ? (
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import * as XLSX from 'xlsx'
 import { supabase } from '@/lib/supabase'
+import SvgIcon from '@/components/SvgIcon'
 import { useOrg } from '@/lib/org-context'
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
@@ -935,7 +936,7 @@ export default function ImportacaoPage() {
                   disabled={isImporting}
                   style={{ background: isImporting ? 'var(--fs-surface-3)' : 'var(--fs-danger)', color: isImporting ? 'var(--fs-text-4)' : '#fff', border:'none', borderRadius:9, padding:'12px', fontSize:14, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
                 >
-                  {isImporting ? 'Substituindo dados...' : `Substituir — apagar os ${confirmModal.count} existentes e importar novos`}
+                  {isImporting ? 'Substituindo dados...' : <><SvgIcon name="refresh" size={13} color="currentColor" style={{marginRight:6}} />Substituir — apagar os {confirmModal.count} existentes e importar novos</>}
                 </button>
                 <button
                   onClick={() => setConfirmModal(null)}
@@ -1075,7 +1076,7 @@ export default function ImportacaoPage() {
             />
             <button onClick={importDre} disabled={isImporting}
               style={{ width: '100%', background: isImporting ? 'var(--fs-surface-3)' : 'var(--fs-brand)', color: isImporting ? 'var(--fs-text-4)' : '#fff', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 800, cursor: isImporting ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
-              {isImporting ? 'Importando...' : `Importar ${dataDre.length} Lançamentos no DRE`}
+              {isImporting ? 'Importando...' : <><SvgIcon name="upload" size={13} color="#fff" style={{marginRight:6}} />Importar {dataDre.length} Lançamentos no DRE</>}
             </button>
           </>
         )
@@ -1097,7 +1098,7 @@ export default function ImportacaoPage() {
             </div>
             <button onClick={importFluxo} disabled={isImporting}
               style={{ width: '100%', background: isImporting ? 'var(--fs-surface-3)' : 'var(--fs-success)', color: isImporting ? 'var(--fs-text-4)' : '#fff', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 800, cursor: isImporting ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
-              {isImporting ? 'Importando...' : `Importar ${dataFluxo.length} Registros no Fluxo de Caixa`}
+              {isImporting ? 'Importando...' : <><SvgIcon name="upload" size={13} color="#fff" style={{marginRight:6}} />Importar {dataFluxo.length} Registros no Fluxo de Caixa</>}
             </button>
           </>
         )

@@ -1,4 +1,5 @@
 'use client'
+import SvgIcon from '@/components/SvgIcon'
 import { useOrg } from '@/lib/org-context'
 
 export default function ViewAsBanner() {
@@ -13,7 +14,7 @@ export default function ViewAsBanner() {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       fontSize: 13, fontWeight: 600, boxShadow: '0 2px 12px rgba(0,0,0,0.4)'
     }}>
-      <span>Visualizando como: <strong>{viewAsOrg?.nome}</strong> · Plano {viewAsOrg?.plano}</span>
+      <span style={{display:'inline-flex',alignItems:'center',gap:7}}><SvgIcon name="eye" size={13} color="currentColor" />Visualizando como: <strong>{viewAsOrg?.nome}</strong> · Plano {viewAsOrg?.plano}</span>
       <button onClick={exitViewAs} style={{
         background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)',
         color: '#fff', padding: '4px 14px', borderRadius: 6,

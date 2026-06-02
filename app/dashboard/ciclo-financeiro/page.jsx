@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import SvgIcon from '@/components/SvgIcon'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine
@@ -225,7 +226,7 @@ export default function CicloFinanceiroPage() {
             disabled={recalcLoading}
             style={{ background: recalcLoading ? 'rgba(59,130,246,0.4)' : '#3b82f6', border:'none', color:'#fff', borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, cursor: recalcLoading ? 'default' : 'pointer', whiteSpace:'nowrap' }}
           >
-            {recalcLoading ? 'Recalculando...' : 'Recalcular'}
+            {recalcLoading ? 'Recalculando...' : <><SvgIcon name="refresh" size={13} color="currentColor" style={{marginRight:6}} />Recalcular</>}
           </button>
           <select value={mesesHist} onChange={e=>setMesesHist(Number(e.target.value))} style={IS}>
             {[3,6,12].map(n => <option key={n} value={n}>Histórico: {n}m</option>)}

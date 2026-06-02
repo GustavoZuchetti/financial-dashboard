@@ -83,7 +83,7 @@ const ConfirmModal = ({ item, onConfirm, onCancel, loading }) => (
           Cancelar
         </button>
         <button onClick={onConfirm} disabled={loading} style={{ padding:'9px 20px', borderRadius:8, border:'none', background:'#ef4444', color:'#fff', fontSize:13, fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display:'flex', alignItems:'center', gap:6 }}>
-          {loading ? '⏳ Excluindo...' : '🗑 Excluir registro'}
+          {loading ? 'Excluindo...' : 'Excluir registro'}
         </button>
       </div>
     </div>
@@ -110,7 +110,7 @@ const BulkModal = ({ count, periodo, onConfirm, onCancel, loading }) => (
           <strong style={{ color:'var(--fs-text-1)' }}>{periodo}</strong>.
         </div>
         <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:6 }}>
-          ⚠️ Esta ação não pode ser desfeita. Os dados serão permanentemente removidos do banco.
+          Esta ação não pode ser desfeita. Os dados serão permanentemente removidos do banco.
         </div>
       </div>
 
@@ -119,7 +119,7 @@ const BulkModal = ({ count, periodo, onConfirm, onCancel, loading }) => (
           Cancelar
         </button>
         <button onClick={onConfirm} disabled={loading} style={{ padding:'9px 20px', borderRadius:8, border:'none', background:'#ef4444', color:'#fff', fontSize:13, fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-          {loading ? '⏳ Excluindo...' : `🗑 Excluir ${count} registro${count !== 1 ? 's' : ''}`}
+          {loading ? 'Excluindo...' : `Excluir ${count} registro${count !== 1 ? 's' : ''}`}
         </button>
       </div>
     </div>
@@ -423,7 +423,7 @@ export default function GestaoFluxoCaixaPage() {
   // ─── Render: acesso negado ───────────────────────────────────────────────────
   if (!isAdmin) return (
     <div style={{ textAlign:'center', padding:'80px 24px', color:'var(--fs-text-4)' }}>
-      <div style={{ fontSize:40, marginBottom:16 }}>🔒</div>
+      <div style={{ fontSize:32, marginBottom:16, color:'var(--fs-text-4)' }}>—</div>
       <div style={{ fontSize:18, fontWeight:700, color:'var(--fs-text-2)', marginBottom:8 }}>Acesso restrito</div>
       <div style={{ fontSize:14 }}>Esta página é acessível somente para administradores da organização.</div>
     </div>
@@ -568,7 +568,7 @@ export default function GestaoFluxoCaixaPage() {
         <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:6 }}>
           <h1 style={{ fontSize:28, fontWeight:900, margin:0 }}>Gestão de Registros</h1>
           <span style={{ background:'rgba(239,68,68,0.1)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.2)', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700 }}>
-            🔒 Admin only
+            Admin only
           </span>
         </div>
         <div style={{ fontSize:12, color:'var(--fs-text-4)' }}>
@@ -644,7 +644,7 @@ export default function GestaoFluxoCaixaPage() {
         {/* Saldo corrente real */}
         <div style={{ background: saldoCorrente >= 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border:`1px solid ${saldoCorrente>=0?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)'}`, borderRadius:10, padding:'12px 18px', flex:2 }}>
           <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>
-            💰 Saldo Corrente (todas as movimentações)
+            Saldo Corrente (todas as movimentações)
           </div>
           <div style={{ display:'flex', alignItems:'baseline', gap:12 }}>
             <div style={{ fontSize:24, fontWeight:900, color: saldoCorrente >= 0 ? '#22c55e' : '#ef4444' }}>
@@ -659,7 +659,7 @@ export default function GestaoFluxoCaixaPage() {
         {/* Saldo inicial configurável */}
         <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 18px', flex:1, minWidth:220 }}>
           <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:6 }}>
-            🏦 Saldo Inicial
+            Saldo Inicial
           </div>
           {editSaldo ? (
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
@@ -678,7 +678,7 @@ export default function GestaoFluxoCaixaPage() {
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)' }}>{fC(saldoInicialDB) || 'R$ 0'}</div>
               <button onClick={()=>setEditSaldo(true)} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
-                ✏️ Editar
+                Editar
               </button>
             </div>
           )}
@@ -708,7 +708,7 @@ export default function GestaoFluxoCaixaPage() {
             {/* Separador de data */}
             <div style={{ display:'flex', alignItems:'center', padding:'7px 16px', background:'var(--fs-bg)', borderBottom:'1px solid var(--fs-border)', borderTop: gi > 0 ? '2px solid var(--fs-border)' : 'none' }}>
               <div style={{ fontSize:11, fontWeight:800, color:'var(--fs-text-3)', letterSpacing:'0.4px' }}>
-                📅 {fDateBR(data)}
+                {fDateBR(data)}
               </div>
               <div style={{ marginLeft:'auto', display:'flex', gap:16, fontSize:11 }}>
                 <span style={{ color:'#22c55e', fontWeight:700 }}>

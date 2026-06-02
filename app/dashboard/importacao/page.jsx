@@ -233,7 +233,7 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
 
       {modulo === 'dre' && pendentes.length > 0 && (
         <div style={{ background: 'var(--fs-warning-bg)', border: '1px solid rgba(var(--fs-warning-rgb),0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: 'var(--fs-warning)' }}>
-          ⚠️ {pendentes.length} categoria{pendentes.length !== 1 ? 's' : ''} sem mapeamento de {uniqueRows.length} únicas. Registros sem mapeamento não entram no DRE.
+          {pendentes.length} categoria{pendentes.length !== 1 ? 's' : ''} sem mapeamento de {uniqueRows.length} únicas. Registros sem mapeamento não entram no DRE.
         </div>
       )}
 
@@ -326,7 +326,7 @@ function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
           </select>
           {contasFiltradas.length === 0 && (
             <p style={{ fontSize: 11, color: 'var(--fs-warning)', marginTop: 6 }}>
-              ⚠️ Nenhuma conta encontrada para este módulo. Verifique o Plano de Contas.
+              Nenhuma conta encontrada para este módulo. Verifique o Plano de Contas.
             </p>
           )}
         </div>
@@ -351,7 +351,7 @@ function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
           </button>
           <button onClick={() => selectedContaId && onSave(selectedContaId)} disabled={!selectedContaId || saving}
             style={{ flex: 2, background: selectedContaId ? 'var(--fs-brand)' : 'var(--fs-surface-3)', color: selectedContaId ? '#fff' : 'var(--fs-text-4)', border: 'none', borderRadius: 8, padding: '11px', fontSize: 14, fontWeight: 700, cursor: selectedContaId ? 'pointer' : 'not-allowed' }}>
-            {saving ? '⏳ Salvando...' : 'Salvar Mapeamento'}
+            {saving ? 'Salvando...' : 'Salvar Mapeamento'}
           </button>
         </div>
       </div>
@@ -857,7 +857,7 @@ export default function ImportacaoPage() {
       <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9998, padding:16 }}>
         <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:16, padding:28, width:'100%', maxWidth:460, boxShadow:'var(--fs-shadow-lg)' }}>
           <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-            <div style={{ width:44, height:44, background:'var(--fs-warning-bg)', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>⚠️</div>
+            <div style={{ width:44, height:44, background:'var(--fs-warning-bg)', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:700, color:'var(--fs-warning)' }}>!</div>
             <div>
               <h2 style={{ fontSize:17, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>Dados existentes detectados</h2>
               <p style={{ fontSize:12, color:'var(--fs-text-4)', margin:'2px 0 0' }}>Conflito de período encontrado</p>
@@ -869,7 +869,7 @@ export default function ImportacaoPage() {
               Já existem <strong style={{ color:'var(--fs-warning)' }}>{confirmModal.count} registros</strong> na base para o período:
             </p>
             <p style={{ fontSize:14, fontWeight:700, color:'var(--fs-text-1)', margin:0 }}>
-              📅 {confirmModal.periodo}
+              {confirmModal.periodo}
             </p>
           </div>
 
@@ -899,7 +899,7 @@ export default function ImportacaoPage() {
               // Reimportação inteligente: oferecer substituição parcial OU total
               <>
                 <div style={{ background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:8, padding:'12px 14px', fontSize:13, color:'var(--fs-text-2)', marginBottom:8 }}>
-                  <strong style={{ color:'#22c55e' }}>✅ Arquivo válido para atualização</strong>
+                  <strong style={{ color:'#22c55e' }}>Arquivo válido para atualização</strong>
                   <div style={{ marginTop:6 }}>Escolha como deseja importar os novos dados:</div>
                 </div>
                 {/* Opção 1: Atualização parcial — preserva histórico */}
@@ -908,7 +908,7 @@ export default function ImportacaoPage() {
                   disabled={isImporting}
                   style={{ background: isImporting ? 'var(--fs-surface-3)' : 'rgba(34,197,94,0.15)', color: isImporting ? 'var(--fs-text-4)' : '#22c55e', border:'1px solid rgba(34,197,94,0.35)', borderRadius:9, padding:'12px', fontSize:13, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', textAlign:'left' }}
                 >
-                  <div style={{ fontWeight:800, marginBottom:3 }}>🔄 Atualizar previsões (recomendado)</div>
+                  <div style={{ fontWeight:800, marginBottom:3 }}>Atualizar previsões (recomendado)</div>
                   <div style={{ fontSize:12, opacity:0.8 }}>Preserva o histórico já realizado. Substitui apenas registros a partir de hoje.</div>
                 </button>
                 {/* Opção 2: Substituição total — apaga tudo e reimporta */}
@@ -917,7 +917,7 @@ export default function ImportacaoPage() {
                   disabled={isImporting}
                   style={{ background: isImporting ? 'var(--fs-surface-3)' : 'rgba(239,68,68,0.1)', color: isImporting ? 'var(--fs-text-4)' : '#ef4444', border:'1px solid rgba(239,68,68,0.3)', borderRadius:9, padding:'12px', fontSize:13, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', textAlign:'left' }}
                 >
-                  <div style={{ fontWeight:800, marginBottom:3 }}>🗑️ Substituir tudo</div>
+                  <div style={{ fontWeight:800, marginBottom:3 }}>Substituir tudo</div>
                   <div style={{ fontSize:12, opacity:0.8 }}>Apaga todos os {confirmModal.count} registros existentes e reimporta o arquivo completo.</div>
                 </button>
                 <button
@@ -935,7 +935,7 @@ export default function ImportacaoPage() {
                   disabled={isImporting}
                   style={{ background: isImporting ? 'var(--fs-surface-3)' : 'var(--fs-danger)', color: isImporting ? 'var(--fs-text-4)' : '#fff', border:'none', borderRadius:9, padding:'12px', fontSize:14, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
                 >
-                  {isImporting ? '⏳ Substituindo dados...' : `🔄 Substituir — apagar os ${confirmModal.count} existentes e importar novos`}
+                  {isImporting ? 'Substituindo dados...' : `Substituir — apagar os ${confirmModal.count} existentes e importar novos`}
                 </button>
                 <button
                   onClick={() => setConfirmModal(null)}
@@ -1003,7 +1003,7 @@ export default function ImportacaoPage() {
             onMouseLeave={e => { e.currentTarget.style.borderColor='var(--fs-border)'; e.currentTarget.style.color='var(--fs-text-2)' }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
-            {activeLayout ? `Layout: ${activeLayout.nome.substring(0,20)}${activeLayout.nome.length>20?'…':''}` : '⚙️ Configurar Layout'}
+            {activeLayout ? `Layout: ${activeLayout.nome.substring(0,20)}${activeLayout.nome.length>20?'…':''}` : 'Configurar Layout'}
           </button>
         )}
       </div>
@@ -1023,8 +1023,8 @@ export default function ImportacaoPage() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 0, marginBottom: 24, background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 12, padding: 4, width: 'fit-content' }}>
         {[
-          { key: 'dre',   icon: '📊', label: 'DRE',           sub: 'Receitas, Custos e Despesas'      },
-          { key: 'fluxo', icon: '💵', label: 'Fluxo de Caixa', sub: 'Entradas e Saídas + Ciclo Fin.'  },
+          { key: 'dre',   icon: '', label: 'DRE',           sub: 'Receitas, Custos e Despesas'      },
+          { key: 'fluxo', icon: '', label: 'Fluxo de Caixa', sub: 'Entradas e Saídas + Ciclo Fin.'  },
         ].map(tab => (
           <button
             key={tab.key}
@@ -1075,7 +1075,7 @@ export default function ImportacaoPage() {
             />
             <button onClick={importDre} disabled={isImporting}
               style={{ width: '100%', background: isImporting ? 'var(--fs-surface-3)' : 'var(--fs-brand)', color: isImporting ? 'var(--fs-text-4)' : '#fff', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 800, cursor: isImporting ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
-              {isImporting ? '⏳ Importando...' : `📊 Importar ${dataDre.length} Lançamentos no DRE`}
+              {isImporting ? 'Importando...' : `Importar ${dataDre.length} Lançamentos no DRE`}
             </button>
           </>
         )
@@ -1097,7 +1097,7 @@ export default function ImportacaoPage() {
             </div>
             <button onClick={importFluxo} disabled={isImporting}
               style={{ width: '100%', background: isImporting ? 'var(--fs-surface-3)' : 'var(--fs-success)', color: isImporting ? 'var(--fs-text-4)' : '#fff', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 800, cursor: isImporting ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
-              {isImporting ? '⏳ Importando...' : `💵 Importar ${dataFluxo.length} Registros no Fluxo de Caixa`}
+              {isImporting ? 'Importando...' : `Importar ${dataFluxo.length} Registros no Fluxo de Caixa`}
             </button>
           </>
         )
@@ -1119,19 +1119,19 @@ export default function ImportacaoPage() {
               <button key={btn.tabela}
                 onClick={() => setConfirmLimpar(btn.tabela)}
                 style={{ background: 'transparent', border: `1px solid ${btn.color}`, borderRadius: 8, color: btn.color, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                🗑 {btn.label}
+                {btn.label}
               </button>
             ))}
           </div>
         ) : (
           <div style={{ background: 'var(--fs-danger-bg)', border: '1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius: 10, padding: '14px 16px' }}>
             <p style={{ fontSize: 13, color: 'var(--fs-text-1)', marginBottom: 12, fontWeight: 600 }}>
-              ⚠️ Confirma a exclusão de TODOS os registros de {confirmLimpar === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'} desta empresa?
+              Confirma a exclusão de TODOS os registros de {confirmLimpar === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'} desta empresa?
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => limparDados(confirmLimpar)} disabled={limpandoDados}
                 style={{ background: 'var(--fs-danger)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                {limpandoDados ? '⏳ Removendo...' : '✓ Confirmar exclusão'}
+                {limpandoDados ? 'Removendo...' : '✓ Confirmar exclusão'}
               </button>
               <button onClick={() => setConfirmLimpar(false)}
                 style={{ background: 'var(--fs-surface-2)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>

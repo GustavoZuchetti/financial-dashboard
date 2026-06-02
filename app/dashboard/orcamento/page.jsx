@@ -90,7 +90,7 @@ const DRERow = ({ label, orcado, realizado, isExpense, isSubtotal, isTotal, isGr
       <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : 'var(--fs-text-3)' }}>
         {orcDisplay}
       </td>
-      <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : '#fff', fontWeight: isTotal || isSubtotal ? 700 : 400 }}>
+      <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : 'var(--fs-text-1)', fontWeight: isTotal || isSubtotal ? 700 : 400 }}>
         {isGroupHeader ? '' : fmtFull(realizado)}
       </td>
       <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : (fd ? (fd.favorable ? '#10b981' : '#ef4444') : '#6b7280') }}>
@@ -289,15 +289,15 @@ export default function OrcamentoPage() {
           {editMode ? (
             <>
               <button onClick={cancelEditMode} style={{ background: 'transparent', color: 'var(--fs-text-2)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                ✕ Cancelar
+                Cancelar
               </button>
               <button onClick={saveOrcamento} disabled={savingOrc} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: savingOrc ? 0.6 : 1 }}>
-                {savingOrc ? 'Salvando...' : '💾 Salvar Orçamento'}
+                {savingOrc ? 'Salvando...' : 'Salvar Orçamento'}
               </button>
             </>
           ) : (
             <button onClick={startEditMode} style={{ background: 'var(--fs-surface)', color: 'var(--fs-text-1)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-              ✏️ Editar Orçamento
+              Editar Orçamento
             </button>
           )}
         </div>
@@ -330,7 +330,7 @@ export default function OrcamentoPage() {
                 transition: 'all 0.2s'
               }}
             >
-              {mode === 'mensal' ? '📅 Mensal' : '📊 Acumulado'}
+              {mode === 'mensal' ? 'Mensal' : 'Acumulado'}
             </button>
           ))}
         </div>
@@ -442,9 +442,9 @@ export default function OrcamentoPage() {
           {/* Legenda F/D */}
           <div style={{ background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '8px', padding: '12px 16px', fontSize: '12px', color: 'var(--fs-text-4)', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
             <span><strong style={{ color: 'var(--fs-text-4)' }}>Lógica F/D aplicada:</strong></span>
-            <span>📈 <strong style={{ color: '#10b981' }}>Receita:</strong> Realizado {'>'} Orçado = Favorável</span>
-            <span>📉 <strong style={{ color: '#10b981' }}>Custo/Despesa:</strong> Realizado {'<'} Orçado = Favorável</span>
-            <span>⚠️ Resultado oposto em qualquer linha = Desfavorável</span>
+            <span>Receita: Realizado {'>'} Orçado = <strong style={{ color: '#10b981' }}>Favorável</strong></span>
+            <span>Custo/Despesa: Realizado {'<'} Orçado = <strong style={{ color: '#10b981' }}>Favorável</strong></span>
+            <span>Resultado oposto em qualquer linha = Desfavorável</span>
           </div>
         </>
       )}

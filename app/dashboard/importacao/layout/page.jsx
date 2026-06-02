@@ -148,7 +148,7 @@ export default function LayoutImportacao() {
 
   if (!isAdmin) return (
     <div style={{textAlign:'center',padding:80,color:'var(--fs-text-4)'}}>
-      <div style={{fontSize:36,marginBottom:12}}>🔒</div>
+      <div style={{marginBottom:12,fontSize:13,color:'var(--fs-text-4)'}}>Acesso restrito</div>
       <div style={{fontSize:15,fontWeight:700}}>Acesso restrito a administradores</div>
     </div>
   )
@@ -172,7 +172,7 @@ export default function LayoutImportacao() {
         ) : (
           <div style={{display:'flex',gap:8}}>
             <button onClick={()=>{setMode('list');setMsg(null)}} style={{background:'var(--fs-surface)',border:'1px solid var(--fs-border)',color:'var(--fs-text-2)',borderRadius:10,padding:'9px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}>← Voltar</button>
-            <button onClick={save} disabled={saving} style={{background:saving?'rgba(59,130,246,0.5)':'#3b82f6',border:'none',color:'#fff',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:saving?'default':'pointer'}}>{saving?'Salvando...':'💾 Salvar Layout'}</button>
+            <button onClick={save} disabled={saving} style={{background:saving?'rgba(59,130,246,0.5)':'#3b82f6',border:'none',color:'#fff',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:saving?'default':'pointer'}}>{saving?'Salvando...':'Salvar Layout'}</button>
           </div>
         )}
       </div>
@@ -184,7 +184,7 @@ export default function LayoutImportacao() {
         ? <div style={{textAlign:'center',padding:60,color:'var(--fs-text-4)'}}>Carregando...</div>
         : layouts.length===0
           ? <Card style={{textAlign:'center',padding:60}}>
-              <div style={{fontSize:36,marginBottom:12}}>📋</div>
+              <div style={{marginBottom:12,fontSize:13,color:'var(--fs-text-4)'}}>Layouts configurados</div>
               <div style={{fontSize:15,fontWeight:700,color:'var(--fs-text-1)',marginBottom:6}}>Nenhum layout configurado</div>
               <div style={{fontSize:13,color:'var(--fs-text-4)',marginBottom:20}}>Crie um layout para que o sistema reconheça automaticamente as colunas do seu arquivo ao importar</div>
               <button onClick={openNew} style={{background:'#3b82f6',border:'none',color:'#fff',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer'}}>Criar primeiro layout</button>
@@ -289,7 +289,7 @@ export default function LayoutImportacao() {
             <div>
               <label style={LS}>Carregar arquivo de exemplo para detectar colunas automaticamente</label>
               <div onClick={()=>fileRef.current?.click()} style={{border:'2px dashed var(--fs-border)',borderRadius:8,padding:'14px 18px',cursor:'pointer',display:'flex',alignItems:'center',gap:10}} onMouseEnter={e=>e.currentTarget.style.borderColor='#3b82f6'} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--fs-border)'}>
-                <span style={{fontSize:22}}>📂</span>
+                
                 <div>
                   <div style={{fontSize:13,color:'var(--fs-text-2)',fontWeight:600}}>Clique para carregar um CSV de exemplo</div>
                   <div style={{fontSize:11,color:'var(--fs-text-4)'}}>Nenhum dado será importado — apenas as colunas serão detectadas</div>
@@ -380,7 +380,7 @@ export default function LayoutImportacao() {
               if (!novas.length) return null
               return (
                 <div style={{marginTop:12,background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:8,padding:'10px 14px'}}>
-                  <div style={{fontSize:11,fontWeight:700,color:'#f59e0b',marginBottom:6}}>💡 Valores detectados no arquivo sem regra:</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#f59e0b',marginBottom:6}}>Dica: Valores detectados no arquivo sem regra:</div>
                   <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                     {novas.map(v=>(
                       <button key={v} onClick={()=>setForm(f=>({...f,tipo_regras:[...f.tipo_regras,{valor_csv:v,tipo_destino:v.toLowerCase().includes('pagar')?'despesa':'receita',modulo:'ambos'}]}))} style={{background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.3)',color:'#f59e0b',borderRadius:5,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>+ {v}</button>
@@ -394,7 +394,7 @@ export default function LayoutImportacao() {
           {/* Botão inferior */}
           <div style={{display:'flex',justifyContent:'flex-end',gap:8,paddingBottom:24}}>
             <button onClick={()=>{setMode('list');setMsg(null)}} style={{background:'var(--fs-surface)',border:'1px solid var(--fs-border)',color:'var(--fs-text-2)',borderRadius:10,padding:'10px 20px',fontSize:13,fontWeight:600,cursor:'pointer'}}>Cancelar</button>
-            <button onClick={save} disabled={saving} style={{background:saving?'rgba(59,130,246,0.5)':'#3b82f6',border:'none',color:'#fff',borderRadius:10,padding:'10px 22px',fontSize:13,fontWeight:700,cursor:saving?'default':'pointer'}}>{saving?'Salvando...':'💾 Salvar Layout'}</button>
+            <button onClick={save} disabled={saving} style={{background:saving?'rgba(59,130,246,0.5)':'#3b82f6',border:'none',color:'#fff',borderRadius:10,padding:'10px 22px',fontSize:13,fontWeight:700,cursor:saving?'default':'pointer'}}>{saving?'Salvando...':'Salvar Layout'}</button>
           </div>
         </div>
       )}

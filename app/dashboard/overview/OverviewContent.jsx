@@ -472,7 +472,7 @@ export default function OverviewPage() {
           {/* Botão Personalizado com picker */}
           <div style={{ position:'relative' }}>
             <QuickBtn
-              label={modo === 'custom' ? `📅 ${fDate(customRange.start)} – ${fDate(customRange.end)}` : '📅 Personalizado'}
+              label={modo === 'custom' ? `${fDate(customRange.start)} – ${fDate(customRange.end)}` : 'Personalizado'}
               active={modo === 'custom'}
               color="teal"
               onClick={() => setPickerOpen(p => !p)}

@@ -368,28 +368,28 @@ export default function FluxoCaixaPage() {
             <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
               {vencidos.s > 0 && (
                 <div style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:'#ef4444', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>⚠️ A Pagar Vencido</div>
+                  <div style={{ fontSize:10, fontWeight:700, color:'#ef4444', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Pagar Vencido</div>
                   <div style={{ fontSize:22, fontWeight:900, color:'#ef4444' }}>{fC(vencidos.s)}</div>
                   <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Saídas com data no passado</div>
                 </div>
               )}
               {vencidos.e > 0 && (
                 <div style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:'#f59e0b', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>⚠️ A Receber Vencido</div>
+                  <div style={{ fontSize:10, fontWeight:700, color:'#f59e0b', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Receber Vencido</div>
                   <div style={{ fontSize:22, fontWeight:900, color:'#f59e0b' }}>{fC(vencidos.e)}</div>
                   <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Entradas com data no passado</div>
                 </div>
               )}
               {vencidos.aS > 0 && (
                 <div style={{ background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.2)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:'#60a5fa', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>📅 A Pagar · 30 dias</div>
+                  <div style={{ fontSize:10, fontWeight:700, color:'#60a5fa', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Pagar · 30 dias</div>
                   <div style={{ fontSize:22, fontWeight:900, color:'#60a5fa' }}>{fC(vencidos.aS)}</div>
                   <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Saídas nos próximos 30 dias</div>
                 </div>
               )}
               {vencidos.aE > 0 && (
                 <div style={{ background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:'#22c55e', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>📅 A Receber · 30 dias</div>
+                  <div style={{ fontSize:10, fontWeight:700, color:'#22c55e', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Receber · 30 dias</div>
                   <div style={{ fontSize:22, fontWeight:900, color:'#22c55e' }}>{fC(vencidos.aE)}</div>
                   <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Entradas nos próximos 30 dias</div>
                 </div>

@@ -225,7 +225,7 @@ export default function CicloFinanceiroPage() {
             disabled={recalcLoading}
             style={{ background: recalcLoading ? 'rgba(59,130,246,0.4)' : '#3b82f6', border:'none', color:'#fff', borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, cursor: recalcLoading ? 'default' : 'pointer', whiteSpace:'nowrap' }}
           >
-            {recalcLoading ? '⏳ Recalculando...' : '🔄 Recalcular'}
+            {recalcLoading ? 'Recalculando...' : 'Recalcular'}
           </button>
           <select value={mesesHist} onChange={e=>setMesesHist(Number(e.target.value))} style={IS}>
             {[3,6,12].map(n => <option key={n} value={n}>Histórico: {n}m</option>)}
@@ -244,7 +244,7 @@ export default function CicloFinanceiroPage() {
       {/* ── Aviso sem dados ─────────────────────────────────────────────────── */}
       {semDados && !loading && (
         <div style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.25)', borderRadius:10, padding:'12px 18px', marginBottom:20, fontSize:13, color:'#f59e0b' }}>
-          ⚠️ Nenhum dado de ciclo financeiro para <strong>{MESES_LABEL[mesSel-1]}/{anoSel}</strong>.
+          Nenhum dado de ciclo financeiro para <strong>{MESES_LABEL[mesSel-1]}/{anoSel}</strong>.
           Os dados são gerados automaticamente ao importar o Fluxo de Caixa em{' '}
           <strong>Importação → Fluxo de Caixa</strong>.
         </div>
@@ -261,31 +261,31 @@ export default function CicloFinanceiroPage() {
               valor={pmr} cor="#3b82f6"
               descricao="Tempo médio entre emissão e recebimento"
               hint={pmr > 0 ? `${fC(fcMes?.entradas)} em ${fcMes?.cntE || 0} recebimentos` : null}
-              aviso={pmr > 45 ? '⚠️ Elevado' : pmr > 0 ? '✓ Ok' : null}
+              aviso={pmr > 45 ? 'Elevado' : pmr > 0 ? 'Ok' : null}
             />
             <KpiCard
               label="Prazo Médio de Pagamento" sigla="PMP"
               valor={pmp} cor="#22c55e"
               descricao="Tempo médio entre compra e pagamento"
               hint={pmp > 0 ? `${fC(fcMes?.saidas)} em ${fcMes?.cntS || 0} pagamentos` : null}
-              aviso={pmp < 20 ? '⚠️ Curto' : pmp > 0 ? '✓ Ok' : null}
+              aviso={pmp < 20 ? 'Curto' : pmp > 0 ? 'Ok' : null}
             />
             <KpiCard
               label="Prazo Médio de Estoque" sigla="PME"
               valor={pme} cor="#8b5cf6"
               descricao="Dias médios de permanência em estoque"
-              aviso={pme > 60 ? '⚠️ Alto' : pme > 0 ? '✓ Ok' : null}
+              aviso={pme > 60 ? 'Alto' : pme > 0 ? 'Ok' : null}
             />
             <KpiCard
               label="Ciclo Operacional" sigla="CO = PMR + PME"
               valor={co} cor="#f59e0b"
               descricao="Tempo desde a compra até o recebimento"
-              aviso={co > 90 ? '⚠️ Longo' : co > 0 ? '✓ Ok' : null}
+              aviso={co > 90 ? 'Longo' : co > 0 ? 'Ok' : null}
             />
             <KpiCard
               label="Ciclo Financeiro" sigla="CF = CO − PMP"
               valor={Math.abs(cf)} cor={cf <= 0 ? '#22c55e' : '#ef4444'}
-              descricao={cf <= 0 ? '✅ Caixa positivo: recebe antes de pagar' : '⚠️ Necessidade de capital de giro'}
+              descricao={cf <= 0 ? 'Caixa positivo: recebe antes de pagar' : 'Necessidade de capital de giro'}
               aviso={cf <= 0 ? 'Favorável' : 'Atenção'}
             />
           </div>

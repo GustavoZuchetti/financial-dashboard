@@ -73,7 +73,7 @@ function AceitarConviteForm() {
 
         {step === 'erro' && (
           <div style={{ textAlign:'center' }}>
-            <div style={{ fontSize:40, marginBottom:12 }}>❌</div>
+            
             <h2 style={{ color:'#f1f5f9', fontSize:18, marginBottom:8 }}>Convite inválido</h2>
             <p style={{ color:'#94a3b8', fontSize:14, marginBottom:20 }}>{msg}</p>
             <p style={{ color:'#64748b', fontSize:12 }}>Solicite um novo link de convite ao administrador.</p>
@@ -110,7 +110,7 @@ function AceitarConviteForm() {
 
         {step === 'sucesso' && (
           <div style={{ textAlign:'center' }}>
-            <div style={{ fontSize:48, marginBottom:14 }}>✅</div>
+            
             <h2 style={{ color:'#f1f5f9', fontSize:20, marginBottom:8 }}>Conta criada!</h2>
             <p style={{ color:'#94a3b8', fontSize:14, marginBottom:24 }}>Sua conta foi criada com sucesso.</p>
             <button onClick={() => router.push('/')} style={{ background:'#3b82f6', color:'#fff', border:'none', borderRadius:8, padding:'11px 28px', fontSize:14, fontWeight:700, cursor:'pointer' }}>

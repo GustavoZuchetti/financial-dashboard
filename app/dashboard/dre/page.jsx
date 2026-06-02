@@ -334,7 +334,7 @@ export default function DREGeral() {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexWrap:'wrap', gap:12 }}>
           <h1 style={{ fontSize:24, fontWeight:800, color:'var(--fs-text-1)', display:'flex', alignItems:'center' }}>
             Demonstrativos Executivos
-            {isConsol && <span style={badge}>📊 Consolidado</span>}
+            {isConsol && <span style={badge}>Consolidado</span>}
           </h1>
           <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--fs-surface)', padding:'7px 14px', borderRadius:8, border:'1px solid var(--fs-border)' }}>
@@ -344,7 +344,7 @@ export default function DREGeral() {
               <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
             </div>
             <button onClick={()=>setShowPres(true)} style={{ background:'linear-gradient(135deg,#1e3a5f,#1d4ed8)',border:'1px solid #2563eb',color:'#bfdbfe',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:700 }}>
-              🎯 Apresentação
+              Apresentação
             </button>
           </div>
         </div>
@@ -388,7 +388,7 @@ export default function DREGeral() {
             <div style={{ height:360,background:'linear-gradient(90deg,var(--fs-surface) 25%,var(--fs-surface-2) 50%,var(--fs-surface) 75%)',backgroundSize:'200% 100%',animation:'shimmer 1.5s infinite',borderRadius:8 }}/>
           ) : data.length===0 ? (
             <div style={{ height:200,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--fs-text-4)',flexDirection:'column',gap:8 }}>
-              <span style={{ fontSize:32 }}>📊</span><span>Nenhum lançamento no período</span>
+              <span>Nenhum lançamento no período</span>
             </div>
           ) : (
             <div style={{ height:380 }}>

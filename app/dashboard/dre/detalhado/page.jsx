@@ -112,7 +112,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
               meses.map(([key, mes]) => (
                 <div key={key}>
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 24px 8px', background:'var(--fs-bg)', borderBottom:'1px solid var(--fs-border)', position:'sticky', top:0, zIndex:1 }}>
-                    <span style={{ fontSize:12, fontWeight:800, color:'var(--fs-text-2)', letterSpacing:'0.3px' }}>📅 {mes.label}</span>
+                    <span style={{ fontSize:12, fontWeight:800, color:'var(--fs-text-2)', letterSpacing:'0.3px' }}>{mes.label}</span>
                     <div style={{ display:'flex', gap:12, fontSize:12 }}>
                       <span style={{ color:'var(--fs-text-4)' }}>{mes.items.length} lançamento{mes.items.length !== 1 ? 's' : ''}</span>
                       <span style={{ fontWeight:700, color:'#3b82f6' }}>{fmtBRL(mes.total)}</span>

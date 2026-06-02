@@ -141,7 +141,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
         >
           {empresas.length === 0 && <option value="">Nenhuma entidade</option>}
           {(empresas || []).map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
-          {empresas.length > 1 && <option value="todas">📊 Todas (Consolidado)</option>}
+          {empresas.length > 1 && <option value="todas">Todas (Consolidado)</option>}
         </select>
         {empresa === 'todas' && (
           <div style={{ fontSize: 10, color: '#3b82f6', marginTop: 5, padding: '3px 8px', background: 'rgba(59,130,246,0.1)', borderRadius: 4, textAlign: 'center', border: '1px solid rgba(59,130,246,0.2)' }}>

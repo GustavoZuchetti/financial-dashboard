@@ -159,10 +159,10 @@ export default function ConfiguracoesPage() {
   }
 
   const TABS = [
-    { v: 'perfil',      l: '👤 Perfil'            },
-    { v: 'empresas',    l: '🏢 Empresas'          },
-    { v: 'usuarios',    l: '👥 Usuários'          },
-    { v: 'identidade',  l: '🎨 Identidade Visual' },
+    { v: 'perfil',      l: 'Perfil'            },
+    { v: 'empresas',    l: 'Empresas'          },
+    { v: 'usuarios',    l: 'Usuários'          },
+    { v: 'identidade',  l: 'Identidade Visual' },
   ]
 
   return (
@@ -330,7 +330,7 @@ export default function ConfiguracoesPage() {
             <div style={{ color: 'var(--fs-text-4)', fontSize: 13, marginBottom: 20 }}>Gere um link de acesso para um novo usuário (válido por 7 dias)</div>
             {!orgId && (
               <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, padding: '10px 14px', color: 'var(--fs-warning)', fontSize: 13, marginBottom: 16 }}>
-                ⚠️ Conta não vinculada a uma organização. Contate o administrador do sistema.
+                Conta não vinculada a uma organização. Contate o administrador do sistema.
               </div>
             )}
             <form onSubmit={gerarConvite} style={{ opacity: orgId ? 1 : 0.5, pointerEvents: orgId ? 'auto' : 'none' }}>
@@ -349,16 +349,16 @@ export default function ConfiguracoesPage() {
                 </div>
               </div>
               <button type="submit" style={btn('primary')} disabled={loading || !invite.email.trim()}>
-                {loading ? 'Gerando...' : '🔗 Gerar Link de Convite'}
+                {loading ? 'Gerando...' : 'Gerar Link de Convite'}
               </button>
             </form>
 
             {inviteLink && (
               <div style={{ marginTop: 16, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10, padding: '14px 16px' }}>
-                <div style={{ fontSize: 12, color: 'var(--fs-success)', fontWeight: 700, marginBottom: 8 }}>✅ Link gerado — válido por 7 dias:</div>
+                <div style={{ fontSize: 12, color: 'var(--fs-success)', fontWeight: 700, marginBottom: 8 }}>Link gerado — válido por 7 dias:</div>
                 <div style={{ fontSize: 12, color: 'var(--fs-text-2)', wordBreak: 'break-all', marginBottom: 8 }}>{inviteLink}</div>
                 <button onClick={() => { navigator.clipboard.writeText(inviteLink); toast('✓ Link copiado!') }} style={{ ...btn('ghost'), padding: '6px 14px', fontSize: 12 }}>
-                  📋 Copiar Link
+                  Copiar Link
                 </button>
               </div>
             )}
@@ -403,23 +403,23 @@ export default function ConfiguracoesPage() {
                 disabled={logoUploading || !orgId}
                 style={{ ...btn('primary'), opacity: (logoUploading || !orgId) ? 0.6 : 1 }}
               >
-                {logoUploading ? '⏳ Enviando...' : '📁 Selecionar Logo'}
+                {logoUploading ? 'Enviando...' : 'Selecionar Logo'}
               </button>
               {logoUrl && (
                 <button onClick={removerLogo} style={{ ...btn('ghost'), color: 'var(--fs-danger)', borderColor: 'rgba(248,113,113,0.3)' }}>
-                  🗑 Remover Logo
+                  Remover Logo
                 </button>
               )}
             </div>
 
             {!orgId && (
               <p style={{ marginTop: 12, fontSize: 12, color: 'var(--fs-warning)' }}>
-                ⚠️ Sua conta não está associada a uma organização. A logo requer uma organização configurada.
+                Sua conta não está associada a uma organização. A logo requer uma organização configurada.
               </p>
             )}
 
             <div style={{ marginTop: 20, padding: '12px 16px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 8 }}>
-              <div style={{ fontSize: 12, color: 'var(--fs-brand)', fontWeight: 700, marginBottom: 6 }}>⚙️ Pré-requisito de infraestrutura</div>
+              <div style={{ fontSize: 12, color: 'var(--fs-brand)', fontWeight: 700, marginBottom: 6 }}>Pré-requisito de infraestrutura</div>
               <div style={{ fontSize: 12, color: 'var(--fs-text-3)', lineHeight: 1.7 }}>
                 Esta funcionalidade requer um bucket público <strong>org-assets</strong> no Supabase Storage
                 e a migration <code>20260601_org_settings.sql</code> executada no banco.

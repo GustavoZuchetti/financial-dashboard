@@ -33,11 +33,21 @@ export default function LoginPage() {
     e.preventDefault()
     if (!email) { setError('Informe o e-mail cadastrado.'); return }
     setLoading(true); setError(null)
-    const redirectTo = `${window.location.origin}/auth/reset-password`
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
-    setLoading(false)
-    if (error) { setError('Erro ao enviar: ' + error.message); return }
-    setForgotSent(true)
+    try {
+      const redirectTo = `${window.location.origin}/auth/reset-password`
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, redirectTo }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setError('Erro ao enviar: ' + (json.error || 'tente novamente.')); setLoading(false); return }
+      setForgotSent(true)
+    } catch {
+      setError('Erro de conexão. Verifique sua internet e tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

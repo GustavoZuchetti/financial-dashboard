@@ -1,26 +1,42 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
+
 export async function POST(req) {
   try {
     const { email, redirectTo } = await req.json()
     if (!email) return NextResponse.json({ error: 'E-mail obrigatório' }, { status: 400 })
 
-    // Cliente server-side — sem problemas de CORS ou sessionStorage
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    )
+    // Verificar se o usuário existe
+    const { data: { users }, error: listErr } = await supabaseAdmin.auth.admin.listUsers()
+    if (listErr) return NextResponse.json({ error: listErr.message }, { status: 500 })
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+    const user = users.find(u => u.email?.toLowerCase() === email.trim().toLowerCase())
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    // Segurança: não revelar se e-mail existe ou não
+    if (!user) return NextResponse.json({ ok: true, method: 'none' })
 
-    // Por segurança, sempre retornar sucesso mesmo se o e-mail não existir
-    // (evita user enumeration)
-    return NextResponse.json({ ok: true })
+    // Gerar link de recuperação direto via admin API (sem depender de SMTP)
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
+      email: user.email,
+      options: { redirectTo },
+    })
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    return NextResponse.json({
+      ok: true,
+      method: 'link',
+      link: data.properties?.action_link,
+      email: user.email,
+    })
   } catch (e) {
-    console.error('forgot-password:', e)
-    return NextResponse.json({ error: 'Erro interno. Tente novamente.' }, { status: 500 })
+    console.error('forgot-password error:', e)
+    return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }

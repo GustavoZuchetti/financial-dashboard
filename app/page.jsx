@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [orgLogo, setOrgLogo] = useState(null)
   const [forgotMode, setForgotMode] = useState(false)
   const [forgotSent, setForgotSent] = useState(false)
+  const [forgotLink, setForgotLink] = useState(null)
 
   useEffect(() => {
     setMounted(true)
@@ -41,10 +42,12 @@ export default function LoginPage() {
         body: JSON.stringify({ email, redirectTo }),
       })
       const json = await res.json()
-      if (!res.ok) { setError('Erro ao enviar: ' + (json.error || 'tente novamente.')); setLoading(false); return }
+      if (!res.ok) { setError((json.error || 'Erro ao gerar link. Tente novamente.')); return }
+      // Se gerou link direto (sem email), exibir na tela
+      if (json.method === 'link' && json.link) setForgotLink(json.link)
       setForgotSent(true)
-    } catch {
-      setError('Erro de conexão. Verifique sua internet e tente novamente.')
+    } catch (err) {
+      setError('Erro de conexão: ' + (err?.message || 'verifique sua internet.'))
     } finally {
       setLoading(false)
     }
@@ -404,10 +407,32 @@ export default function LoginPage() {
             {forgotSent ? (
               <div style={{ textAlign:'center', padding:'12px 0' }}>
                 <div style={{ width:52, height:52, background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.25)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 18px', fontSize:22, color:'#10b981' }}>✓</div>
-                <p style={{ fontSize:13, color:'rgba(148,163,184,0.65)', lineHeight:1.7, marginBottom:24, fontFamily:"'DM Sans', sans-serif" }}>
-                  Acesse o link enviado para <strong style={{ color:'rgba(241,245,249,0.8)' }}>{email}</strong> e siga as instruções para criar uma nova senha.
-                </p>
-                <button onClick={() => { setForgotMode(false); setForgotSent(false); setError(null) }}
+
+                {forgotLink ? (
+                  /* Link gerado diretamente — exibir na tela */
+                  <>
+                    <div style={{ fontSize:15, fontWeight:700, color:'rgba(241,245,249,0.9)', marginBottom:8, fontFamily:"'DM Sans', sans-serif" }}>
+                      Link de recuperação gerado
+                    </div>
+                    <p style={{ fontSize:13, color:'rgba(148,163,184,0.65)', lineHeight:1.7, marginBottom:20, fontFamily:"'DM Sans', sans-serif" }}>
+                      Clique no botão abaixo para redefinir sua senha agora:
+                    </p>
+                    <a href={forgotLink}
+                      style={{ display:'block', background:'linear-gradient(135deg,#1d4ed8,#3b82f6)', color:'#fff', borderRadius:10, padding:'13px 20px', fontSize:14, fontWeight:600, textDecoration:'none', marginBottom:16, fontFamily:"'DM Sans', sans-serif" }}>
+                      Redefinir minha senha →
+                    </a>
+                    <p style={{ fontSize:11, color:'rgba(148,163,184,0.4)', lineHeight:1.6, marginBottom:20, fontFamily:"'DM Sans', sans-serif" }}>
+                      Este link é de uso único e expira em 24 horas.
+                    </p>
+                  </>
+                ) : (
+                  /* E-mail enviado normalmente */
+                  <p style={{ fontSize:13, color:'rgba(148,163,184,0.65)', lineHeight:1.7, marginBottom:24, fontFamily:"'DM Sans', sans-serif" }}>
+                    Acesse o link enviado para <strong style={{ color:'rgba(241,245,249,0.8)' }}>{email}</strong> e siga as instruções para criar uma nova senha.
+                  </p>
+                )}
+
+                <button onClick={() => { setForgotMode(false); setForgotSent(false); setForgotLink(null); setError(null) }}
                   style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(148,163,184,0.8)', borderRadius:8, padding:'10px 20px', fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:"'DM Sans', sans-serif" }}>
                   Voltar ao login
                 </button>

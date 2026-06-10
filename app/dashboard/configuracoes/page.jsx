@@ -50,6 +50,11 @@ export default function ConfiguracoesPage() {
   const [logoUrl,      setLogoUrl]      = useState(null)
   const [logoUploading, setLogoUploading] = useState(false)
   const logoInputRef = React.useRef(null)
+  // ─── Role do usuário logado e redefinição de senha ─────────────
+  const [myRole,      setMyRole]      = useState(null)
+  const [resetModal,  setResetModal]  = useState(null) // { userId, email } | null
+  const [resetResult, setResetResult] = useState(null) // { email, password } | null
+  const [resetting,   setResetting]   = useState(false)
   // ──────────────────────────────────────────────────────────────
 
   const toast = (text, tipo = 'success') => {
@@ -66,6 +71,7 @@ export default function ConfiguracoesPage() {
         const { data: p } = await supabase.from('profiles').select('organization_id, role').eq('id', user.id).single()
         if (p?.organization_id) {
           setOrgId(p.organization_id)
+          setMyRole(p.role)
           const [{ data: emps }, { data: users }, { data: settings }] = await Promise.all([
             supabase.from('empresas').select('id,nome,cnpj').eq('organization_id', p.organization_id).order('nome'),
             supabase.from('profiles').select('id,email,role,created_at').eq('organization_id', p.organization_id),
@@ -112,6 +118,28 @@ export default function ConfiguracoesPage() {
     )
     setLogoUrl(null)
     toast('Logo removida.')
+  }
+  // ──────────────────────────────────────────────────────────────
+
+  // ─── Redefinição de senha (super_admin) ───────────────────────
+  const resetarSenha = async () => {
+    if (!resetModal) return
+    setResetting(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/admin/reset-user-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ userId: resetModal.userId }),
+      })
+      const json = await res.json()
+      if (!res.ok) { toast(json.error || 'Erro ao redefinir', 'error'); return }
+      setResetModal(null)
+      setResetResult({ email: json.email, password: json.password })
+    } finally { setResetting(false) }
   }
   // ──────────────────────────────────────────────────────────────
 
@@ -299,7 +327,7 @@ export default function ConfiguracoesPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--fs-border)' }}>
-                      {['E-mail', 'Perfil', 'Desde'].map(h => (
+                      {['E-mail', 'Perfil', 'Desde', ...(myRole === 'super_admin' ? ['Acesso'] : [])].map(h => (
                         <th key={h} style={{ padding: '7px 10px', textAlign: 'left', color: 'var(--fs-text-4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>{h}</th>
                       ))}
                     </tr>
@@ -325,6 +353,16 @@ export default function ConfiguracoesPage() {
                           </select>
                         </td>
                         <td style={{ padding: '10px', color: 'var(--fs-text-4)', fontSize: 12 }}>{u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '—'}</td>
+                        {myRole === 'super_admin' && (
+                          <td style={{ padding: '10px' }}>
+                            <button
+                              onClick={() => setResetModal({ userId: u.id, email: u.email })}
+                              style={{ background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.25)', borderRadius:6, color:'#f59e0b', padding:'4px 10px', fontSize:11, fontWeight:600, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5 }}
+                            >
+                              <SvgIcon name="lock" size={11} color="currentColor" /> Redefinir Senha
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -430,6 +468,51 @@ export default function ConfiguracoesPage() {
 
           </div>
         </>
+      )}
+      {/* ─── Modal: Confirmar redefinição de senha ───────────────── */}
+      {resetModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, padding:28, width:420, maxWidth:'90vw' }}>
+            <div style={{ fontSize:16, fontWeight:700, color:'var(--fs-text-1)', marginBottom:10 }}>Redefinir senha</div>
+            <p style={{ fontSize:13, color:'var(--fs-text-3)', marginBottom:20, lineHeight:1.6 }}>
+              Será gerada uma nova senha aleatória para <strong style={{ color:'var(--fs-text-1)' }}>{resetModal.email}</strong>.
+              A senha anterior deixará de funcionar imediatamente.
+            </p>
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+              <button onClick={() => setResetModal(null)} style={{ ...btn('ghost'), padding:'8px 18px' }}>Cancelar</button>
+              <button onClick={resetarSenha} disabled={resetting} style={{ ...btn('primary'), padding:'8px 18px', opacity: resetting ? 0.6 : 1 }}>
+                {resetting ? 'Gerando...' : 'Confirmar e Gerar Nova Senha'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Modal: Exibir nova senha ────────────────────────────── */}
+      {resetResult && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, padding:28, width:440, maxWidth:'90vw' }}>
+            <div style={{ fontSize:16, fontWeight:700, color:'#10b981', marginBottom:10 }}>Senha redefinida com sucesso</div>
+            <p style={{ fontSize:13, color:'var(--fs-text-3)', marginBottom:16, lineHeight:1.6 }}>
+              Compartilhe as credenciais abaixo com o usuário. Esta janela é a única oportunidade de visualizar a senha.
+            </p>
+            <div style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'14px 16px', marginBottom:20 }}>
+              <div style={{ fontSize:12, color:'var(--fs-text-4)', marginBottom:4 }}>E-MAIL</div>
+              <div style={{ fontSize:14, fontWeight:600, color:'var(--fs-text-1)', marginBottom:12 }}>{resetResult.email}</div>
+              <div style={{ fontSize:12, color:'var(--fs-text-4)', marginBottom:4 }}>NOVA SENHA</div>
+              <div style={{ fontSize:20, fontWeight:800, color:'var(--fs-text-1)', letterSpacing:2, fontFamily:'monospace' }}>{resetResult.password}</div>
+            </div>
+            <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
+              <button
+                onClick={() => { navigator.clipboard.writeText(`E-mail: ${resetResult.email}\nSenha: ${resetResult.password}`); toast('Credenciais copiadas!') }}
+                style={{ ...btn('ghost'), padding:'8px 18px', display:'flex', alignItems:'center', gap:6 }}
+              >
+                <SvgIcon name="copy" size={13} /> Copiar Credenciais
+              </button>
+              <button onClick={() => setResetResult(null)} style={{ ...btn('primary'), padding:'8px 18px' }}>Fechar</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

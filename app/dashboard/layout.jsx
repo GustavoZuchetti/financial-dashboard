@@ -17,18 +17,15 @@ export default function DashboardLayout({ children }) {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/'); return }
-      setUser(session.user)
-
       try {
-        // Usar API route server-side com service role key
-        // Isso bypassa qualquer política RLS na tabela de empresas
-        const { data: { session: sess } } = await supabase.auth.getSession()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) { router.push('/'); return }
+        setUser(session.user)
+
         const res = await fetch('/api/my-empresas', {
-          headers: { Authorization: `Bearer ${sess?.access_token}` }
+          headers: { Authorization: `Bearer ${session.access_token}` }
         })
-        const { empresas: data, error } = await res.json()
+        const { empresas: data } = await res.json()
 
         if (data && data.length > 0) {
           setEmpresas(data)
@@ -43,7 +40,9 @@ export default function DashboardLayout({ children }) {
           setEmpresas([])
         }
       } catch (e) {
-        console.error('Erro ao carregar empresas:', e)
+        console.error('checkAuth error:', e)
+        // Se falhar por qualquer motivo (ex: Supabase pausado), redirecionar ao login
+        router.push('/')
       } finally {
         setLoading(false)
       }

@@ -224,7 +224,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
                         borderLeft: pathname === child.href ? '2px solid rgba(var(--fs-brand-rgb),0.4)' : '2px solid transparent',
                       }}
                     >
-                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: pathname === child.href ? '#3b82f6' : '#475569', flexShrink: 0 }} />
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: pathname === child.href ? '#3b82f6' : 'var(--fs-text-4)', flexShrink: 0 }} />
                       {child.label}
                       {child.adminOnly && (
                         <span style={{ fontSize:9, background:'rgba(239,68,68,0.12)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.2)', padding:'1px 5px', borderRadius:4, marginLeft:'auto', fontWeight:700, letterSpacing:'0.3px' }}>ADM</span>

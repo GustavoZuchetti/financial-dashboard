@@ -11,13 +11,14 @@ export default function LoginPage() {
   const [error, setError] = useState(null)
   const [mounted, setMounted] = useState(false)
   const [orgLogo, setOrgLogo] = useState(null)
+  const [forgotMode, setForgotMode] = useState(false)
+  const [forgotSent, setForgotSent] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    // Buscar logo da organização (leitura pública — não requer auth)
     supabase.from('org_settings').select('logo_url').not('logo_url', 'is', null).limit(1).maybeSingle()
       .then(({ data }) => { if (data?.logo_url) setOrgLogo(data.logo_url) })
-      .catch(() => {}) // tabela pode não existir ainda — falha silenciosa
+      .catch(() => {})
   }, [])
 
   const handleLogin = async (e) => {
@@ -26,6 +27,17 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) { setError('E-mail ou senha incorretos.'); setLoading(false) }
     else router.push('/dashboard/dre')
+  }
+
+  const handleForgot = async (e) => {
+    e.preventDefault()
+    if (!email) { setError('Informe o e-mail cadastrado.'); return }
+    setLoading(true); setError(null)
+    const redirectTo = `${window.location.origin}/auth/reset-password`
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+    setLoading(false)
+    if (error) { setError('Erro ao enviar: ' + error.message); return }
+    setForgotSent(true)
   }
 
   return (
@@ -352,94 +364,111 @@ export default function LoginPage() {
                 color:'rgba(241,245,249,0.95)',
                 letterSpacing:'-0.5px',
                 margin:'0 0 8px',
-              }}>Bem-vindo</h2>
+              }}>
+                {forgotMode ? (forgotSent ? 'Verifique o e-mail' : 'Recuperar acesso') : 'Bem-vindo'}
+              </h2>
               <p style={{
                 fontSize:13.5, color:'rgba(148,163,184,0.65)',
                 fontFamily:"'DM Sans', sans-serif",
                 fontWeight:400, margin:0,
               }}>
-                Acesse com suas credenciais para continuar
+                {forgotMode
+                  ? (forgotSent ? `Enviamos um link para ${email}` : 'Informe seu e-mail para receber o link de redefinição')
+                  : 'Acesse com suas credenciais para continuar'
+                }
               </p>
             </div>
 
             {/* Erro */}
             {error && (
               <div style={{
-                background:'rgba(248,113,113,0.08)',
-                border:'1px solid rgba(248,113,113,0.2)',
-                borderRadius:10,
-                padding:'11px 14px',
-                color:'#fca5a5',
-                fontSize:13,
-                marginBottom:20,
-                display:'flex', alignItems:'center', gap:8,
-                fontFamily:"'DM Sans', sans-serif",
+                background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.2)',
+                borderRadius:10, padding:'11px 14px', color:'#fca5a5', fontSize:13, marginBottom:20,
+                display:'flex', alignItems:'center', gap:8, fontFamily:"'DM Sans', sans-serif",
               }}>
                 <span style={{ fontSize:15 }}>⚠</span> {error}
               </div>
             )}
 
-            {/* Formulário */}
-            <form onSubmit={handleLogin} style={{ display:'flex', flexDirection:'column', gap:0 }}>
-              <div style={{ marginBottom:16 }}>
-                <label style={{
-                  display:'block', fontSize:12.5, fontWeight:500,
-                  color:'rgba(148,163,184,0.7)',
-                  marginBottom:7, letterSpacing:'0.3px',
-                  fontFamily:"'DM Sans', sans-serif",
-                  textTransform:'uppercase',
-                }}>E-mail</label>
-                <input
-                  className="inp-field"
-                  type="email" value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="nome@empresa.com"
-                  autoComplete="email"
-                  required
-                />
+            {/* ── Modo: link enviado ── */}
+            {forgotSent ? (
+              <div style={{ textAlign:'center', padding:'12px 0' }}>
+                <div style={{ width:52, height:52, background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.25)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 18px', fontSize:22, color:'#10b981' }}>✓</div>
+                <p style={{ fontSize:13, color:'rgba(148,163,184,0.65)', lineHeight:1.7, marginBottom:24, fontFamily:"'DM Sans', sans-serif" }}>
+                  Acesse o link enviado para <strong style={{ color:'rgba(241,245,249,0.8)' }}>{email}</strong> e siga as instruções para criar uma nova senha.
+                </p>
+                <button onClick={() => { setForgotMode(false); setForgotSent(false); setError(null) }}
+                  style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(148,163,184,0.8)', borderRadius:8, padding:'10px 20px', fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:"'DM Sans', sans-serif" }}>
+                  Voltar ao login
+                </button>
               </div>
-
-              <div style={{ marginBottom:28 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:7 }}>
-                  <label style={{
-                    fontSize:12.5, fontWeight:500,
-                    color:'rgba(148,163,184,0.7)',
-                    letterSpacing:'0.3px',
-                    fontFamily:"'DM Sans', sans-serif",
-                    textTransform:'uppercase',
-                  }}>Senha</label>
+            ) : forgotMode ? (
+              /* ── Modo: esqueci minha senha ── */
+              <form onSubmit={handleForgot} style={{ display:'flex', flexDirection:'column', gap:0 }}>
+                <div style={{ marginBottom:24 }}>
+                  <label style={{ display:'block', fontSize:12.5, fontWeight:500, color:'rgba(148,163,184,0.7)', marginBottom:7, letterSpacing:'0.3px', fontFamily:"'DM Sans', sans-serif", textTransform:'uppercase' }}>E-mail</label>
+                  <input
+                    className="inp-field" type="email" value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="seu@email.com" autoFocus required
+                  />
                 </div>
-                <input
-                  className="inp-field"
-                  type="password" value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••••"
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
-
-              <button type="submit" className="btn-primary" disabled={loading}>
-                {loading ? (
-                  <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontFamily:"'DM Sans', sans-serif" }}>
-                    <span style={{
-                      width:15, height:15,
-                      border:'2px solid rgba(255,255,255,0.25)',
-                      borderTop:'2px solid #fff',
-                      borderRadius:'50%',
-                      animation:'spin 0.75s linear infinite',
-                      display:'inline-block',
-                    }} />
-                    Autenticando...
-                  </span>
-                ) : (
-                  <span style={{ fontFamily:"'DM Sans', sans-serif", display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                    Entrar na plataforma
-                    <span style={{ fontSize:16, opacity:0.8 }}>→</span>
-                  </span>
-                )}
-              </button>
-            </form>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading
+                    ? <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontFamily:"'DM Sans', sans-serif" }}>
+                        <span style={{ width:15, height:15, border:'2px solid rgba(255,255,255,0.25)', borderTop:'2px solid #fff', borderRadius:'50%', animation:'spin 0.75s linear infinite', display:'inline-block' }} />
+                        Enviando...
+                      </span>
+                    : <span style={{ fontFamily:"'DM Sans', sans-serif" }}>Enviar link de recuperação</span>
+                  }
+                </button>
+                <button type="button" onClick={() => { setForgotMode(false); setError(null) }}
+                  style={{ marginTop:14, background:'transparent', border:'none', color:'rgba(148,163,184,0.6)', fontSize:13, cursor:'pointer', fontFamily:"'DM Sans', sans-serif" }}>
+                  ← Voltar ao login
+                </button>
+              </form>
+            ) : (
+              /* ── Modo: login normal ── */
+              <form onSubmit={handleLogin} style={{ display:'flex', flexDirection:'column', gap:0 }}>
+                <div style={{ marginBottom:16 }}>
+                  <label style={{ display:'block', fontSize:12.5, fontWeight:500, color:'rgba(148,163,184,0.7)', marginBottom:7, letterSpacing:'0.3px', fontFamily:"'DM Sans', sans-serif", textTransform:'uppercase' }}>E-mail</label>
+                  <input
+                    className="inp-field" type="email" value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="nome@empresa.com" autoComplete="email" required
+                  />
+                </div>
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:7 }}>
+                    <label style={{ fontSize:12.5, fontWeight:500, color:'rgba(148,163,184,0.7)', letterSpacing:'0.3px', fontFamily:"'DM Sans', sans-serif", textTransform:'uppercase' }}>Senha</label>
+                    <button type="button" onClick={() => { setForgotMode(true); setError(null) }}
+                      style={{ background:'none', border:'none', color:'rgba(96,165,250,0.7)', fontSize:12, cursor:'pointer', fontFamily:"'DM Sans', sans-serif", padding:0, transition:'color 0.2s' }}
+                      onMouseEnter={e => e.target.style.color='rgba(96,165,250,1)'}
+                      onMouseLeave={e => e.target.style.color='rgba(96,165,250,0.7)'}
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
+                  <input
+                    className="inp-field" type="password" value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••••" autoComplete="current-password" required
+                  />
+                </div>
+                <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop:12 }}>
+                  {loading
+                    ? <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontFamily:"'DM Sans', sans-serif" }}>
+                        <span style={{ width:15, height:15, border:'2px solid rgba(255,255,255,0.25)', borderTop:'2px solid #fff', borderRadius:'50%', animation:'spin 0.75s linear infinite', display:'inline-block' }} />
+                        Autenticando...
+                      </span>
+                    : <span style={{ fontFamily:"'DM Sans', sans-serif", display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                        Entrar na plataforma
+                        <span style={{ fontSize:16, opacity:0.8 }}>→</span>
+                      </span>
+                  }
+                </button>
+              </form>
+            )}
 
             {/* Footer */}
             <div style={{

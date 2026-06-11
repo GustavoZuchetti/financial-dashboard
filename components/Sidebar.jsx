@@ -52,7 +52,6 @@ const navItems = [
     { label: 'Layouts',          href: '/dashboard/importacao/layout', adminOnly: true },
   ]},
   { label: 'Configurações',    href: '/dashboard/configuracoes',    icon: 'config' },
-  { label: 'Admin Geral',      href: '/dashboard/admin',            icon: 'admin', superAdminOnly: true },
 ]
 
 export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
@@ -83,8 +82,14 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
     }
   }
 
-  const isActive = (href) => pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
-  const isGroupActive = (item) => item.children ? item.children.some(c => pathname === c.href) || pathname === item.href : pathname === item.href
+  const isActive = (href) => pathname === href
+  const isGroupActive = (item) => {
+    if (item.children) {
+      // Grupo ativo se a rota atual é exatamente um dos filhos
+      return item.children.some(c => pathname === c.href)
+    }
+    return pathname === item.href
+  }
 
   const initials = userEmail ? userEmail.substring(0, 2).toUpperCase() : 'U'
   const username = userEmail ? userEmail.split('@')[0] : 'Usuário'

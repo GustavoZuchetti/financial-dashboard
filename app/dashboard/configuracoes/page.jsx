@@ -72,14 +72,33 @@ export default function ConfiguracoesPage() {
         if (p?.organization_id) {
           setOrgId(p.organization_id)
           setMyRole(p.role)
-          const [{ data: emps }, { data: users }, { data: settings }] = await Promise.all([
+          const [{ data: emps }, { data: settings }] = await Promise.all([
             supabase.from('empresas').select('id,nome,cnpj').eq('organization_id', p.organization_id).order('nome'),
-            supabase.from('profiles').select('id,email,role,created_at').eq('organization_id', p.organization_id),
             supabase.from('org_settings').select('logo_url').eq('organization_id', p.organization_id).maybeSingle(),
           ])
           setEmpresas(emps || [])
-          setUsuarios(users || [])
           if (settings?.logo_url) setLogoUrl(settings.logo_url)
+
+          // Super admin vê TODOS os usuários do sistema (via API global)
+          if (p.role === 'super_admin') {
+            try {
+              const { data: { session } } = await supabase.auth.getSession()
+              const res = await fetch('/api/admin/list-all-users', {
+                headers: { Authorization: `Bearer ${session?.access_token}` }
+              })
+              const json = await res.json()
+              if (res.ok) {
+                setUsuarios((json.users || []).map(u => ({
+                  id: u.id, email: u.email, role: u.role,
+                  created_at: u.created_at, org_nome: u.org_nome, has_profile: u.has_profile,
+                })))
+              }
+            } catch {}
+          } else {
+            const { data: users } = await supabase.from('profiles')
+              .select('id,email,role,created_at').eq('organization_id', p.organization_id)
+            setUsuarios(users || [])
+          }
         } else {
           const { data: emps } = await supabase.from('empresas').select('id,nome,cnpj').order('nome')
           setEmpresas(emps || [])
@@ -319,7 +338,9 @@ export default function ConfiguracoesPage() {
       {tab === 'usuarios' && (
         <>
           <div style={card}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 4 }}>Usuários da Organização</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 4 }}>
+              {myRole === 'super_admin' ? 'Todos os Usuários do Sistema' : 'Usuários da Organização'}
+            </div>
             <div style={{ color: 'var(--fs-text-4)', fontSize: 13, marginBottom: 16 }}>{usuarios.length} usuário{usuarios.length !== 1 ? 's' : ''} cadastrado{usuarios.length !== 1 ? 's' : ''}</div>
             {usuarios.length === 0
               ? <p style={{ color: 'var(--fs-text-4)', fontSize: 13 }}>Nenhum usuário ainda. Envie um convite abaixo.</p>

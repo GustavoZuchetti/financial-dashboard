@@ -43,7 +43,9 @@ export default function IdleTimeout() {
   // pois compara o horário real decorrido, não depende do timer rodar continuamente.
   const check = useCallback(() => {
     const idle = getIdleMs()
+    console.log('[IdleTimeout] inativo há', Math.round(idle / 1000), 's | limite', IDLE_LIMIT_MS / 1000, 's')
     if (idle >= IDLE_LIMIT_MS) {
+      console.log('[IdleTimeout] → LOGOUT')
       doLogout()
     } else if (idle >= IDLE_LIMIT_MS - WARN_BEFORE_MS) {
       setShowWarning(true)
@@ -59,6 +61,7 @@ export default function IdleTimeout() {
   }
 
   useEffect(() => {
+    console.log('[IdleTimeout] componente montado — monitorando inatividade')
     // Inicializa o timestamp ao montar
     markActivity()
 

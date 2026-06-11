@@ -27,24 +27,6 @@ const card = {
 const cardTitle = {
   fontSize: 15, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 16,
 }
-
-const SQL_SETUP = `CREATE TABLE IF NOT EXISTS public.org_settings (
-  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  organization_id uuid NOT NULL UNIQUE,
-  logo_url        text,
-  nome_fantasia   text,
-  updated_at      timestamptz DEFAULT now()
-);
-ALTER TABLE public.org_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public select org logo" ON public.org_settings
-  FOR SELECT USING (true);
-CREATE POLICY "admins manage org settings" ON public.org_settings
-  FOR ALL USING (
-    organization_id IN (
-      SELECT organization_id FROM public.profiles
-      WHERE id = auth.uid() AND role IN ('org_admin','super_admin')
-    )
-  );`
 const label = {
   display: 'block', color: 'var(--fs-text-2)', fontSize: 12,
   fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6,
@@ -67,7 +49,6 @@ export default function ConfiguracoesPage() {
   // ─── Logo da organização ───────────────────────────────────────
   const [logoUrl,      setLogoUrl]      = useState(null)
   const [logoUploading, setLogoUploading] = useState(false)
-  const [needsSetup,   setNeedsSetup]   = useState(false)
   const logoInputRef = React.useRef(null)
   // ─── Role do usuário logado e redefinição de senha ─────────────
   const [myRole,      setMyRole]      = useState(null)
@@ -91,12 +72,12 @@ export default function ConfiguracoesPage() {
         if (p?.organization_id) {
           setOrgId(p.organization_id)
           setMyRole(p.role)
-          const [{ data: emps }, { data: settings }] = await Promise.all([
+          const [{ data: emps }, { data: orgRow }] = await Promise.all([
             supabase.from('empresas').select('id,nome,cnpj').eq('organization_id', p.organization_id).order('nome'),
-            supabase.from('org_settings').select('logo_url').eq('organization_id', p.organization_id).maybeSingle(),
+            supabase.from('organizations').select('logo_url').eq('id', p.organization_id).maybeSingle(),
           ])
           setEmpresas(emps || [])
-          if (settings?.logo_url) setLogoUrl(settings.logo_url)
+          if (orgRow?.logo_url) setLogoUrl(orgRow.logo_url)
 
           // Super admin vê TODOS os usuários do sistema (via API global)
           if (p.role === 'super_admin') {
@@ -141,17 +122,7 @@ export default function ConfiguracoesPage() {
         body: fd,
       })
       const json = await res.json()
-      if (!res.ok) {
-        // Detecta tabela org_settings ausente
-        if (json.error && json.error.includes('org_settings')) {
-          setNeedsSetup(true)
-          toast('Configuração de banco pendente — veja as instruções abaixo', 'error')
-        } else {
-          toast(json.error || 'Erro no upload', 'error')
-        }
-        return
-      }
-      setNeedsSetup(false)
+      if (!res.ok) { toast(json.error || 'Erro no upload', 'error'); return }
       setLogoUrl(json.logo_url)
       toast('Logo atualizada com sucesso!')
     } catch (e) {
@@ -534,26 +505,6 @@ export default function ConfiguracoesPage() {
               <p style={{ marginTop: 12, fontSize: 12, color: 'var(--fs-warning)' }}>
                 Sua conta não está associada a uma organização. A logo requer uma organização configurada.
               </p>
-            )}
-
-            {needsSetup && (
-              <div style={{ marginTop: 20, padding: '16px 18px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 8 }}>
-                  Configuração única pendente
-                </div>
-                <div style={{ fontSize: 12.5, color: 'var(--fs-text-3)', lineHeight: 1.7, marginBottom: 12 }}>
-                  A tabela de configurações ainda não existe no banco. Copie o comando abaixo,
-                  cole no <strong>SQL Editor do Supabase</strong> e execute uma única vez.
-                  Depois, tente enviar a logo novamente.
-                </div>
-                <pre style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: 12, fontSize: 11, color: 'var(--fs-text-2)', overflowX: 'auto', margin: 0, fontFamily: 'monospace', lineHeight: 1.5 }}>{SQL_SETUP}</pre>
-                <button
-                  onClick={() => { navigator.clipboard.writeText(SQL_SETUP); toast('Comando SQL copiado!') }}
-                  style={{ ...btn('ghost'), marginTop: 10, padding: '6px 14px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                >
-                  <SvgIcon name="copy" size={13} /> Copiar comando SQL
-                </button>
-              </div>
             )}
 
           </div>

@@ -358,14 +358,6 @@ export default function DREDetalhado() {
                 ]
               })}
             </tbody>
-            <tfoot>
-              <tr style={{ background:'var(--fs-bg)', borderTop:'2px solid var(--fs-border)' }}>
-                <td style={{ padding:'10px 16px', color:'var(--fs-text-4)', fontSize:11 }}>
-                  {data.length} lançamentos · {contas.length} contas · {periodoLabel}
-                </td>
-                <td colSpan={3} />
-              </tr>
-            </tfoot>
           </table>
         </div>
       )}

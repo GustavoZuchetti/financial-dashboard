@@ -179,6 +179,7 @@ export default function DREDetalhado() {
   const [empresaId, setEmpresaId] = useState(null)
   const [isConsol,  setIsConsol]  = useState(false)
   const [loading,   setLoading]   = useState(true)
+  const [firstLoad, setFirstLoad] = useState(true)
   const [data,      setData]      = useState([])
   const [contas,    setContas]    = useState([])
   const [expanded,  setExpanded]  = useState({})
@@ -205,7 +206,7 @@ export default function DREDetalhado() {
       } else { q = q.eq('empresa_id', empresaId) }
       const { data: rows } = await q
       setData(rows || [])
-    } finally { setLoading(false) }
+    } finally { setLoading(false); setFirstLoad(false) }
   }, [empresaId, debStart, debEnd, isConsol])
 
   useEffect(() => { fetchData() }, [fetchData])
@@ -282,7 +283,7 @@ export default function DREDetalhado() {
         </div>
       </div>
 
-      {loading ? (
+      {firstLoad ? (
         <div style={{ textAlign:'center', padding:60, color:'var(--fs-text-4)', fontSize:14 }}>Carregando lançamentos...</div>
       ) : (
         <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, overflow:'hidden' }}>

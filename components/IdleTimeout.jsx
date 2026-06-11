@@ -6,66 +6,85 @@ import { supabase } from '@/lib/supabase'
 // ─── Configuração ──────────────────────────────────────────────────────────
 const IDLE_LIMIT_MS  = 45 * 60 * 1000  // 45 min de inatividade → logout
 const WARN_BEFORE_MS = 2  * 60 * 1000  // avisa 2 min antes
+const CHECK_EVERY_MS = 5  * 1000       // verifica a cada 5s
+const STORAGE_KEY    = 'fs-last-activity'
 // ──────────────────────────────────────────────────────────────────────────
 
 export default function IdleTimeout() {
   const router = useRouter()
   const [showWarning, setShowWarning] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState(Math.floor(WARN_BEFORE_MS / 1000))
+  const checker = useRef(null)
+  const loggedOut = useRef(false)
 
-  const idleTimer  = useRef(null)
-  const warnTimer  = useRef(null)
-  const countdown  = useRef(null)
+  const markActivity = useCallback(() => {
+    try { localStorage.setItem(STORAGE_KEY, String(Date.now())) } catch {}
+  }, [])
+
+  const getIdleMs = useCallback(() => {
+    try {
+      const last = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10)
+      if (!last) return 0
+      return Date.now() - last
+    } catch { return 0 }
+  }, [])
 
   const doLogout = useCallback(async () => {
-    clearAll()
+    if (loggedOut.current) return
+    loggedOut.current = true
+    clearInterval(checker.current)
+    try { localStorage.removeItem(STORAGE_KEY) } catch {}
     await supabase.auth.signOut()
     router.push('/?expired=1')
   }, [router])
 
-  const clearAll = () => {
-    clearTimeout(idleTimer.current)
-    clearTimeout(warnTimer.current)
-    clearInterval(countdown.current)
+  // Verificação por timestamp — funciona mesmo com aba minimizada/congelada,
+  // pois compara o horário real decorrido, não depende do timer rodar continuamente.
+  const check = useCallback(() => {
+    const idle = getIdleMs()
+    if (idle >= IDLE_LIMIT_MS) {
+      doLogout()
+    } else if (idle >= IDLE_LIMIT_MS - WARN_BEFORE_MS) {
+      setShowWarning(true)
+      setSecondsLeft(Math.max(0, Math.ceil((IDLE_LIMIT_MS - idle) / 1000)))
+    } else {
+      setShowWarning(false)
+    }
+  }, [getIdleMs, doLogout])
+
+  const stayConnected = () => {
+    markActivity()
+    setShowWarning(false)
   }
 
-  const startCountdown = useCallback(() => {
-    setShowWarning(true)
-    setSecondsLeft(Math.floor(WARN_BEFORE_MS / 1000))
-    countdown.current = setInterval(() => {
-      setSecondsLeft(s => {
-        if (s <= 1) { clearInterval(countdown.current); return 0 }
-        return s - 1
-      })
-    }, 1000)
-  }, [])
-
-  const resetTimers = useCallback(() => {
-    clearAll()
-    setShowWarning(false)
-    // Agenda o aviso e o logout
-    warnTimer.current = setTimeout(startCountdown, IDLE_LIMIT_MS - WARN_BEFORE_MS)
-    idleTimer.current = setTimeout(doLogout, IDLE_LIMIT_MS)
-  }, [startCountdown, doLogout])
-
-  // Continuar a sessão (usuário clicou em "Continuar conectado")
-  const stayConnected = () => { resetTimers() }
-
   useEffect(() => {
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click']
-    // Só reseta por atividade enquanto o aviso NÃO está visível —
-    // quando o aviso aparece, o usuário precisa clicar explicitamente.
-    const onActivity = () => { if (!showWarning) resetTimers() }
+    // Inicializa o timestamp ao montar
+    markActivity()
 
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click']
+    const onActivity = () => {
+      // Atividade só conta enquanto o aviso NÃO está visível.
+      // Com o aviso, exige clique explícito em "Continuar conectado".
+      if (!showWarning) markActivity()
+    }
     events.forEach(e => window.addEventListener(e, onActivity, { passive: true }))
-    resetTimers()
+
+    // Ao voltar o foco para a aba (desminimizar), verifica imediatamente
+    const onVisibility = () => { if (document.visibilityState === 'visible') check() }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('focus', check)
+
+    // Verificação periódica
+    checker.current = setInterval(check, CHECK_EVERY_MS)
+    check() // verificação inicial
 
     return () => {
       events.forEach(e => window.removeEventListener(e, onActivity))
-      clearAll()
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('focus', check)
+      clearInterval(checker.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showWarning])
+  }, [showWarning, markActivity, check])
 
   if (!showWarning) return null
 

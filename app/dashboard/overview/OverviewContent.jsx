@@ -434,7 +434,13 @@ export default function OverviewPage() {
     finally { setLoading(false); setFirstLoad(false) }
   }, [empresaId, isConsol, getRange, today])
 
-  useEffect(() => { if (empresaId !== null) load() }, [load, empresaId])
+  useEffect(() => {
+    if (empresaId === null) return
+    // Debounce: aguarda 500ms sem novas mudanças antes de buscar.
+    // Evita recarregar a cada clique ao navegar por meses/datas rapidamente.
+    const t = setTimeout(() => { load() }, firstLoad ? 0 : 500)
+    return () => clearTimeout(t)
+  }, [load, empresaId, firstLoad])
 
   const tipoColor = { receita:'#22c55e', custo:'#ef4444', despesa:'#f59e0b', deducao:'#f97316', receita_financeira:'#14b8a6', despesa_financeira:'#8b5cf6', investimento:'#64748b' }
   const dr = getRange()

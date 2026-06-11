@@ -4,8 +4,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 // ─── Configuração ──────────────────────────────────────────────────────────
-const IDLE_LIMIT_MS  = 45 * 60 * 1000  // 45 min de inatividade → logout
-const WARN_BEFORE_MS = 2  * 60 * 1000  // avisa 2 min antes
+// TESTE: valores reduzidos. Reverter para 45min/2min após validação.
+const IDLE_LIMIT_MS  = 2 * 60 * 1000   // 2 min de inatividade → logout
+const WARN_BEFORE_MS = 30 * 1000       // avisa 30s antes
 const CHECK_EVERY_MS = 5  * 1000       // verifica a cada 5s
 const STORAGE_KEY    = 'fs-last-activity'
 // ──────────────────────────────────────────────────────────────────────────

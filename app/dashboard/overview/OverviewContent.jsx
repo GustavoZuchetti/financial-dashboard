@@ -223,6 +223,7 @@ export default function OverviewPage() {
   const [pickerOpen,   setPickerOpen]   = useState(false)
 
   const [loading,   setLoading]   = useState(true)
+  const [firstLoad, setFirstLoad] = useState(true)
   const [empresaId, setEmpresaId] = useState(null)
   const [isConsol,  setIsConsol]  = useState(false)
   const [empNome,   setEmpNome]   = useState('')
@@ -430,7 +431,7 @@ export default function OverviewPage() {
       setRecentes(rec.map(l=>({ desc:(l.descricao||l.categoria||'Lançamento').substring(0,28), tipo:l.tipo, valor:Number(l.valor), data:l.data })))
 
     } catch(e) { console.error('Overview:', e) }
-    finally { setLoading(false) }
+    finally { setLoading(false); setFirstLoad(false) }
   }, [empresaId, isConsol, getRange, today])
 
   useEffect(() => { if (empresaId !== null) load() }, [load, empresaId])
@@ -493,7 +494,7 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      {loading ? (
+      {firstLoad ? (
         <><KpiCardsSkeleton count={4} /><ChartSkeleton height={320} /></>
       ) : !kpis ? (
         <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)' }}>Sem dados para exibir.</div>

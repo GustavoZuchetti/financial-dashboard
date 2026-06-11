@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -15,80 +15,74 @@ export default function IdleTimeout() {
   const router = useRouter()
   const [showWarning, setShowWarning] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState(Math.floor(WARN_BEFORE_MS / 1000))
-  const checker = useRef(null)
-  const loggedOut = useRef(false)
 
-  const markActivity = useCallback(() => {
-    try { localStorage.setItem(STORAGE_KEY, String(Date.now())) } catch {}
-  }, [])
+  // Refs para evitar recriação do efeito (causa de remontagem/reset)
+  const showWarningRef = useRef(false)
+  const loggedOut      = useRef(false)
+  const router_        = useRef(router)
+  router_.current = router
 
-  const getIdleMs = useCallback(() => {
-    try {
-      const last = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10)
-      if (!last) return 0
-      return Date.now() - last
-    } catch { return 0 }
-  }, [])
+  // Mantém o ref sincronizado com o state
+  useEffect(() => { showWarningRef.current = showWarning }, [showWarning])
 
-  const doLogout = useCallback(async () => {
-    if (loggedOut.current) return
-    loggedOut.current = true
-    clearInterval(checker.current)
-    try { localStorage.removeItem(STORAGE_KEY) } catch {}
-    await supabase.auth.signOut()
-    router.push('/?expired=1')
-  }, [router])
-
-  // Verificação por timestamp — funciona mesmo com aba minimizada/congelada,
-  // pois compara o horário real decorrido, não depende do timer rodar continuamente.
-  const check = useCallback(() => {
-    const idle = getIdleMs()
-    console.log('[IdleTimeout] inativo há', Math.round(idle / 1000), 's | limite', IDLE_LIMIT_MS / 1000, 's')
-    if (idle >= IDLE_LIMIT_MS) {
-      console.log('[IdleTimeout] → LOGOUT')
-      doLogout()
-    } else if (idle >= IDLE_LIMIT_MS - WARN_BEFORE_MS) {
-      setShowWarning(true)
-      setSecondsLeft(Math.max(0, Math.ceil((IDLE_LIMIT_MS - idle) / 1000)))
-    } else {
-      setShowWarning(false)
-    }
-  }, [getIdleMs, doLogout])
-
-  const stayConnected = () => {
-    markActivity()
-    setShowWarning(false)
-  }
-
+  // Efeito de inicialização — roda UMA ÚNICA VEZ (deps vazias)
   useEffect(() => {
-    console.log('[IdleTimeout] componente montado — monitorando inatividade')
-    // Inicializa o timestamp ao montar
-    markActivity()
+    const markActivity = () => {
+      try { localStorage.setItem(STORAGE_KEY, String(Date.now())) } catch {}
+    }
+    const getIdleMs = () => {
+      try {
+        const last = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10)
+        return last ? Date.now() - last : 0
+      } catch { return 0 }
+    }
+    const doLogout = async () => {
+      if (loggedOut.current) return
+      loggedOut.current = true
+      clearInterval(intervalId)
+      try { localStorage.removeItem(STORAGE_KEY) } catch {}
+      await supabase.auth.signOut()
+      router_.current.push('/?expired=1')
+    }
+    const check = () => {
+      const idle = getIdleMs()
+      if (idle >= IDLE_LIMIT_MS) {
+        doLogout()
+      } else if (idle >= IDLE_LIMIT_MS - WARN_BEFORE_MS) {
+        setShowWarning(true)
+        setSecondsLeft(Math.max(0, Math.ceil((IDLE_LIMIT_MS - idle) / 1000)))
+      } else {
+        if (showWarningRef.current) setShowWarning(false)
+      }
+    }
+
+    // Inicializa o timestamp só se ainda não existir (não reseta em remontagem)
+    if (!localStorage.getItem(STORAGE_KEY)) markActivity()
 
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click']
-    const onActivity = () => {
-      // Atividade só conta enquanto o aviso NÃO está visível.
-      // Com o aviso, exige clique explícito em "Continuar conectado".
-      if (!showWarning) markActivity()
-    }
+    const onActivity = () => { if (!showWarningRef.current) markActivity() }
     events.forEach(e => window.addEventListener(e, onActivity, { passive: true }))
 
-    // Ao voltar o foco para a aba (desminimizar), verifica imediatamente
     const onVisibility = () => { if (document.visibilityState === 'visible') check() }
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('focus', check)
 
-    // Verificação periódica
-    checker.current = setInterval(check, CHECK_EVERY_MS)
-    check() // verificação inicial
+    const intervalId = setInterval(check, CHECK_EVERY_MS)
+    check()
+
+    // Expõe a função para o botão "Continuar conectado"
+    window.__fsStayConnected = () => { markActivity(); setShowWarning(false) }
+    window.__fsLogoutNow = doLogout
 
     return () => {
       events.forEach(e => window.removeEventListener(e, onActivity))
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('focus', check)
-      clearInterval(checker.current)
+      clearInterval(intervalId)
+      delete window.__fsStayConnected
+      delete window.__fsLogoutNow
     }
-  }, [showWarning, markActivity, check])
+  }, []) // ← deps VAZIAS: monta uma vez, nunca remonta
 
   if (!showWarning) return null
 
@@ -111,10 +105,10 @@ export default function IdleTimeout() {
           {mm}:{ss}
         </div>
         <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
-          <button onClick={doLogout} style={{ background:'transparent', border:'1px solid var(--fs-border)', borderRadius:8, padding:'9px 18px', fontSize:13, fontWeight:600, color:'var(--fs-text-2)', cursor:'pointer' }}>
+          <button onClick={() => window.__fsLogoutNow?.()} style={{ background:'transparent', border:'1px solid var(--fs-border)', borderRadius:8, padding:'9px 18px', fontSize:13, fontWeight:600, color:'var(--fs-text-2)', cursor:'pointer' }}>
             Sair agora
           </button>
-          <button onClick={stayConnected} style={{ background:'#1d4ed8', color:'#fff', border:'none', borderRadius:8, padding:'9px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+          <button onClick={() => window.__fsStayConnected?.()} style={{ background:'#1d4ed8', color:'#fff', border:'none', borderRadius:8, padding:'9px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
             Continuar conectado
           </button>
         </div>

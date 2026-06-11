@@ -33,6 +33,10 @@ export default function FluxoCaixaAnalise() {
     return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0]
   })
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0])
+  const [debStart, setDebStart] = useState(startDate)
+  const [debEnd,   setDebEnd]   = useState(endDate)
+  useEffect(() => { const t = setTimeout(() => setDebStart(startDate), 500); return () => clearTimeout(t) }, [startDate])
+  useEffect(() => { const t = setTimeout(() => setDebEnd(endDate), 500);     return () => clearTimeout(t) }, [endDate])
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [empresaId, setEmpresaId] = useState(null)
@@ -48,7 +52,7 @@ export default function FluxoCaixaAnalise() {
     const fetchData = async () => {
       setLoading(true)
       try {
-        let query = supabase.from('fluxo_caixa').select('*').gte('data', startDate).lte('data', endDate)
+        let query = supabase.from('fluxo_caixa').select('*').gte('data', debStart).lte('data', debEnd)
         if (isConsolidado) {
           const { data: userEmpresas } = await supabase.from('empresas').select('id').eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
           if (userEmpresas?.length) query = query.in('empresa_id', userEmpresas.map(e => e.id))
@@ -64,7 +68,7 @@ export default function FluxoCaixaAnalise() {
       }
     }
     fetchData()
-  }, [empresaId, startDate, endDate, isConsolidado])
+  }, [empresaId, debStart, debEnd, isConsolidado])
 
   // ── Cálculos ─────────────────────────────────────────────────────────────────
   const entradas = data.filter(d => d.tipo === 'entrada')

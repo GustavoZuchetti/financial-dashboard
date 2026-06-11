@@ -132,6 +132,11 @@ export default function FluxoCaixaPage() {
   const [empNome,      setEmpNome]      = useState('')
   const [startDate,    setStartDate]    = useState(`${curYear - 2}-01-01`)
   const [endDate,      setEndDate]      = useState(today)
+  // Debounce de datas — evita query a cada clique no calendário
+  const [debStart, setDebStart] = useState(`${curYear - 2}-01-01`)
+  const [debEnd,   setDebEnd]   = useState(today)
+  useEffect(() => { const t = setTimeout(() => setDebStart(startDate), 500); return () => clearTimeout(t) }, [startDate])
+  useEffect(() => { const t = setTimeout(() => setDebEnd(endDate), 500);     return () => clearTimeout(t) }, [endDate])
   const [granular,     setGranular]     = useState('mensal') // mensal | trimestral | anual
   const [busca,        setBusca]        = useState('')
 
@@ -165,8 +170,8 @@ export default function FluxoCaixaPage() {
       if (!empIds.length) { setLoading(false); return }
 
       // Período anterior com mesmo número de dias
-      const diasCur   = Math.max(1, (new Date(endDate) - new Date(startDate)) / 86400000 + 1)
-      const prevEnd   = new Date(new Date(startDate).getTime() - 86400000)
+      const diasCur   = Math.max(1, (new Date(debEnd) - new Date(debStart)) / 86400000 + 1)
+      const prevEnd   = new Date(new Date(debStart).getTime() - 86400000)
       const prevStart = new Date(prevEnd.getTime() - diasCur * 86400000 + 86400000)
       const prevStartStr = prevStart.toISOString().split('T')[0]
       const prevEndStr   = prevEnd.toISOString().split('T')[0]
@@ -194,7 +199,7 @@ export default function FluxoCaixaPage() {
       }
 
       const [fc, fcPrev, fcAll] = await Promise.all([
-        fetchAll('id,tipo,valor,data,descricao,categoria', startDate, endDate),
+        fetchAll('id,tipo,valor,data,descricao,categoria', debStart, debEnd),
         fetchAll('tipo,valor', prevStartStr, prevEndStr),
         fetchAll('tipo,valor,data', '2020-01-01', null),
       ])
@@ -216,7 +221,7 @@ export default function FluxoCaixaPage() {
 
     } catch(e) { console.error('FluxoCaixa:', e) }
     finally { setLoading(false) }
-  }, [empresaId, isConsol, startDate, endDate])
+  }, [empresaId, isConsol, debStart, debEnd])
 
   useEffect(() => { if (empresaId !== null) load() }, [load, empresaId])
 

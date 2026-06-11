@@ -171,6 +171,11 @@ function LancRow({ l, isLast }) {
 export default function DREDetalhado() {
   const [startDate, setStartDate] = useState(() => new Date(new Date().getFullYear(),0,1).toISOString().split('T')[0])
   const [endDate,   setEndDate]   = useState(new Date().toISOString().split('T')[0])
+  // Datas com debounce — evita query a cada clique no calendário
+  const [debStart, setDebStart] = useState(startDate)
+  const [debEnd,   setDebEnd]   = useState(endDate)
+  useEffect(() => { const t = setTimeout(() => setDebStart(startDate), 500); return () => clearTimeout(t) }, [startDate])
+  useEffect(() => { const t = setTimeout(() => setDebEnd(endDate), 500);     return () => clearTimeout(t) }, [endDate])
   const [empresaId, setEmpresaId] = useState(null)
   const [isConsol,  setIsConsol]  = useState(false)
   const [loading,   setLoading]   = useState(true)
@@ -193,7 +198,7 @@ export default function DREDetalhado() {
       const { data: pc } = await supabase.from('plano_contas').select('id,codigo,nome,tipo')
       setContas(pc || [])
 
-      let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,conta_id,empresa_id').range(0, 9999).gte('data', startDate).lte('data', endDate)
+      let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,conta_id,empresa_id').range(0, 9999).gte('data', debStart).lte('data', debEnd)
       if (isConsol) {
         const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
         if (ue?.length) q = q.in('empresa_id', ue.map(e => e.id))
@@ -201,7 +206,7 @@ export default function DREDetalhado() {
       const { data: rows } = await q
       setData(rows || [])
     } finally { setLoading(false) }
-  }, [empresaId, startDate, endDate, isConsol])
+  }, [empresaId, debStart, debEnd, isConsol])
 
   useEffect(() => { fetchData() }, [fetchData])
 

@@ -17,6 +17,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     setMounted(true)
+    // Aviso de sessão expirada por inatividade
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('expired') === '1') {
+        setError('Sua sessão foi encerrada por inatividade. Faça login novamente.')
+      }
+    }
     supabase.from('org_settings').select('logo_url').not('logo_url', 'is', null).limit(1).maybeSingle()
       .then(({ data }) => { if (data?.logo_url) setOrgLogo(data.logo_url) })
       .catch(() => {})

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Sidebar from '@/components/Sidebar'
 import ViewAsBanner from '@/components/ViewAsBanner'
+import IdleTimeout from '@/components/IdleTimeout'
 
 const DashboardContext = createContext()
 export const useDashboard = () => useContext(DashboardContext)
@@ -73,6 +74,7 @@ export default function DashboardLayout({ children }) {
 
   return (
     <DashboardContext.Provider value={{ empresa, empresas, user, setEmpresa: handleEmpresaChange }}>
+      <IdleTimeout />
       <ViewAsBanner />
       <div style={{ display:'flex', minHeight:'100vh', background:'var(--fs-bg)' }}>
         <Sidebar empresa={empresa} empresas={empresas} onEmpresaChange={handleEmpresaChange} />

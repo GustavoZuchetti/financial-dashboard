@@ -64,7 +64,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
               }
             </div>
             <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)', marginBottom:4 }}>
-              {clienteSel || item.nome}
+              <span style={{ textTransform:'uppercase' }}>{clienteSel || item.nome}</span>
             </div>
             <div style={{ display:'flex', gap:16, alignItems:'center', flexWrap:'wrap' }}>
               <span style={{ fontSize:22, fontWeight:900, color:'#3b82f6' }}>{fmtBRL(clienteSel ? clienteAtual?.total || 0 : total)}</span>
@@ -96,7 +96,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
               >
                 <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
                   <div style={{ width:7, height:7, borderRadius:'50%', background:'#3b82f6', flexShrink:0 }} />
-                  <span style={{ fontSize:14, fontWeight:600, color:'var(--fs-text-1)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{cli.nome}</span>
+                  <span style={{ fontSize:14, fontWeight:600, color:'var(--fs-text-1)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textTransform:'uppercase' }}>{cli.nome}</span>
                   <span style={{ fontSize:11, color:'var(--fs-text-4)', flexShrink:0 }}>{cli.count}×</span>
                   <span className="cli-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'#3b82f6', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', padding:'2px 7px', borderRadius:4, whiteSpace:'nowrap', flexShrink:0 }}>ver →</span>
                 </div>
@@ -338,7 +338,7 @@ export default function DREDetalhado() {
                       onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.02)'; e.currentTarget.querySelector('.cat-hint').style.opacity='0' }}
                     >
                       <td style={{ padding:'11px 16px 11px 36px', display:'flex', alignItems:'center', gap:10 }}>
-                        <span style={{ color:line.color, fontWeight:700, fontSize:13 }}>{cat.nome}</span>
+                        <span style={{ color:line.color, fontWeight:700, fontSize:13, textTransform:'uppercase' }}>{cat.nome}</span>
                         <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{cat.clientes.length} conta{cat.clientes.length !== 1 ? 's' : ''}</span>
                         <span className="cat-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'#3b82f6', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', padding:'2px 8px', borderRadius:4, whiteSpace:'nowrap' }}>
                           ver contas →

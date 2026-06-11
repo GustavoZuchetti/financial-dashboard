@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
+import { KpiCardsSkeleton, TableSkeleton } from '@/components/Skeleton'
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -341,7 +342,7 @@ export default function OrcamentoPage() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', color: '#3b82f6', padding: '60px' }}>Carregando dados...</div>
+        <><KpiCardsSkeleton count={3} /><TableSkeleton rows={10} cols={6} /></>
       ) : (
         <>
           {/* KPIs */}

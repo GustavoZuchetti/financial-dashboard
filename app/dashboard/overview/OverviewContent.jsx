@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { calcDRE } from '@/lib/dre-calc'
+import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import {
   ComposedChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Legend
@@ -493,9 +494,7 @@ export default function OverviewPage() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)' }}>
-          <div style={{ fontSize:14 }}>Calculando métricas...</div>
-        </div>
+        <><KpiCardsSkeleton count={4} /><ChartSkeleton height={320} /></>
       ) : !kpis ? (
         <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)' }}>Sem dados para exibir.</div>
       ) : (

@@ -362,9 +362,22 @@ export default function ConfiguracoesPage() {
                             value={u.role}
                             onChange={async e => {
                               const newRole = e.target.value
-                              const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', u.id)
-                              if (!error) setUsuarios(prev => prev.map(x => x.id === u.id ? { ...x, role: newRole } : x))
-                              else toast('Erro: ' + error.message, 'error')
+                              const prev = u.role
+                              const { data: { session } } = await supabase.auth.getSession()
+                              const res = await fetch('/api/admin/update-role', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+                                body: JSON.stringify({ userId: u.id, newRole }),
+                              })
+                              const json = await res.json()
+                              if (res.ok) {
+                                setUsuarios(prevList => prevList.map(x => x.id === u.id ? { ...x, role: newRole } : x))
+                                toast('Permissão atualizada')
+                              } else {
+                                toast('Erro: ' + (json.error || 'falha ao atualizar'), 'error')
+                                // reverter visualmente
+                                setUsuarios(prevList => prevList.map(x => x.id === u.id ? { ...x, role: prev } : x))
+                              }
                             }}
                             style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:6, color:'var(--fs-text-1)', padding:'3px 8px', fontSize:11, fontWeight:700, cursor:'pointer', outline:'none' }}
                           >

@@ -27,6 +27,24 @@ const card = {
 const cardTitle = {
   fontSize: 15, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 16,
 }
+
+const SQL_SETUP = `CREATE TABLE IF NOT EXISTS public.org_settings (
+  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id uuid NOT NULL UNIQUE,
+  logo_url        text,
+  nome_fantasia   text,
+  updated_at      timestamptz DEFAULT now()
+);
+ALTER TABLE public.org_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public select org logo" ON public.org_settings
+  FOR SELECT USING (true);
+CREATE POLICY "admins manage org settings" ON public.org_settings
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM public.profiles
+      WHERE id = auth.uid() AND role IN ('org_admin','super_admin')
+    )
+  );`
 const label = {
   display: 'block', color: 'var(--fs-text-2)', fontSize: 12,
   fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6,
@@ -49,6 +67,7 @@ export default function ConfiguracoesPage() {
   // ─── Logo da organização ───────────────────────────────────────
   const [logoUrl,      setLogoUrl]      = useState(null)
   const [logoUploading, setLogoUploading] = useState(false)
+  const [needsSetup,   setNeedsSetup]   = useState(false)
   const logoInputRef = React.useRef(null)
   // ─── Role do usuário logado e redefinição de senha ─────────────
   const [myRole,      setMyRole]      = useState(null)
@@ -113,30 +132,47 @@ export default function ConfiguracoesPage() {
     if (!file || !orgId) return
     setLogoUploading(true)
     try {
-      const ext  = file.name.split('.').pop().toLowerCase()
-      const path = `logos/${orgId}/logo.${ext}`
-      const { error: upErr } = await supabase.storage.from('org-assets').upload(path, file, { upsert: true, contentType: file.type })
-      if (upErr) { toast('Erro no upload: ' + upErr.message, 'error'); return }
-      const { data: { publicUrl } } = supabase.storage.from('org-assets').getPublicUrl(path)
-      // Salvar URL na tabela org_settings
-      const { error: dbErr } = await supabase.from('org_settings').upsert(
-        { organization_id: orgId, logo_url: publicUrl + `?v=${Date.now()}`, updated_at: new Date().toISOString() },
-        { onConflict: 'organization_id' }
-      )
-      if (dbErr) { toast('Erro ao salvar logo: ' + dbErr.message, 'error'); return }
-      setLogoUrl(publicUrl + `?v=${Date.now()}`)
-      toast('✓ Logo atualizada com sucesso!')
+      const { data: { session } } = await supabase.auth.getSession()
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/admin/upload-logo', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+        body: fd,
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        // Detecta tabela org_settings ausente
+        if (json.error && json.error.includes('org_settings')) {
+          setNeedsSetup(true)
+          toast('Configuração de banco pendente — veja as instruções abaixo', 'error')
+        } else {
+          toast(json.error || 'Erro no upload', 'error')
+        }
+        return
+      }
+      setNeedsSetup(false)
+      setLogoUrl(json.logo_url)
+      toast('Logo atualizada com sucesso!')
+    } catch (e) {
+      toast('Erro no upload: ' + e.message, 'error')
     } finally { setLogoUploading(false) }
   }
 
   const removerLogo = async () => {
     if (!orgId || !confirm('Remover a logo da organização?')) return
-    await supabase.from('org_settings').upsert(
-      { organization_id: orgId, logo_url: null, updated_at: new Date().toISOString() },
-      { onConflict: 'organization_id' }
-    )
-    setLogoUrl(null)
-    toast('Logo removida.')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/admin/upload-logo', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      if (!res.ok) { const j = await res.json(); toast(j.error || 'Erro ao remover', 'error'); return }
+      setLogoUrl(null)
+      toast('Logo removida.')
+    } catch (e) {
+      toast('Erro ao remover: ' + e.message, 'error')
+    }
   }
   // ──────────────────────────────────────────────────────────────
 
@@ -498,6 +534,26 @@ export default function ConfiguracoesPage() {
               <p style={{ marginTop: 12, fontSize: 12, color: 'var(--fs-warning)' }}>
                 Sua conta não está associada a uma organização. A logo requer uma organização configurada.
               </p>
+            )}
+
+            {needsSetup && (
+              <div style={{ marginTop: 20, padding: '16px 18px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 8 }}>
+                  Configuração única pendente
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--fs-text-3)', lineHeight: 1.7, marginBottom: 12 }}>
+                  A tabela de configurações ainda não existe no banco. Copie o comando abaixo,
+                  cole no <strong>SQL Editor do Supabase</strong> e execute uma única vez.
+                  Depois, tente enviar a logo novamente.
+                </div>
+                <pre style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: 12, fontSize: 11, color: 'var(--fs-text-2)', overflowX: 'auto', margin: 0, fontFamily: 'monospace', lineHeight: 1.5 }}>{SQL_SETUP}</pre>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(SQL_SETUP); toast('Comando SQL copiado!') }}
+                  style={{ ...btn('ghost'), marginTop: 10, padding: '6px 14px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <SvgIcon name="copy" size={13} /> Copiar comando SQL
+                </button>
+              </div>
             )}
 
           </div>

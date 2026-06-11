@@ -46,7 +46,9 @@ export default function IdleTimeout() {
     }
     const check = () => {
       const idle = getIdleMs()
+      console.log('[IdleTimeout] inativo há', Math.round(idle / 1000), 's | limite', IDLE_LIMIT_MS / 1000, 's')
       if (idle >= IDLE_LIMIT_MS) {
+        console.log('[IdleTimeout] → LOGOUT')
         doLogout()
       } else if (idle >= IDLE_LIMIT_MS - WARN_BEFORE_MS) {
         setShowWarning(true)
@@ -58,6 +60,7 @@ export default function IdleTimeout() {
 
     // Inicializa o timestamp só se ainda não existir (não reseta em remontagem)
     if (!localStorage.getItem(STORAGE_KEY)) markActivity()
+    console.log('[IdleTimeout] monitorando (monta uma vez) | last-activity:', localStorage.getItem(STORAGE_KEY))
 
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click']
     const onActivity = () => { if (!showWarningRef.current) markActivity() }

@@ -1,10 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+function getAdmin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co', process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key') }
 
 export async function POST(req) {
   try {
@@ -12,7 +9,7 @@ export async function POST(req) {
     const token = (req.headers.get('authorization') || '').replace('Bearer ', '')
     if (!token) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authErr } = await getAdmin().auth.getUser(token)
     if (authErr || !user) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     // ──────────────────────────────────────────────────────────────
 
@@ -21,8 +18,8 @@ export async function POST(req) {
 
     // Verificar se o usuário tem acesso à empresa solicitada
     const [{ data: profile }, { data: empresa }] = await Promise.all([
-      supabaseAdmin.from('profiles').select('organization_id').eq('id', user.id).single(),
-      supabaseAdmin.from('empresas').select('id,user_id,organization_id').eq('id', empresa_id).single(),
+      getAdmin().from('profiles').select('organization_id').eq('id', user.id).single(),
+      getAdmin().from('empresas').select('id,user_id,organization_id').eq('id', empresa_id).single(),
     ])
 
     if (!empresa) return NextResponse.json({ error: 'Empresa não encontrada' }, { status: 404 })

@@ -1,10 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+function getAdmin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co', process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key') }
 
 const VALID_ROLES = ['super_admin', 'org_admin', 'user']
 
@@ -12,7 +9,7 @@ export async function POST(req) {
   const token = (req.headers.get('authorization') || '').replace('Bearer ', '')
   if (!token) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-  const { data: { user: caller }, error: authErr } = await supabaseAdmin.auth.getUser(token)
+  const { data: { user: caller }, error: authErr } = await getAdmin().auth.getUser(token)
   if (authErr || !caller) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   const { data: callerProfile } = await supabaseAdmin

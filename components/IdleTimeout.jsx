@@ -34,7 +34,7 @@ export default function IdleTimeout() {
       try {
         const last = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10)
         return last ? Date.now() - last : 0
-      } catch { return 0 }
+      } catch(_e) { return 0 }
     }
     const doLogout = async () => {
       if (loggedOut.current) return

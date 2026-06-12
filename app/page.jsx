@@ -24,8 +24,9 @@ export default function LoginPage() {
         setError('Sua sessão foi encerrada por inatividade. Faça login novamente.')
       }
     }
-    supabase.from('organizations').select('logo_url').not('logo_url', 'is', null).limit(1).maybeSingle()
-      .then(({ data }) => { if (data?.logo_url) setOrgLogo(data.logo_url) })
+    fetch('/api/public/logo')
+      .then(r => r.json())
+      .then(({ logo_url }) => { if (logo_url) setOrgLogo(logo_url) })
       .catch(() => {})
   }, [])
 

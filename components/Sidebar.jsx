@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { COLORS, TRANSITION } from '@/lib/design-tokens'
 import { useOrg } from '@/lib/org-context'
+import OrgLogo from '@/components/OrgLogo'
 import ThemeToggle from '@/components/ThemeToggle'
 
 // ─── Ícones SVG inline ──────────────────────────────────────────────────────────
@@ -121,29 +122,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
       {/* ── Logo Facesign ───────────────────────────────────────── */}
       <div style={{ padding: '18px 16px 16px', borderBottom: '1px solid var(--fs-border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {org?.logo_url ? (
-            <img
-              src={org.logo_url}
-              alt="Logo da organização"
-              style={{ height: 34, maxWidth: 150, objectFit: 'contain', flexShrink: 0 }}
-            />
-          ) : (
-            <>
-              <div style={{
-                width: 34, height: 34,
-                background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
-                borderRadius: 10,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 900, color: 'var(--fs-text-1)', fontSize: 14,
-                boxShadow: '0 4px 12px rgba(59,130,246,0.35)',
-                flexShrink: 0,
-              }}>FS</div>
-              <div>
-                <div style={{ fontWeight: 800, color: 'var(--fs-text-1)', fontSize: 15, letterSpacing: '-0.3px', lineHeight: 1.2 }}>Facesign</div>
-                <div style={{ fontSize: 10, color: 'var(--fs-text-4)', fontWeight: 500, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Financeiro</div>
-              </div>
-            </>
-          )}
+          <OrgLogo logoUrl={org?.logo_url} logoUrlLight={org?.logo_url_light} />
         </div>
       </div>
 

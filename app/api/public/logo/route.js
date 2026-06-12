@@ -17,15 +17,17 @@ function getAdmin() {
 export async function GET() {
   try {
     const admin = getAdmin()
-    const { data } = await admin
+    const { data: rows } = await admin
       .from('organizations')
-      .select('logo_url')
-      .not('logo_url', 'is', null)
-      .limit(1)
-      .maybeSingle()
+      .select('*')
+      .limit(10)
 
-    return NextResponse.json({ logo_url: data?.logo_url || null })
+    const withLogo = (rows || []).find(r => r.logo_url || r.logo_url_light)
+    return NextResponse.json({
+      logo_url: withLogo?.logo_url || null,
+      logo_url_light: withLogo?.logo_url_light || null,
+    })
   } catch (_e) {
-    return NextResponse.json({ logo_url: null })
+    return NextResponse.json({ logo_url: null, logo_url_light: null })
   }
 }

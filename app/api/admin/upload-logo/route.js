@@ -21,7 +21,7 @@ async function ensureLogoColumn() {
     await fetch('https://api.supabase.com/v1/projects/' + projectRef + '/database/query', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + mgmtToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: 'ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS logo_url text;' }),
+      body: JSON.stringify({ query: 'ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS logo_url text; ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS logo_url_light text;' }),
     })
   } catch (_e) {}
 }
@@ -53,6 +53,7 @@ export async function POST(request) {
 
     const form = await request.formData()
     const file = form.get('file')
+    const variant = form.get('variant') === 'light' ? 'light' : 'dark'
     if (!file) return NextResponse.json({ error: 'Arquivo ausente' }, { status: 400 })
 
     await ensureBucket(admin)
@@ -60,7 +61,7 @@ export async function POST(request) {
 
     const nameParts = (file.name || 'logo.png').split('.')
     const ext = nameParts.length > 1 ? nameParts.pop().toLowerCase() : 'png'
-    const storagePath = 'logos/' + profile.organization_id + '/logo.' + ext
+    const storagePath = 'logos/' + profile.organization_id + '/logo-' + variant + '.' + ext
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
@@ -71,11 +72,12 @@ export async function POST(request) {
     const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(storagePath)
     const logoUrl = urlData.publicUrl + '?v=' + Date.now()
 
+    const column = variant === 'light' ? 'logo_url_light' : 'logo_url'
     const { error: dbErr } = await admin
-      .from('organizations').update({ logo_url: logoUrl }).eq('id', profile.organization_id)
+      .from('organizations').update({ [column]: logoUrl }).eq('id', profile.organization_id)
     if (dbErr) return NextResponse.json({ error: 'Erro ao salvar URL: ' + dbErr.message }, { status: 500 })
 
-    return NextResponse.json({ ok: true, logo_url: logoUrl })
+    return NextResponse.json({ ok: true, logo_url: logoUrl, variant })
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
@@ -96,8 +98,11 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
 
-    await admin.from('organizations').update({ logo_url: null }).eq('id', profile.organization_id)
-    return NextResponse.json({ ok: true })
+    const url = new URL(request.url)
+    const variant = url.searchParams.get('variant') === 'light' ? 'light' : 'dark'
+    const column = variant === 'light' ? 'logo_url_light' : 'logo_url'
+    await admin.from('organizations').update({ [column]: null }).eq('id', profile.organization_id)
+    return NextResponse.json({ ok: true, variant })
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

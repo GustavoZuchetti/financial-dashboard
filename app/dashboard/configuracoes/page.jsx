@@ -47,9 +47,11 @@ export default function ConfiguracoesPage() {
   const [msg,      setMsg]      = useState({ text: '', tipo: '' })
   const [loading,  setLoading]  = useState(false)
   // ─── Logo da organização ───────────────────────────────────────
-  const [logoUrl,      setLogoUrl]      = useState(null)
-  const [logoUploading, setLogoUploading] = useState(false)
-  const logoInputRef = React.useRef(null)
+  const [logoUrl,        setLogoUrl]        = useState(null)
+  const [logoUrlLight,   setLogoUrlLight]   = useState(null)
+  const [logoUploading,  setLogoUploading]  = useState(null) // 'dark' | 'light' | null
+  const logoInputRefDark  = React.useRef(null)
+  const logoInputRefLight = React.useRef(null)
   // ─── Role do usuário logado e redefinição de senha ─────────────
   const [myRole,      setMyRole]      = useState(null)
   const [resetModal,  setResetModal]  = useState(null) // { userId, email } | null
@@ -74,10 +76,11 @@ export default function ConfiguracoesPage() {
           setMyRole(p.role)
           const [{ data: emps }, { data: orgRow }] = await Promise.all([
             supabase.from('empresas').select('id,nome,cnpj').eq('organization_id', p.organization_id).order('nome'),
-            supabase.from('organizations').select('logo_url').eq('id', p.organization_id).maybeSingle(),
+            supabase.from('organizations').select('*').eq('id', p.organization_id).maybeSingle(),
           ])
           setEmpresas(emps || [])
           if (orgRow?.logo_url) setLogoUrl(orgRow.logo_url)
+          if (orgRow?.logo_url_light) setLogoUrlLight(orgRow.logo_url_light)
 
           // Super admin vê TODOS os usuários do sistema (via API global)
           if (p.role === 'super_admin') {
@@ -109,13 +112,14 @@ export default function ConfiguracoesPage() {
   }, [])
 
   // ─── Upload de logo ────────────────────────────────────────────
-  const uploadLogo = async (file) => {
+  const uploadLogo = async (file, variant) => {
     if (!file || !orgId) return
-    setLogoUploading(true)
+    setLogoUploading(variant)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const fd = new FormData()
       fd.append('file', file)
+      fd.append('variant', variant)
       const res = await fetch('/api/admin/upload-logo', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + (session ? session.access_token : '') },
@@ -123,23 +127,25 @@ export default function ConfiguracoesPage() {
       })
       const json = await res.json()
       if (!res.ok) { toast(json.error || 'Erro no upload', 'error'); return }
-      setLogoUrl(json.logo_url)
-      toast('Logo atualizada com sucesso!')
+      if (variant === 'light') setLogoUrlLight(json.logo_url)
+      else setLogoUrl(json.logo_url)
+      toast('Logo (' + (variant === 'light' ? 'tema claro' : 'tema escuro') + ') atualizada!')
     } catch (err) {
       toast('Erro: ' + err.message, 'error')
-    } finally { setLogoUploading(false) }
+    } finally { setLogoUploading(null) }
   }
 
-  const removerLogo = async () => {
-    if (!orgId || !confirm('Remover a logo da organização?')) return
+  const removerLogo = async (variant) => {
+    if (!orgId || !confirm('Remover a logo do ' + (variant === 'light' ? 'tema claro' : 'tema escuro') + '?')) return
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/admin/upload-logo', {
+      const res = await fetch('/api/admin/upload-logo?variant=' + variant, {
         method: 'DELETE',
         headers: { Authorization: 'Bearer ' + (session ? session.access_token : '') },
       })
       if (!res.ok) { const j = await res.json(); toast(j.error || 'Erro ao remover', 'error'); return }
-      setLogoUrl(null)
+      if (variant === 'light') setLogoUrlLight(null)
+      else setLogoUrl(null)
       toast('Logo removida.')
     } catch (err) {
       toast('Erro: ' + err.message, 'error')
@@ -459,46 +465,83 @@ export default function ConfiguracoesPage() {
           <div style={card}>
             <div style={cardTitle}>Logo da Organização</div>
             <p style={{ fontSize: 13, color: 'var(--fs-text-4)', marginBottom: 20, lineHeight: 1.6 }}>
-              A logo será exibida na tela de login e no cabeçalho do sistema.
-              Formatos aceitos: PNG, JPG ou SVG. Tamanho recomendado: 200×60px.
+              A logo será exibida na tela de login e no cabeçalho do sistema, acompanhando o tema ativo.
+              Envie uma versão para cada tema — se apenas uma for enviada, ela será usada em ambos.
+              Formatos: PNG, JPG ou SVG. Tamanho recomendado: 200×60px.
             </p>
 
-            {/* Preview da logo atual */}
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 12, color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
-                Logo Atual
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+              {/* ── Logo Tema Escuro ── */}
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
+                  Tema Escuro
+                </div>
+                <div style={{ width: 280, height: 90, background: '#0f172a', border: '1px solid var(--fs-border)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 12 }}>
+                  {logoUrl
+                    ? <img src={logoUrl} alt="Logo tema escuro" style={{ maxWidth: '90%', maxHeight: '80px', objectFit: 'contain' }} />
+                    : <span style={{ fontSize: 12, color: '#7b96ab' }}>Sem logo cadastrada</span>
+                  }
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <input
+                    ref={logoInputRefDark}
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    style={{ display: 'none' }}
+                    onChange={e => { if (e.target.files?.[0]) uploadLogo(e.target.files[0], 'dark'); e.target.value = '' }}
+                  />
+                  <button
+                    onClick={() => logoInputRefDark.current?.click()}
+                    disabled={!!logoUploading || !orgId}
+                    style={{ ...btn('primary'), opacity: (logoUploading || !orgId) ? 0.6 : 1, display:'flex', alignItems:'center', gap:7, fontSize: 12, padding: '8px 14px' }}
+                  >
+                    <SvgIcon name="upload" size={13} color="#fff" />
+                    {logoUploading === 'dark' ? 'Enviando...' : 'Selecionar'}
+                  </button>
+                  {logoUrl && (
+                    <button onClick={() => removerLogo('dark')} style={{ ...btn('ghost'), color: 'var(--fs-danger)', borderColor: 'rgba(248,113,113,0.3)', display:'flex', alignItems:'center', gap:6, fontSize: 12, padding: '8px 12px' }}>
+                      <SvgIcon name="trash" size={13} color="var(--fs-danger)" />
+                      Remover
+                    </button>
+                  )}
+                </div>
               </div>
-              <div style={{ width: 280, height: 90, background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                {logoUrl
-                  ? <img src={logoUrl} alt="Logo da organização" style={{ maxWidth: '90%', maxHeight: '80px', objectFit: 'contain' }} />
-                  : <span style={{ fontSize: 12, color: 'var(--fs-text-4)' }}>Sem logo cadastrada</span>
-                }
-              </div>
-            </div>
 
-            {/* Upload */}
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <input
-                ref={logoInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                style={{ display: 'none' }}
-                onChange={e => { if (e.target.files?.[0]) uploadLogo(e.target.files[0]) }}
-              />
-              <button
-                onClick={() => logoInputRef.current?.click()}
-                disabled={logoUploading || !orgId}
-                style={{ ...btn('primary'), opacity: (logoUploading || !orgId) ? 0.6 : 1, display:'flex', alignItems:'center', gap:7 }}
-              >
-                <SvgIcon name="upload" size={14} color="#fff" />
-                {logoUploading ? 'Enviando...' : 'Selecionar Logo'}
-              </button>
-              {logoUrl && (
-                <button onClick={removerLogo} style={{ ...btn('ghost'), color: 'var(--fs-danger)', borderColor: 'rgba(248,113,113,0.3)', display:'flex', alignItems:'center', gap:7 }}>
-                  <SvgIcon name="trash" size={14} color="var(--fs-danger)" />
-                  Remover Logo
-                </button>
-              )}
+              {/* ── Logo Tema Claro ── */}
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
+                  Tema Claro
+                </div>
+                <div style={{ width: 280, height: 90, background: '#f8fafc', border: '1px solid var(--fs-border)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 12 }}>
+                  {logoUrlLight
+                    ? <img src={logoUrlLight} alt="Logo tema claro" style={{ maxWidth: '90%', maxHeight: '80px', objectFit: 'contain' }} />
+                    : <span style={{ fontSize: 12, color: '#64748b' }}>Sem logo cadastrada</span>
+                  }
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <input
+                    ref={logoInputRefLight}
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    style={{ display: 'none' }}
+                    onChange={e => { if (e.target.files?.[0]) uploadLogo(e.target.files[0], 'light'); e.target.value = '' }}
+                  />
+                  <button
+                    onClick={() => logoInputRefLight.current?.click()}
+                    disabled={!!logoUploading || !orgId}
+                    style={{ ...btn('primary'), opacity: (logoUploading || !orgId) ? 0.6 : 1, display:'flex', alignItems:'center', gap:7, fontSize: 12, padding: '8px 14px' }}
+                  >
+                    <SvgIcon name="upload" size={13} color="#fff" />
+                    {logoUploading === 'light' ? 'Enviando...' : 'Selecionar'}
+                  </button>
+                  {logoUrlLight && (
+                    <button onClick={() => removerLogo('light')} style={{ ...btn('ghost'), color: 'var(--fs-danger)', borderColor: 'rgba(248,113,113,0.3)', display:'flex', alignItems:'center', gap:6, fontSize: 12, padding: '8px 12px' }}>
+                      <SvgIcon name="trash" size={13} color="var(--fs-danger)" />
+                      Remover
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             {!orgId && (

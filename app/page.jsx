@@ -26,7 +26,11 @@ export default function LoginPage() {
     }
     fetch('/api/public/logo')
       .then(r => r.json())
-      .then(({ logo_url }) => { if (logo_url) setOrgLogo(logo_url) })
+      .then(({ logo_url, logo_url_light }) => {
+        // Login tem fundo escuro fixo — prioriza a logo do tema escuro
+        const src = logo_url || logo_url_light
+        if (src) setOrgLogo(src)
+      })
       .catch(() => {})
   }, [])
 

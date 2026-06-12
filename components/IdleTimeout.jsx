@@ -1,11 +1,13 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 // ─── Configuração ──────────────────────────────────────────────────────────
 const IDLE_LIMIT_MS  = 45 * 60 * 1000  // 45 min de inatividade → logout
 const WARN_BEFORE_MS = 2  * 60 * 1000  // avisa 2 min antes
+const CHECK_EVERY_MS = 5  * 1000       // verifica a cada 5s
+const STORAGE_KEY    = 'fs-last-activity'
 // ──────────────────────────────────────────────────────────────────────────
 
 export default function IdleTimeout() {
@@ -13,59 +15,70 @@ export default function IdleTimeout() {
   const [showWarning, setShowWarning] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState(Math.floor(WARN_BEFORE_MS / 1000))
 
-  const idleTimer  = useRef(null)
-  const warnTimer  = useRef(null)
-  const countdown  = useRef(null)
+  const showWarningRef = useRef(false)
+  const loggedOut      = useRef(false)
+  const router_        = useRef(router)
+  router_.current = router
 
-  const doLogout = useCallback(async () => {
-    clearAll()
-    await supabase.auth.signOut()
-    router.push('/?expired=1')
-  }, [router])
+  useEffect(() => { showWarningRef.current = showWarning }, [showWarning])
 
-  const clearAll = () => {
-    clearTimeout(idleTimer.current)
-    clearTimeout(warnTimer.current)
-    clearInterval(countdown.current)
-  }
-
-  const startCountdown = useCallback(() => {
-    setShowWarning(true)
-    setSecondsLeft(Math.floor(WARN_BEFORE_MS / 1000))
-    countdown.current = setInterval(() => {
-      setSecondsLeft(s => {
-        if (s <= 1) { clearInterval(countdown.current); return 0 }
-        return s - 1
-      })
-    }, 1000)
-  }, [])
-
-  const resetTimers = useCallback(() => {
-    clearAll()
-    setShowWarning(false)
-    // Agenda o aviso e o logout
-    warnTimer.current = setTimeout(startCountdown, IDLE_LIMIT_MS - WARN_BEFORE_MS)
-    idleTimer.current = setTimeout(doLogout, IDLE_LIMIT_MS)
-  }, [startCountdown, doLogout])
-
-  // Continuar a sessão (usuário clicou em "Continuar conectado")
-  const stayConnected = () => { resetTimers() }
-
+  // Efeito de inicialização — roda UMA ÚNICA VEZ (deps vazias)
   useEffect(() => {
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click']
-    // Só reseta por atividade enquanto o aviso NÃO está visível —
-    // quando o aviso aparece, o usuário precisa clicar explicitamente.
-    const onActivity = () => { if (!showWarning) resetTimers() }
+    const markActivity = () => {
+      try { localStorage.setItem(STORAGE_KEY, String(Date.now())) } catch (_e) {}
+    }
+    const getIdleMs = () => {
+      try {
+        const last = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10)
+        return last ? Date.now() - last : 0
+      } catch (_e) { return 0 }
+    }
+    const doLogout = async () => {
+      if (loggedOut.current) return
+      loggedOut.current = true
+      clearInterval(intervalId)
+      try { localStorage.removeItem(STORAGE_KEY) } catch (_e) {}
+      await supabase.auth.signOut()
+      router_.current.push('/?expired=1')
+    }
+    // Verificação por timestamp — funciona mesmo com aba minimizada/congelada
+    const check = () => {
+      const idle = getIdleMs()
+      if (idle >= IDLE_LIMIT_MS) {
+        doLogout()
+      } else if (idle >= IDLE_LIMIT_MS - WARN_BEFORE_MS) {
+        setShowWarning(true)
+        setSecondsLeft(Math.max(0, Math.ceil((IDLE_LIMIT_MS - idle) / 1000)))
+      } else {
+        if (showWarningRef.current) setShowWarning(false)
+      }
+    }
 
+    if (!localStorage.getItem(STORAGE_KEY)) markActivity()
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click']
+    const onActivity = () => { if (!showWarningRef.current) markActivity() }
     events.forEach(e => window.addEventListener(e, onActivity, { passive: true }))
-    resetTimers()
+
+    const onVisibility = () => { if (document.visibilityState === 'visible') check() }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('focus', check)
+
+    const intervalId = setInterval(check, CHECK_EVERY_MS)
+    check()
+
+    window.__fsStayConnected = () => { markActivity(); setShowWarning(false) }
+    window.__fsLogoutNow = doLogout
 
     return () => {
       events.forEach(e => window.removeEventListener(e, onActivity))
-      clearAll()
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('focus', check)
+      clearInterval(intervalId)
+      delete window.__fsStayConnected
+      delete window.__fsLogoutNow
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showWarning])
+  }, [])
 
   if (!showWarning) return null
 
@@ -88,10 +101,10 @@ export default function IdleTimeout() {
           {mm}:{ss}
         </div>
         <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
-          <button onClick={doLogout} style={{ background:'transparent', border:'1px solid var(--fs-border)', borderRadius:8, padding:'9px 18px', fontSize:13, fontWeight:600, color:'var(--fs-text-2)', cursor:'pointer' }}>
+          <button onClick={() => window.__fsLogoutNow?.()} style={{ background:'transparent', border:'1px solid var(--fs-border)', borderRadius:8, padding:'9px 18px', fontSize:13, fontWeight:600, color:'var(--fs-text-2)', cursor:'pointer' }}>
             Sair agora
           </button>
-          <button onClick={stayConnected} style={{ background:'#1d4ed8', color:'#fff', border:'none', borderRadius:8, padding:'9px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+          <button onClick={() => window.__fsStayConnected?.()} style={{ background:'#1d4ed8', color:'#fff', border:'none', borderRadius:8, padding:'9px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
             Continuar conectado
           </button>
         </div>

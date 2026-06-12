@@ -28,7 +28,7 @@ export default function IdleTimeout() {
   // Efeito de inicialização — roda UMA ÚNICA VEZ (deps vazias)
   useEffect(() => {
     const markActivity = () => {
-      try { localStorage.setItem(STORAGE_KEY, String(Date.now())) } catch {}
+      try { localStorage.setItem(STORAGE_KEY, String(Date.now())) } catch(_e) {}
     }
     const getIdleMs = () => {
       try {
@@ -40,7 +40,7 @@ export default function IdleTimeout() {
       if (loggedOut.current) return
       loggedOut.current = true
       clearInterval(intervalId)
-      try { localStorage.removeItem(STORAGE_KEY) } catch {}
+      try { localStorage.removeItem(STORAGE_KEY) } catch(_e) {}
       await supabase.auth.signOut()
       router_.current.push('/?expired=1')
     }

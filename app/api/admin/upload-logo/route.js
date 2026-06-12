@@ -19,7 +19,7 @@ async function ensureLogoColumn() {
       headers: { Authorization: `Bearer ${mgmtToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: 'ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS logo_url text;' }),
     })
-  } catch {}
+  } catch(_e) {}
 }
 
 // Garante bucket (cria se não existir)

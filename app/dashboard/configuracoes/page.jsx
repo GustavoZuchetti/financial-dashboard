@@ -93,7 +93,7 @@ export default function ConfiguracoesPage() {
                   created_at: u.created_at, org_nome: u.org_nome, has_profile: u.has_profile,
                 })))
               }
-            } catch {}
+            } catch(_e) {}
           } else {
             const { data: users } = await supabase.from('profiles')
               .select('id,email,role,created_at').eq('organization_id', p.organization_id)

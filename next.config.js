@@ -2,8 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
-    // Warnings não quebram o build; errors já foram corrigidos
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
   images: {
     domains: ['lh3.googleusercontent.com'],

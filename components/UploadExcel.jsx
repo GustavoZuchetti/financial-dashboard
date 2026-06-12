@@ -95,7 +95,7 @@ export default function UploadExcel({ onFileSelect, mappings = [], planoContas =
         >
           <Plus className="w-10 h-10 text-zinc-500 mx-auto mb-4" />
           <p className="text-white font-medium">Clique para selecionar o arquivo CSV/XLSX</p>
-          <p className="text-zinc-500 text-sm mt-2">O sistema usará a coluna "Descrição" para o mapeamento</p>
+          <p className="text-zinc-500 text-sm mt-2">O sistema usará a coluna &quot;Descrição&quot; para o mapeamento</p>
         </div>
       )}
 

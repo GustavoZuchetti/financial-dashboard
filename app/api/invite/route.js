@@ -6,6 +6,7 @@ function getAdmin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL |
 
 // GET /api/invite?token=XXXX — valida o token (sem auth necessária)
 export async function GET(request) {
+  const supabaseAdmin = getAdmin()
   const { searchParams } = new URL(request.url)
   const token = searchParams.get('token')
 
@@ -27,6 +28,7 @@ export async function GET(request) {
 
 // POST /api/invite — aceita o convite e cria o usuário
 export async function POST(request) {
+  const supabaseAdmin = getAdmin()
   const { token, nome, senha } = await request.json()
   if (!token || !nome || !senha) return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
 
@@ -42,7 +44,7 @@ export async function POST(request) {
   if (new Date(inv.expires_at) < new Date()) return NextResponse.json({ error: 'Convite expirado' }, { status: 410 })
 
   // Criar usuário via Admin API (bypassa confirmação de e-mail)
-  const { data: authData, error: authErr } = await getAdmin().auth.admin.createUser({
+  const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
     email:              inv.email,
     password:           senha,
     email_confirm:      true, // confirma automaticamente — sem precisar de e-mail
@@ -53,7 +55,7 @@ export async function POST(request) {
 
   const userId = authData.user?.id
   // Criar perfil
-  await getAdmin().from('profiles').upsert({
+  await supabaseAdmin.from('profiles').upsert({
     id:              userId,
     organization_id: inv.organization_id,
     role:            inv.role,
@@ -62,7 +64,7 @@ export async function POST(request) {
   })
 
   // Marcar convite como usado
-  await getAdmin().from('invites').update({ used_at: new Date().toISOString() }).eq('token', token)
+  await supabaseAdmin.from('invites').update({ used_at: new Date().toISOString() }).eq('token', token)
 
   return NextResponse.json({ ok: true })
 }

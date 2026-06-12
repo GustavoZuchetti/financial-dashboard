@@ -4,10 +4,11 @@ import { NextResponse } from 'next/server'
 function getAdmin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co', process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key') }
 
 export async function GET(req) {
+  const supabaseAdmin = getAdmin()
   const token = (req.headers.get('authorization') || '').replace('Bearer ', '')
   if (!token) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-  const { data: { user: caller }, error: authErr } = await getAdmin().auth.getUser(token)
+  const { data: { user: caller }, error: authErr } = await supabaseAdmin.auth.getUser(token)
   if (authErr || !caller) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   const { data: callerProfile } = await supabaseAdmin
@@ -18,7 +19,7 @@ export async function GET(req) {
   }
 
   // Listar todos os usuários via admin API (sem filtro de org)
-  const { data: { users }, error } = await getAdmin().auth.admin.listUsers({ perPage: 1000 })
+  const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Enriquecer com dados dos perfis

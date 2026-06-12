@@ -19,10 +19,11 @@ function generatePassword() {
 }
 
 export async function POST(req) {
+  const supabaseAdmin = getAdmin()
   const token = (req.headers.get('authorization') || '').replace('Bearer ', '')
   if (!token) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-  const { data: { user: caller }, error: authErr } = await getAdmin().auth.getUser(token)
+  const { data: { user: caller }, error: authErr } = await supabaseAdmin.auth.getUser(token)
   if (authErr || !caller) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
   const { data: callerProfile } = await supabaseAdmin
@@ -40,7 +41,7 @@ export async function POST(req) {
   }
 
   const newPassword = generatePassword()
-  const { data, error } = await getAdmin().auth.admin.updateUserById(userId, { password: newPassword })
+  const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, { password: newPassword })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ ok: true, email: data.user?.email, password: newPassword })

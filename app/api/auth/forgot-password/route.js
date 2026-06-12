@@ -4,12 +4,13 @@ import { NextResponse } from 'next/server'
 function getAdmin() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co', process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key') }
 
 export async function POST(req) {
+  const supabaseAdmin = getAdmin()
   try {
     const { email, redirectTo } = await req.json()
     if (!email) return NextResponse.json({ error: 'E-mail obrigatório' }, { status: 400 })
 
     // Verificar se o usuário existe
-    const { data: { users }, error: listErr } = await getAdmin().auth.admin.listUsers()
+    const { data: { users }, error: listErr } = await supabaseAdmin.auth.admin.listUsers()
     if (listErr) return NextResponse.json({ error: listErr.message }, { status: 500 })
 
     const user = users.find(u => u.email?.toLowerCase() === email.trim().toLowerCase())
@@ -18,7 +19,7 @@ export async function POST(req) {
     if (!user) return NextResponse.json({ ok: true, method: 'none' })
 
     // Gerar link de recuperação direto via admin API (sem depender de SMTP)
-    const { data, error } = await getAdmin().auth.admin.generateLink({
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email: user.email,
       options: { redirectTo },

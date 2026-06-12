@@ -1,6 +1,9 @@
 import './globals.css'
+import { Inter } from 'next/font/google'
 import { ToastProvider } from '@/components/Toast'
 import { OrgProvider } from '@/lib/org-context'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: 'Facesign — Financeiro',
@@ -11,7 +14,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
-      <body>
+      <body className={inter.className}>
         {/* Script síncrono: aplica tema ANTES do React hidratar — evita flash */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {

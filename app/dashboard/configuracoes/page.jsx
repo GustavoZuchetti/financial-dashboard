@@ -72,12 +72,12 @@ export default function ConfiguracoesPage() {
         if (p?.organization_id) {
           setOrgId(p.organization_id)
           setMyRole(p.role)
-          const [{ data: emps }, { data: orgRow }] = await Promise.all([
+          const [{ data: emps }, { data: settings }] = await Promise.all([
             supabase.from('empresas').select('id,nome,cnpj').eq('organization_id', p.organization_id).order('nome'),
-            supabase.from('organizations').select('logo_url').eq('id', p.organization_id).maybeSingle(),
+            supabase.from('org_settings').select('logo_url').eq('organization_id', p.organization_id).maybeSingle(),
           ])
           setEmpresas(emps || [])
-          if (orgRow?.logo_url) setLogoUrl(orgRow.logo_url)
+          if (settings?.logo_url) setLogoUrl(settings.logo_url)
 
           // Super admin vê TODOS os usuários do sistema (via API global)
           if (p.role === 'super_admin') {
@@ -93,7 +93,7 @@ export default function ConfiguracoesPage() {
                   created_at: u.created_at, org_nome: u.org_nome, has_profile: u.has_profile,
                 })))
               }
-            } catch(_e) {}
+            } catch {}
           } else {
             const { data: users } = await supabase.from('profiles')
               .select('id,email,role,created_at').eq('organization_id', p.organization_id)
@@ -113,37 +113,30 @@ export default function ConfiguracoesPage() {
     if (!file || !orgId) return
     setLogoUploading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/admin/upload-logo', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-        body: fd,
-      })
-      const json = await res.json()
-      if (!res.ok) { toast(json.error || 'Erro no upload', 'error'); return }
-      setLogoUrl(json.logo_url)
-      toast('Logo atualizada com sucesso!')
-    } catch (e) {
-      toast('Erro no upload: ' + e.message, 'error')
+      const ext  = file.name.split('.').pop().toLowerCase()
+      const path = `logos/${orgId}/logo.${ext}`
+      const { error: upErr } = await supabase.storage.from('org-assets').upload(path, file, { upsert: true, contentType: file.type })
+      if (upErr) { toast('Erro no upload: ' + upErr.message, 'error'); return }
+      const { data: { publicUrl } } = supabase.storage.from('org-assets').getPublicUrl(path)
+      // Salvar URL na tabela org_settings
+      const { error: dbErr } = await supabase.from('org_settings').upsert(
+        { organization_id: orgId, logo_url: publicUrl + `?v=${Date.now()}`, updated_at: new Date().toISOString() },
+        { onConflict: 'organization_id' }
+      )
+      if (dbErr) { toast('Erro ao salvar logo: ' + dbErr.message, 'error'); return }
+      setLogoUrl(publicUrl + `?v=${Date.now()}`)
+      toast('✓ Logo atualizada com sucesso!')
     } finally { setLogoUploading(false) }
   }
 
   const removerLogo = async () => {
     if (!orgId || !confirm('Remover a logo da organização?')) return
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/admin/upload-logo', {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      })
-      if (!res.ok) { const j = await res.json(); toast(j.error || 'Erro ao remover', 'error'); return }
-      setLogoUrl(null)
-      toast('Logo removida.')
-    } catch (e) {
-      toast('Erro ao remover: ' + e.message, 'error')
-    }
+    await supabase.from('org_settings').upsert(
+      { organization_id: orgId, logo_url: null, updated_at: new Date().toISOString() },
+      { onConflict: 'organization_id' }
+    )
+    setLogoUrl(null)
+    toast('Logo removida.')
   }
   // ──────────────────────────────────────────────────────────────
 

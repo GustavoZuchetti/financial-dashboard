@@ -351,12 +351,12 @@ export default function LayoutImportacao() {
               <button onClick={addRegra} style={{background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.25)',color:'#22c55e',borderRadius:7,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}}>+ Adicionar Regra</button>
             </div>
             <div style={{fontSize:12,color:'var(--fs-text-4)',marginBottom:16,marginLeft:30}}>
-              Define como cada valor da coluna &quot;Tipo&quot; do seu arquivo é classificado no sistema.<br/>
-              <span style={{color:'var(--fs-text-3)'}}>Ex: &quot;Conta a pagar&quot; → Despesa Fixa · &quot;Conta a receber&quot; → Receita Operacional</span>
+              Define como cada valor da coluna "Tipo" do seu arquivo é classificado no sistema.<br/>
+              <span style={{color:'var(--fs-text-3)'}}>Ex: "Conta a pagar" → Despesa Fixa · "Conta a receber" → Receita Operacional</span>
             </div>
 
             {form.tipo_regras.length===0
-              ? <div style={{textAlign:'center',padding:'20px',color:'var(--fs-text-4)',fontSize:12,background:'var(--fs-bg)',borderRadius:8,border:'1px dashed var(--fs-border)'}}>Nenhuma regra criada. Clique em &quot;+ Adicionar Regra&quot;.</div>
+              ? <div style={{textAlign:'center',padding:'20px',color:'var(--fs-text-4)',fontSize:12,background:'var(--fs-bg)',borderRadius:8,border:'1px dashed var(--fs-border)'}}>Nenhuma regra criada. Clique em "+ Adicionar Regra".</div>
               : <>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 140px 36px',gap:10,marginBottom:6}}>
                     {['Valor no CSV','Classificar como','Módulo',''].map(h=><div key={h} style={{fontSize:10,fontWeight:700,color:'var(--fs-text-4)',textTransform:'uppercase',letterSpacing:'0.5px'}}>{h}</div>)}

@@ -31,7 +31,7 @@ export default function ThemeToggle({ collapsed = false }) {
     const next = theme === 'dark' ? 'light' : 'dark'
     setTheme(next)
     document.documentElement.setAttribute('data-theme', next)
-    try { localStorage.setItem('fs-theme', next) } catch(_e) {}
+    try { localStorage.setItem('fs-theme', next) } catch {}
   }
 
   if (!mounted) {

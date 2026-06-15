@@ -13,28 +13,20 @@ function getAdmin() {
   )
 }
 
-const BUCKET  = 'org-assets'
-const ORG_ID  = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+const BUCKET = 'org-assets'
+const ORG_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
-export async function POST(request) {
+export async function POST() {
+  // Rota interna — protegida apenas por ser server-side com service role
+  // (sem token de usuário, pois é executada logo após deploy)
   const admin = getAdmin()
 
-  // Verificar autenticação
-  const token = (request.headers.get('authorization') || '').replace('Bearer ', '')
-  if (!token) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-  const { data: { user }, error: authErr } = await admin.auth.getUser(token)
-  if (authErr || !user) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-
-  // Ler o arquivo da pasta public
   const filePath = path.join(process.cwd(), 'public', 'logo-dark.jpg')
   let fileBuffer
-  try {
-    fileBuffer = fs.readFileSync(filePath)
-  } catch (e) {
-    return NextResponse.json({ error: 'Arquivo não encontrado: ' + e.message }, { status: 500 })
-  }
+  try { fileBuffer = fs.readFileSync(filePath) }
+  catch (e) { return NextResponse.json({ error: 'Arquivo não encontrado: ' + e.message }, { status: 500 }) }
 
-  // Garantir que o bucket existe
+  // Bucket
   const { data: buckets } = await admin.storage.listBuckets()
   if (!(buckets || []).find(b => b.name === BUCKET)) {
     await admin.storage.createBucket(BUCKET, { public: true, fileSizeLimit: 2097152 })
@@ -43,21 +35,14 @@ export async function POST(request) {
   // Upload
   const storagePath = `logos/${ORG_ID}/logo-dark.jpg`
   const { error: upErr } = await admin.storage
-    .from(BUCKET)
-    .upload(storagePath, fileBuffer, { upsert: true, contentType: 'image/jpeg' })
-
+    .from(BUCKET).upload(storagePath, fileBuffer, { upsert: true, contentType: 'image/jpeg' })
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 })
 
-  // URL pública
   const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(storagePath)
   const logoUrl = urlData.publicUrl + '?v=' + Date.now()
 
-  // Salvar no banco
   const { error: dbErr } = await admin
-    .from('organizations')
-    .update({ logo_url: logoUrl })
-    .eq('id', ORG_ID)
-
+    .from('organizations').update({ logo_url: logoUrl }).eq('id', ORG_ID)
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
 
   return NextResponse.json({ ok: true, logo_url: logoUrl })

@@ -1,10 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import fs from 'fs'
-import path from 'path'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
 
 function getAdmin() {
   return createClient(
@@ -13,33 +10,19 @@ function getAdmin() {
   )
 }
 
-const BUCKET = 'org-assets'
-const ORG_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-
-export async function POST() {
+// A imagem logo-dark.png está no /public do projeto — acessível como arquivo estático.
+// Apenas atualiza o banco para apontar para essa URL. Rápido, sem timeout.
+export async function POST(request) {
   const admin = getAdmin()
+  const host = request.headers.get('host') || 'financial-dashboard-omega-six.vercel.app'
+  const protocol = host.includes('localhost') ? 'http' : 'https'
+  const logoUrl = `${protocol}://${host}/logo-dark.png?v=${Date.now()}`
 
-  const filePath = path.join(process.cwd(), 'public', 'logo-dark.png')
-  let fileBuffer
-  try { fileBuffer = fs.readFileSync(filePath) }
-  catch (e) { return NextResponse.json({ error: 'Arquivo não encontrado: ' + e.message }, { status: 500 }) }
+  const { error } = await admin
+    .from('organizations')
+    .update({ logo_url: logoUrl })
+    .eq('id', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
 
-  const { data: buckets } = await admin.storage.listBuckets()
-  if (!(buckets || []).find(b => b.name === BUCKET)) {
-    await admin.storage.createBucket(BUCKET, { public: true, fileSizeLimit: 2097152 })
-  }
-
-  const storagePath = `logos/${ORG_ID}/logo-dark.png`
-  const { error: upErr } = await admin.storage
-    .from(BUCKET).upload(storagePath, fileBuffer, { upsert: true, contentType: 'image/png' })
-  if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 })
-
-  const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(storagePath)
-  const logoUrl = urlData.publicUrl + '?v=' + Date.now()
-
-  const { error: dbErr } = await admin
-    .from('organizations').update({ logo_url: logoUrl }).eq('id', ORG_ID)
-  if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 })
-
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, logo_url: logoUrl })
 }

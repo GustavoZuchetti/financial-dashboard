@@ -10,7 +10,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [mounted, setMounted] = useState(false)
-  const [orgLogo, setOrgLogo] = useState(null)
+  const LOGO_CACHE_KEY = 'fs-org-logo-dark'
+
+  // Inicializar com cache do localStorage → logo aparece instantâneo (sem flash)
+  const [orgLogo, setOrgLogo] = useState(() => {
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem(LOGO_CACHE_KEY) || null
+  })
   const [forgotMode, setForgotMode] = useState(false)
   const [forgotSent, setForgotSent] = useState(false)
   const [forgotLink, setForgotLink] = useState(null)
@@ -29,7 +35,10 @@ export default function LoginPage() {
       .then(({ logo_url, logo_url_light }) => {
         // Login tem fundo escuro fixo — prioriza a logo do tema escuro
         const src = logo_url || logo_url_light
-        if (src) setOrgLogo(src)
+        if (src) {
+          setOrgLogo(src)
+          try { localStorage.setItem(LOGO_CACHE_KEY, src) } catch (_e) {}
+        }
       })
       .catch(() => {})
   }, [])

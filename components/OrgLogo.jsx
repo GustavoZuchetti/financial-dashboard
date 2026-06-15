@@ -34,7 +34,7 @@ function pickFilter(theme, logoUrl, logoUrlLight) {
   return 'none'
 }
 
-export default function OrgLogo({ logoUrl, logoUrlLight, height = 36, maxWidth = 160 }) {
+export default function OrgLogo({ logoUrl, logoUrlLight, height = 44, maxWidth = 180 }) {
   const theme = useActiveTheme()
   const src    = pickLogo(theme, logoUrl, logoUrlLight)
   const filter = pickFilter(theme, logoUrl, logoUrlLight)

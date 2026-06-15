@@ -1,45 +1,63 @@
 'use client'
 import { useState, useEffect } from 'react'
 
-// Hook: observa o tema ativo (data-theme no <html>) e reage à troca em tempo real
+// Observa o atributo data-theme no <html> e reage à troca em tempo real
 export function useActiveTheme() {
+  const getTheme = () => {
+    if (typeof document === 'undefined') return 'dark'
+    return document.documentElement.getAttribute('data-theme') ||
+      localStorage.getItem('fs-theme') || 'dark'
+  }
   const [theme, setTheme] = useState('dark')
-
   useEffect(() => {
-    const read = () => setTheme(document.documentElement.getAttribute('data-theme') || 'dark')
-    read()
-    // MutationObserver: dispara imediatamente quando o ThemeToggle muda o atributo
-    const obs = new MutationObserver(read)
+    setTheme(getTheme())
+    const obs = new MutationObserver(() => setTheme(getTheme()))
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
     return () => obs.disconnect()
   }, [])
-
   return theme
 }
 
-// Escolhe a logo certa para o tema atual, com fallback inteligente:
-// tema claro → logo_url_light, senão logo_url
-// tema escuro → logo_url, senão logo_url_light
-export function pickLogo(theme, logoUrl, logoUrlLight) {
+// Escolhe a logo certa para o tema com fallback inteligente
+function pickLogo(theme, logoUrl, logoUrlLight) {
   if (theme === 'light') return logoUrlLight || logoUrl || null
   return logoUrl || logoUrlLight || null
 }
 
-// Logo da organização que acompanha o tema. Fallback: marca FS/Facesign.
-export default function OrgLogo({ logoUrl, logoUrlLight, height = 34, maxWidth = 150 }) {
+// Filtro CSS para o tema escuro quando não há versão específica para ele:
+// se só existe logo_url_light (versão clara), clareia no tema escuro;
+// se existe logo_url (versão escura), nenhum filtro.
+function pickFilter(theme, logoUrl, logoUrlLight) {
+  if (theme !== 'dark') return 'none'
+  // Está usando a versão light no tema escuro (não tem versão dark)
+  if (!logoUrl && logoUrlLight) return 'brightness(0) invert(1)'
+  return 'none'
+}
+
+export default function OrgLogo({ logoUrl, logoUrlLight, height = 36, maxWidth = 160 }) {
   const theme = useActiveTheme()
-  const src = pickLogo(theme, logoUrl, logoUrlLight)
+  const src    = pickLogo(theme, logoUrl, logoUrlLight)
+  const filter = pickFilter(theme, logoUrl, logoUrlLight)
 
   if (src) {
     return (
       <img
+        key={src + theme}           /* força remount ao trocar tema */
         src={src}
         alt="Logo da organização"
-        style={{ height, maxWidth, objectFit: 'contain', flexShrink: 0 }}
+        style={{
+          height,
+          maxWidth,
+          objectFit: 'contain',
+          flexShrink: 0,
+          filter,
+          transition: 'filter 0.3s ease',
+        }}
       />
     )
   }
 
+  // Fallback: marca FS
   return (
     <>
       <div style={{

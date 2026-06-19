@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, fetchAll } from '@/lib/supabase'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -61,7 +61,7 @@ export default function FluxoComparativo() {
     if (!empIds.length) return []
     let q = supabase.from('fluxo_caixa').select('tipo,valor,data').gte('data', start).lte('data', end)
     q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
-    const { data } = await q.range(0, 9999)
+    const data = await fetchAll(q)
     return data || []
   }, [empresaId, isConsol])
 

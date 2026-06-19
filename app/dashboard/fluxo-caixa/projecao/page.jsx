@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, fetchAll } from '@/lib/supabase'
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -72,7 +72,7 @@ export default function FluxoProjecao() {
         .gte('data', baseStart.toISOString().split('T')[0])
         .lte('data', baseEnd.toISOString().split('T')[0])
       q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
-      const { data: hist = [] } = await q.range(0, 9999)
+      const hist = await fetchAll(q)
 
       // Agrupar por mês
       const byMonth = {}

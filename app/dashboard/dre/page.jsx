@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, fetchAll } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
 
@@ -226,7 +226,7 @@ export default function DREGeral() {
   const empIdsRef = useRef(null)
 
   const fetchPeriod = useCallback(async (s, e, consol, empId) => {
-    let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,conta_id,empresa_id').range(0, 9999).gte('data',s).lte('data',e)
+    let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,conta_id,empresa_id').gte('data',s).lte('data',e)
     if (consol) {
       if (!empIdsRef.current) {
         const { data: { session } } = await supabase.auth.getSession()
@@ -235,8 +235,7 @@ export default function DREGeral() {
       }
       if (empIdsRef.current.length) q = q.in('empresa_id', empIdsRef.current)
     } else { q = q.eq('empresa_id', empId) }
-    const { data: r, error: err } = await q
-    if (err) throw err
+    const r = await fetchAll(q)
     return r || []
   }, [])
 

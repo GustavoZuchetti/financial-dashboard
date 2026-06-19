@@ -15,9 +15,9 @@ const mappingsConfig = [
   { categoria_origem: 'Juros recebidos', tipo_destino: 'receita', conta_codigo: '4.1.1' },
 
   // IMPOSTOS SOBRE RECEITA
-  { categoria_origem: 'COFINS', tipo_destino: 'receita', conta_codigo: '1.2.1' },
-  { categoria_origem: 'ISS', tipo_destino: 'receita', conta_codigo: '1.2.2' },
-  { categoria_origem: 'PIS', tipo_destino: 'receita', conta_codigo: '1.2.3' },
+  { categoria_origem: 'COFINS', tipo_destino: 'deducao', conta_codigo: '1.2.1' },
+  { categoria_origem: 'ISS', tipo_destino: 'deducao', conta_codigo: '1.2.2' },
+  { categoria_origem: 'PIS', tipo_destino: 'deducao', conta_codigo: '1.2.3' },
 
   // CAC
   { categoria_origem: 'PABX', tipo_destino: 'custo', conta_codigo: '2.1.1.1' },

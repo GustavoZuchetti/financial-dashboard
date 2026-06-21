@@ -127,6 +127,23 @@ export default function PlanoContasPage() {
     setEditando(c.id); setShowAdd(true)
   }
 
+  // Remapeia uma categoria (De-Para) para outra conta do plano.
+  // O tipo_destino acompanha o tipo da conta de destino.
+  const remapearCategoria = async (mappingId, novaContaId) => {
+    const destino = contas.find(c => c.id === novaContaId)
+    if (!destino) return
+    setLoading(true)
+    const { error } = await supabase
+      .from('categoria_mappings')
+      .update({ conta_id: novaContaId, tipo_destino: destino.tipo })
+      .eq('id', mappingId)
+    setLoading(false)
+    if (error) { toast('Erro ao remapear: ' + error.message, false); return }
+    toast('Categoria movida para ' + destino.codigo + ' — ' + destino.nome)
+    await load()
+    setContaDetalhes(null)
+  }
+
   const cancelar = () => { setNova({ codigo:'', nome:'', tipo:'receita', descricao:'' }); setEditando(null); setShowAdd(false) }
 
   const inp = { background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:7, color:'var(--fs-text-1)', padding:'9px 12px', fontSize:13, outline:'none', width:'100%', boxSizing:'border-box' }
@@ -136,36 +153,58 @@ export default function PlanoContasPage() {
     if (!contaDetalhes) return null
     const mps = mappings.filter(m => m.conta_id === contaDetalhes.id)
     return (
-      <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center' }}
+      <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24 }}
            onClick={() => setContaDetalhes(null)}>
-        <div style={{ background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:12,padding:28,maxWidth:500,width:'90%' }}
+        <div style={{ background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:12,maxWidth:540,width:'90%',maxHeight:'85vh',display:'flex',flexDirection:'column' }}
              onClick={e => e.stopPropagation()}>
-          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20 }}>
-            <div>
-              <div style={{ fontSize:11,color:'var(--fs-text-4)',fontWeight:700,textTransform:'uppercase',marginBottom:4 }}>Código {contaDetalhes.codigo}</div>
-              <div style={{ fontSize:17,fontWeight:800,color:'var(--fs-text-1)' }}>{contaDetalhes.nome}</div>
-              <span style={{ display:'inline-block',marginTop:6,background:`${TIPO_CORES[contaDetalhes.tipo]}20`,color:TIPO_CORES[contaDetalhes.tipo],border:`1px solid ${TIPO_CORES[contaDetalhes.tipo]}40`,padding:'2px 10px',borderRadius:20,fontSize:11,fontWeight:700 }}>
-                {TIPO_LABELS[contaDetalhes.tipo]}
-              </span>
-            </div>
-            <button onClick={() => setContaDetalhes(null)} style={{ background:'transparent',border:'none',color:'var(--fs-text-4)',fontSize:18,cursor:'pointer',lineHeight:1 }}>✕</button>
-          </div>
-          {contaDetalhes.descricao && <p style={{ color:'var(--fs-text-2)',fontSize:13,marginBottom:16 }}>{contaDetalhes.descricao}</p>}
-          <div style={{ fontSize:12,fontWeight:700,color:'var(--fs-text-4)',textTransform:'uppercase',marginBottom:8 }}>De-Para vinculados ({mps.length})</div>
-          {mps.length === 0
-            ? <p style={{ color:'var(--fs-text-4)',fontSize:13 }}>Nenhum De-Para configurado para esta conta.</p>
-            : mps.map(m => (
-              <div key={m.id} style={{ background:'var(--fs-bg)',borderRadius:7,padding:'8px 12px',marginBottom:6,fontSize:12,color:'var(--fs-text-2)' }}>
-                {m.categoria_origem}
+          {/* Cabeçalho fixo */}
+          <div style={{ padding:'24px 28px 16px',borderBottom:'1px solid var(--fs-border)' }}>
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'flex-start' }}>
+              <div>
+                <div style={{ fontSize:11,color:'var(--fs-text-4)',fontWeight:700,textTransform:'uppercase',marginBottom:4 }}>Código {contaDetalhes.codigo}</div>
+                <div style={{ fontSize:17,fontWeight:800,color:'var(--fs-text-1)' }}>{contaDetalhes.nome}</div>
+                <span style={{ display:'inline-block',marginTop:6,background:`${TIPO_CORES[contaDetalhes.tipo]}20`,color:TIPO_CORES[contaDetalhes.tipo],border:`1px solid ${TIPO_CORES[contaDetalhes.tipo]}40`,padding:'2px 10px',borderRadius:20,fontSize:11,fontWeight:700 }}>
+                  {TIPO_LABELS[contaDetalhes.tipo]}
+                </span>
               </div>
-            ))}
+              <button onClick={() => setContaDetalhes(null)} style={{ background:'transparent',border:'none',color:'var(--fs-text-4)',fontSize:18,cursor:'pointer',lineHeight:1 }}>✕</button>
+            </div>
+            {contaDetalhes.descricao && <p style={{ color:'var(--fs-text-2)',fontSize:13,marginTop:12,marginBottom:0 }}>{contaDetalhes.descricao}</p>}
+          </div>
+
+          {/* Corpo com SCROLL */}
+          <div style={{ padding:'16px 28px 24px',overflowY:'auto',flex:1 }}>
+            <div style={{ fontSize:12,fontWeight:700,color:'var(--fs-text-4)',textTransform:'uppercase',marginBottom:10 }}>
+              Categorias vinculadas ({mps.length})
+            </div>
+            {mps.length === 0
+              ? <p style={{ color:'var(--fs-text-4)',fontSize:13 }}>Nenhuma categoria (De-Para) vinculada a esta conta.</p>
+              : mps.map(m => (
+                <div key={m.id} style={{ background:'var(--fs-bg)',borderRadius:8,padding:'10px 12px',marginBottom:8,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10 }}>
+                  <span style={{ fontSize:13,color:'var(--fs-text-1)',flex:1 }}>{m.categoria_origem}</span>
+                  <select
+                    value={contaDetalhes.id}
+                    onChange={e => { if (e.target.value !== contaDetalhes.id) remapearCategoria(m.id, e.target.value) }}
+                    disabled={loading}
+                    title="Mover esta categoria para outra conta"
+                    style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-2)',padding:'6px 8px',fontSize:11,maxWidth:220,cursor:'pointer' }}>
+                    {contas.map(c => (
+                      <option key={c.id} value={c.id}>{c.codigo} — {c.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            <p style={{ color:'var(--fs-text-4)',fontSize:11,marginTop:14,lineHeight:1.5 }}>
+              Para mover uma categoria para outra conta de despesa/receita, selecione a conta de destino no menu ao lado de cada categoria.
+            </p>
+          </div>
         </div>
       </div>
     )
   }
 
   // ─── Formulário de nova/editar conta ─────────────────────────────
-  const FormConta = () => (
+  const formConta = (
     <div style={{ background:'var(--fs-surface)',border:'1px solid var(--fs-border)',borderRadius:12,padding:24,marginBottom:20 }}>
       <div style={{ fontSize:15,fontWeight:700,color:'var(--fs-text-1)',marginBottom:16 }}>
         {editando ? 'Editar Conta' : 'Nova Conta'}
@@ -244,7 +283,7 @@ export default function PlanoContasPage() {
         </div>
       )}
 
-      {showAdd && <FormConta />}
+      {showAdd && formConta}
 
       {!empresaId ? (
         <div style={{ textAlign:'center',padding:60,color:'var(--fs-text-4)' }}>Selecione uma empresa no menu lateral.</div>

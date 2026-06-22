@@ -749,7 +749,11 @@ export default function ImportacaoPage() {
       })
       .map(row => {
         const map = (mappingsDre || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
-        let tipo = map?.tipo_destino || (row.tipoCsv.includes('pagar') ? 'despesa' : 'receita')
+        // Fonte da verdade: o tipo da CONTA vinculada (plano de contas).
+        // O tipo_destino do mapping pode estar defasado se a conta foi
+        // reclassificada depois que o mapping foi criado.
+        const contaVinc = map?.conta_id ? (planoContas || []).find(c => c.id === map.conta_id) : null
+        let tipo = contaVinc?.tipo || map?.tipo_destino || (row.tipoCsv.includes('pagar') ? 'despesa' : 'receita')
         if (!['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','imposto_lucro','investimento'].includes(tipo)) tipo = 'receita'
         return { empresa_id: empresaId, data: row.data, descricao: row.nome || row.__desc || '', valor: row.valor, tipo, conta_id: map?.conta_id || null, categoria: row.__desc || '' }
       })

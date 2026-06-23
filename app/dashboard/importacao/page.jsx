@@ -216,30 +216,6 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
         </button>
       </div>
 
-      {/* Distribuição por mês — apenas no DRE */}
-      {modulo === 'dre' && (() => {
-        const dist = {}
-        ;(data || []).forEach(r => {
-          const m = r.data ? r.data.substring(0, 7) : '?'
-          dist[m] = (dist[m] || 0) + 1
-        })
-        const sorted = Object.entries(dist).sort()
-        return sorted.length > 0 ? (
-          <div style={{ background: 'rgba(var(--fs-brand-rgb),0.06)', border: '1px solid rgba(var(--fs-brand-rgb),0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 12 }}>
-            <span style={{ color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-              Distribuição por mês ({modulo === 'dre' ? 'Competência' : 'Liquidação'}):
-            </span>
-            <span style={{ marginLeft: 10 }}>
-              {sorted.map(([m, n]) => (
-                <span key={m} style={{ marginRight: 14, color: 'var(--fs-text-1)', fontWeight: 600 }}>
-                  {m}: <strong style={{ color: 'var(--fs-brand)' }}>{n}</strong>
-                </span>
-              ))}
-            </span>
-          </div>
-        ) : null
-      })()}
-
       {modulo === 'dre' && pendentes.length > 0 && (
         <div style={{ background: 'var(--fs-warning-bg)', border: '1px solid rgba(var(--fs-warning-rgb),0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: 'var(--fs-warning)' }}>
           {pendentes.length} categoria{pendentes.length !== 1 ? 's' : ''} sem mapeamento de {uniqueRows.length} únicas. Registros sem mapeamento não entram no DRE.
@@ -537,32 +513,29 @@ export default function ImportacaoPage() {
       )
 
       // Mesclar com dados já carregados (múltiplos arquivos)
+      let totalAcumulado = processed.length
       if (modulo === 'dre') {
         setDataDre(prev => {
           const existing = (prev || [])
-          const existingDescs = new Set(existing.map(r => r.__desc?.toLowerCase()))
-          // Renumerar IDs para evitar conflitos
           const offset = existing.length
           const newRows = processed.map((r, i) => ({ ...r, __id: offset + i }))
-          return [...existing, ...newRows]
+          const merged = [...existing, ...newRows]
+          totalAcumulado = merged.length
+          return merged
         })
       } else {
         setDataFluxo(prev => {
           const existing = (prev || [])
           const offset = existing.length
           const newRows = processed.map((r, i) => ({ ...r, __id: offset + i }))
-          return [...existing, ...newRows]
+          const merged = [...existing, ...newRows]
+          totalAcumulado = merged.length
+          return merged
         })
       }
-      // Toast com info do arquivo processado
-      const totalLidas = rows.length
-      const aproveitadas = processed.length
-      const descartadas = totalLidas - aproveitadas
-      const fileName = file.name.length > 30 ? file.name.substring(0, 30) + '…' : file.name
-      const msgCarga = descartadas > 0
-        ? `"${fileName}": ${aproveitadas} linhas válidas carregadas (${descartadas} sem valor ou em branco foram ignoradas)`
-        : `"${fileName}": ${aproveitadas} linhas carregadas`
-      showToast('✓ ' + msgCarga, 'success')
+      // Toast: mostra o total acumulado de TODOS os arquivos já carregados
+      // (evita a distorção de mostrar só o número de um arquivo isolado)
+      showToast(`✓ ${totalAcumulado} linhas carregadas e prontas para revisão`, 'success')
     } catch (err) {
       showToast('Erro ao processar: ' + err.message, 'error')
     }

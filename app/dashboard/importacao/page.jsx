@@ -195,13 +195,13 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
         <div style={{ display: 'flex', gap: 10 }}>
           {(modulo === 'dre'
             ? [
-              { label: 'Linhas no arquivo', val: data.length,  rgb: '59,130,246' },
+              { label: 'Linhas carregadas', val: data.length,  rgb: '59,130,246' },
               { label: 'Entram no DRE',     val: entrarao,     rgb: '16,185,129' },
               { label: 'Serão ignorados',   val: naoEntrarao,  rgb: '148,163,184' },
               { label: 'Categorias s/ mapa', val: pendentes.length, rgb: '245,158,11' },
             ]
             : [
-              { label: 'Linhas no arquivo', val: data.length,       rgb: '59,130,246' },
+              { label: 'Linhas carregadas', val: data.length,       rgb: '59,130,246' },
               { label: 'Categorias',        val: uniqueRows.length, rgb: '16,185,129' },
             ]
           ).map(k => (
@@ -513,29 +513,26 @@ export default function ImportacaoPage() {
       )
 
       // Mesclar com dados já carregados (múltiplos arquivos)
-      let totalAcumulado = processed.length
       if (modulo === 'dre') {
         setDataDre(prev => {
           const existing = (prev || [])
           const offset = existing.length
           const newRows = processed.map((r, i) => ({ ...r, __id: offset + i }))
-          const merged = [...existing, ...newRows]
-          totalAcumulado = merged.length
-          return merged
+          return [...existing, ...newRows]
         })
       } else {
         setDataFluxo(prev => {
           const existing = (prev || [])
           const offset = existing.length
           const newRows = processed.map((r, i) => ({ ...r, __id: offset + i }))
-          const merged = [...existing, ...newRows]
-          totalAcumulado = merged.length
-          return merged
+          return [...existing, ...newRows]
         })
       }
-      // Toast: mostra o total acumulado de TODOS os arquivos já carregados
-      // (evita a distorção de mostrar só o número de um arquivo isolado)
-      showToast(`✓ ${totalAcumulado} linhas carregadas e prontas para revisão`, 'success')
+      // Toast confirma a leitura do arquivo SEM número — o total real e
+      // atualizado fica nos cards de resumo e no botão "Importar N Lançamentos",
+      // que leem o estado consolidado (evita divergência por batching do React).
+      const fileName = file.name.length > 32 ? file.name.substring(0, 32) + '…' : file.name
+      showToast(`✓ Arquivo "${fileName}" carregado. Confira o resumo acima.`, 'success')
     } catch (err) {
       showToast('Erro ao processar: ' + err.message, 'error')
     }

@@ -117,16 +117,37 @@ function parseValueBR(v) {
 
 const fmtBRL = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
+// Classifica uma linha de Fluxo de Caixa como entrada ou saída a partir do
+// tipo do CSV. Usa match PARCIAL (includes) para reconhecer variações como
+// "Conta a receber", "Recebimento", "Crédito" → entrada; "Conta a pagar",
+// "Pagamento", "Débito" → saída. Fonte única usada na exibição E no salvamento.
+function classificarFluxo(tipoCsv) {
+  const t = (tipoCsv || '').toLowerCase()
+  const isEntrada = t.includes('receber') || t.includes('entrada') ||
+                    t.includes('receita') || t.includes('recebiment') ||
+                    t.includes('crédito') || t.includes('credito') ||
+                    t.includes('aporte') || t.includes('fluxo_entrada')
+  const isSaida = t.includes('pagar') || t.includes('saida') || t.includes('saída') ||
+                  t.includes('despesa') || t.includes('custo') || t.includes('pagament') ||
+                  t.includes('débito') || t.includes('debito') ||
+                  t.includes('deducao') || t.includes('dedução') || t.includes('fluxo_saida')
+  if (isEntrada && !isSaida) return 'entrada'
+  if (isSaida && !isEntrada) return 'saida'
+  return null // indeterminado — decidir por outro critério
+}
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function Toast({ msg, type, onClose }) {
-  useEffect(() => { const t = setTimeout(onClose, 5000); return () => clearTimeout(t) }, [onClose])
-  const colors = { success: 'var(--fs-success)', error: 'var(--fs-danger)', info: 'var(--fs-brand)' }
+  useEffect(() => { const t = setTimeout(onClose, type === 'error' ? 7000 : 4500); return () => clearTimeout(t) }, [onClose, type])
+  const colors = { success: '#10b981', error: 'var(--fs-danger)', info: 'var(--fs-brand)' }
+  const bgTint = { success: 'rgba(16,185,129,0.12)', error: 'rgba(239,68,68,0.12)', info: 'rgba(59,130,246,0.12)' }
   const icons  = { success: '✓', error: '✕', info: 'ℹ' }
+  const c = colors[type] || colors.info
   return (
-    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, background: 'var(--fs-surface)', border: `1px solid ${colors[type]}`, borderRadius: 10, padding: '12px 18px', color: 'var(--fs-text-1)', fontSize: 13, fontWeight: 600, maxWidth: 400, boxShadow: 'var(--fs-shadow-lg)', display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span style={{ color: colors[type], fontSize: 16 }}>{icons[type] || 'ℹ'}</span>
-      <span style={{ flex: 1 }}>{msg}</span>
-      <span onClick={onClose} style={{ cursor: 'pointer', color: 'var(--fs-text-4)', fontSize: 18, lineHeight: 1 }}>×</span>
+    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, background: 'var(--fs-surface)', border: `1px solid ${c}55`, borderLeft: `3px solid ${c}`, borderRadius: 10, padding: '14px 16px', color: 'var(--fs-text-1)', fontSize: 13, fontWeight: 500, maxWidth: 420, boxShadow: 'var(--fs-shadow-lg)', display: 'flex', alignItems: 'center', gap: 12, animation: 'fadeUp 0.25s ease' }}>
+      <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: '50%', background: bgTint[type] || bgTint.info, color: c, fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icons[type] || 'ℹ'}</span>
+      <span style={{ flex: 1, lineHeight: 1.45 }}>{msg}</span>
+      <span onClick={onClose} style={{ cursor: 'pointer', color: 'var(--fs-text-4)', fontSize: 18, lineHeight: 1, flexShrink: 0 }}>×</span>
     </div>
   )
 }
@@ -238,7 +259,7 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
                 ? (mappings || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
                 : null
               const tipoFC = row.tipoCsv || ''
-              const isEntrada = ['receita','entrada','fluxo_entrada','receita_financeira'].includes(tipoFC)
+              const isEntrada = classificarFluxo(tipoFC) === 'entrada'
               return (
                 <tr key={row.__id} style={{ borderBottom: '1px solid var(--fs-border)' }}>
                   <td style={{ padding: '9px 12px', color: 'var(--fs-text-1)', fontWeight: 600 }}>{row.__desc || '—'}</td>
@@ -247,7 +268,10 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
                   <td style={{ padding: '9px 12px', color: 'var(--fs-text-2)' }}>{row.data}</td>
                   <td style={{ padding: '9px 12px' }}>
                     {modulo === 'fluxo'
-                      ? <span style={{ background: isEntrada ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: isEntrada ? '#10b981' : '#ef4444', border: `1px solid ${isEntrada ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>
+                      ? <span
+                          onClick={() => onEdit(row)}
+                          title="Clique para alternar entre Entrada e Saída"
+                          style={{ background: isEntrada ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: isEntrada ? '#10b981' : '#ef4444', border: `1px solid ${isEntrada ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', userSelect: 'none' }}>
                           {isEntrada ? '↑ ENTRADA' : '↓ SAÍDA'}
                         </span>
                       : map
@@ -532,7 +556,7 @@ export default function ImportacaoPage() {
       // atualizado fica nos cards de resumo e no botão "Importar N Lançamentos",
       // que leem o estado consolidado (evita divergência por batching do React).
       const fileName = file.name.length > 32 ? file.name.substring(0, 32) + '…' : file.name
-      showToast(`✓ Arquivo "${fileName}" carregado. Confira o resumo acima.`, 'success')
+      showToast(`Arquivo "${fileName}" carregado. Confira o resumo acima.`, 'success')
     } catch (err) {
       showToast('Erro ao processar: ' + err.message, 'error')
     }
@@ -607,7 +631,7 @@ export default function ImportacaoPage() {
       const label = tabela === 'lancamentos' ? 'DRE' : 'Fluxo de Caixa'
       const { error } = await supabase.from(tabela).delete().eq('empresa_id', empresaId)
       if (error) throw error
-      showToast(`✓ Todos os registros de ${label} removidos com sucesso.`, 'success')
+      showToast(`Todos os registros de ${label} removidos com sucesso.`, 'success')
       setConfirmLimpar(false)
     } catch (e) {
       showToast('Erro ao limpar: ' + e.message, 'error')
@@ -719,7 +743,7 @@ export default function ImportacaoPage() {
       const mesesMsg = nMeses > 0 ? ` · ${nMeses} ${nMeses === 1 ? 'mês' : 'meses'} cobertos` : ''
       const ignoradosMsg = ignorados > 0
         ? `. ${ignorados} linhas não entraram (transferências, sem mapeamento ou sem valor)` : ''
-      showToast(`✓ ${baseMsg}${mesesMsg}${ignoradosMsg}.${extra}`, 'success')
+      showToast(`${baseMsg}${mesesMsg}${ignoradosMsg}.${extra}`, 'success')
       if (modulo === 'dre') setDataDre([])
       else                  setDataFluxo([])
       setConfirmModal(null)
@@ -752,22 +776,26 @@ export default function ImportacaoPage() {
       .filter(r => r.valor > 0)
 
   // ─── Construir payload do Fluxo de Caixa ──────────────────────────────────
+  // Alterna manualmente entre Entrada e Saída uma linha do Fluxo de Caixa.
+  // Sobrescreve o tipoCsv de TODAS as linhas da mesma categoria (agrupadas
+  // na preview), marcando com um valor que classificarFluxo reconhece.
+  const toggleFluxoTipo = (row) => {
+    const atual = classificarFluxo(row.tipoCsv) === 'entrada'
+    const novoTipo = atual ? 'saida' : 'entrada' // valor canônico reconhecido
+    const descKey = (row.__desc || '').trim().toLowerCase()
+    setDataFluxo(prev => (prev || []).map(r =>
+      (r.__desc || '').trim().toLowerCase() === descKey ? { ...r, tipoCsv: novoTipo } : r
+    ))
+  }
+
   const buildFluxoPayload = () =>
     (dataFluxo || []).map(row => {
       const map = (mappingsFluxo || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
-      // Classificar: 'Conta a pagar' / 'saida' / 'despesa' = saida
-      //             'Conta a receber' / 'entrada' / 'receita' = entrada
-      const tcLower = (row.tipoCsv || '').toLowerCase()
-      const isSaida = tcLower.includes('pagar') || tcLower.includes('saida') ||
-                      tcLower.includes('despesa') || tcLower.includes('custo') ||
-                      tcLower.includes('deducao') || tcLower.includes('dedução') ||
-                      tcLower.includes('saída')
-      const isEntradaTipo = tcLower.includes('receber') || tcLower.includes('entrada') ||
-                            tcLower.includes('receita') || tcLower.includes('crédito') ||
-                            tcLower.includes('credito')
-      let tipo = map?.tipo_destino ||
-                 (isSaida ? 'saida' : isEntradaTipo ? 'entrada' :
-                 row.tipoCsv ? 'saida' : 'entrada') // default saida quando tipo desconhecido
+      // Classificação unificada (mesma lógica da exibição na tela)
+      let tipo = map?.tipo_destino || classificarFluxo(row.tipoCsv)
+      // Fallback final quando indeterminado: se há tipoCsv mas não casou,
+      // assume saída (conservador); sem tipoCsv algum, assume entrada
+      if (!tipo) tipo = row.tipoCsv ? 'saida' : 'entrada'
       tipo = tipo.replace('fluxo_', '')
       if (!['entrada','saida'].includes(tipo)) tipo = tipo.includes('receita') ? 'entrada' : 'saida'
       return { empresa_id: empresaId, data: row.data, descricao: row.nome || row.__desc || '', valor: row.valor, tipo, categoria: row.__desc || '' }
@@ -1087,7 +1115,7 @@ export default function ImportacaoPage() {
         ) : (
           <>
             <PreviewTable data={dataFluxo} mappings={mappingsFluxo} modulo="fluxo"
-              onEdit={row => setEditingRow(row)}
+              onEdit={row => toggleFluxoTipo(row)}
               onRemove={() => setDataFluxo([])}
             />
             <div style={{ background: 'var(--fs-success-bg)', border: '1px solid rgba(var(--fs-success-rgb),0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: 'var(--fs-success)' }}>

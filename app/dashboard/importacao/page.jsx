@@ -181,6 +181,13 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
   })
   const mapeados = uniqueRows.length - pendentes.length
 
+  // Quantos registros realmente entrarão no DRE (excluindo "ignorar" e sem mapeamento)
+  const entrarao = (data || []).filter(r => {
+    const map = (mappings || []).find(m => m.categoria_origem?.toLowerCase() === (r.__desc || '').toLowerCase())
+    return map && map.tipo_destino !== 'ignorar'
+  }).length
+  const naoEntrarao = (data || []).length - entrarao
+
   return (
     <div style={{ background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 16, padding: 24, marginBottom: 20 }}>
       {/* Resumo */}
@@ -188,13 +195,14 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
         <div style={{ display: 'flex', gap: 10 }}>
           {(modulo === 'dre'
             ? [
-              { label: 'Total',     val: data.length,      rgb: '59,130,246' },
-              { label: 'Mapeados',  val: mapeados,         rgb: '16,185,129' },
-              { label: 'Pendentes', val: pendentes.length, rgb: '245,158,11' },
+              { label: 'Linhas no arquivo', val: data.length,  rgb: '59,130,246' },
+              { label: 'Entram no DRE',     val: entrarao,     rgb: '16,185,129' },
+              { label: 'Serão ignorados',   val: naoEntrarao,  rgb: '148,163,184' },
+              { label: 'Categorias s/ mapa', val: pendentes.length, rgb: '245,158,11' },
             ]
             : [
-              { label: 'Total',      val: data.length,      rgb: '59,130,246' },
-              { label: 'Categorias', val: uniqueRows.length, rgb: '16,185,129' },
+              { label: 'Linhas no arquivo', val: data.length,       rgb: '59,130,246' },
+              { label: 'Categorias',        val: uniqueRows.length, rgb: '16,185,129' },
             ]
           ).map(k => (
             <div key={k.label} style={{ background: `rgba(${k.rgb},0.1)`, border: `1px solid rgba(${k.rgb},0.2)`, borderRadius: 8, padding: '7px 14px', textAlign: 'center' }}>
@@ -547,7 +555,14 @@ export default function ImportacaoPage() {
         })
       }
       // Toast com info do arquivo processado
-      showToast(`✓ ${processed.length} registros de "${file.name.substring(0,30)}" carregados`, 'success')
+      const totalLidas = rows.length
+      const aproveitadas = processed.length
+      const descartadas = totalLidas - aproveitadas
+      const fileName = file.name.length > 30 ? file.name.substring(0, 30) + '…' : file.name
+      const msgCarga = descartadas > 0
+        ? `"${fileName}": ${aproveitadas} linhas válidas carregadas (${descartadas} sem valor ou em branco foram ignoradas)`
+        : `"${fileName}": ${aproveitadas} linhas carregadas`
+      showToast('✓ ' + msgCarga, 'success')
     } catch (err) {
       showToast('Erro ao processar: ' + err.message, 'error')
     }
@@ -632,7 +647,7 @@ export default function ImportacaoPage() {
   }
 
   // ─── Executar importação (único ponto de insert/delete) ──────────────────────
-  const executeImport = async ({ toInsert: _toInsert, tabela, modulo, replace, minDt, maxDt, smartReimport = false, today = null }) => {
+  const executeImport = async ({ toInsert: _toInsert, tabela, modulo, replace, minDt, maxDt, smartReimport = false, today = null, totalCarregado = null }) => {
     let toInsert = [...(_toInsert || [])] // cópia mutável para smart reimport
     setIsImporting(true)
     try {
@@ -727,7 +742,14 @@ export default function ImportacaoPage() {
       toInsert.forEach(r => { const m = r.data?.substring(0,7); if(m) dist[m] = (dist[m]||0)+1 })
       console.log(`✓ Import concluído [${tabela}]:`, dist)
       const nMeses = Object.keys(dist).length
-      showToast(`✓ ${toInsert.length} lançamentos importados para o ${modLabel}!${nMeses > 0 ? ` · ${nMeses} ${nMeses === 1 ? 'mês' : 'meses'} cobertos.` : ''}${extra}`, 'success')
+      // Quantos do total carregado NÃO entraram (sem mapeamento, ignorados ou valor zero)
+      const ignorados = (totalCarregado != null && totalCarregado > toInsert.length)
+        ? totalCarregado - toInsert.length : 0
+      const baseMsg = `${toInsert.length} lançamentos importados para o ${modLabel}`
+      const mesesMsg = nMeses > 0 ? ` · ${nMeses} ${nMeses === 1 ? 'mês' : 'meses'} cobertos` : ''
+      const ignoradosMsg = ignorados > 0
+        ? `. ${ignorados} linhas não entraram (transferências, sem mapeamento ou sem valor)` : ''
+      showToast(`✓ ${baseMsg}${mesesMsg}${ignoradosMsg}.${extra}`, 'success')
       if (modulo === 'dre') setDataDre([])
       else                  setDataFluxo([])
       setConfirmModal(null)
@@ -784,16 +806,17 @@ export default function ImportacaoPage() {
   // ─── Importar DRE ─────────────────────────────────────────────────────────
   const importDre = async () => {
     if (!empresaId) { showToast('Selecione uma empresa.', 'error'); return }
+    const totalCarregado = (dataDre || []).length
     const toInsert = buildDrePayload()
     if (!toInsert.length) { showToast('Nenhum lançamento válido para importar.', 'error'); return }
     const dupe = await checkDuplicates(toInsert, 'lancamentos')
     if (dupe.hasDupe) {
       // Sempre exibe modal de confirmação quando há dados existentes
       showToast(`⚠️ Já existem ${dupe.count} lançamentos em ${dupe.periodo}`, 'error')
-      setConfirmModal({ toInsert, tabela: 'lancamentos', modulo: 'dre', ...dupe })
+      setConfirmModal({ toInsert, tabela: 'lancamentos', modulo: 'dre', totalCarregado, ...dupe })
     } else {
       // Tabela vazia — importar direto
-      await executeImport({ toInsert, tabela: 'lancamentos', modulo: 'dre', replace: false })
+      await executeImport({ toInsert, tabela: 'lancamentos', modulo: 'dre', replace: false, totalCarregado })
     }
   }
 

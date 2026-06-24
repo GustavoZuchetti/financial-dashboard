@@ -149,8 +149,9 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
         )}
       </div>
 
-      {/* ── Navegação ───────────────────────────────────────────── */}
-      <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
+      {/* ── Área rolável: navegação + bloco de usuário juntos ────── */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <nav style={{ padding: '8px 0' }}>
         {(navItems || []).filter(item => !item.superAdminOnly || userRole === 'super_admin').map(item => {
           const active = isGroupActive(item)
           const open = openMenus[item.href]
@@ -235,8 +236,8 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
         })}
       </nav>
 
-      {/* ── Footer com usuário (compacto, sempre visível) ──────────── */}
-      <div style={{ padding: 10, borderTop: '1px solid var(--fs-border)', background: 'var(--fs-bg)', flexShrink: 0 }}>
+      {/* ── Bloco de usuário (logo após o menu) ──────────────────── */}
+      <div style={{ padding: 10, borderTop: '1px solid var(--fs-border)', background: 'var(--fs-bg)', marginTop: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: 'var(--fs-surface-2)', borderRadius: 8, marginBottom: 8 }}>
           <div style={{
             width: 28, height: 28, borderRadius: '50%',
@@ -266,6 +267,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
           </button>
         </div>
         <ThemeToggle />
+      </div>
       </div>
     </div>
   )

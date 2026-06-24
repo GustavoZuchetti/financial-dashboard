@@ -100,13 +100,14 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
   return (
     <div style={{
       width: 240,
-      minHeight: '100vh',
+      height: '100vh',
+      position: 'sticky',
+      top: 0,
       background: 'var(--fs-bg)',
       borderRight: '1px solid var(--fs-border)',
       display: 'flex',
       flexDirection: 'column',
       flexShrink: 0,
-      position: 'relative',
     }}>
       <style>{`
         .nav-item-btn { transition: ${TRANSITION}; }
@@ -120,14 +121,14 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
       `}</style>
 
       {/* ── Logo Facesign ───────────────────────────────────────── */}
-      <div style={{ padding: '18px 16px 16px', borderBottom: '1px solid var(--fs-border)' }}>
+      <div style={{ padding: '18px 16px 16px', borderBottom: '1px solid var(--fs-border)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <OrgLogo logoUrl={org?.logo_url} logoUrlLight={org?.logo_url_light} />
         </div>
       </div>
 
       {/* ── Seletor de Empresa ──────────────────────────────────── */}
-      <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--fs-border)' }}>
+      <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--fs-border)', flexShrink: 0 }}>
         <label style={{ fontSize: 9, color: 'var(--fs-text-4)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.8px', marginBottom: 4, display: 'block', paddingLeft: 2 }}>
           Entidade
         </label>
@@ -234,11 +235,11 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
         })}
       </nav>
 
-      {/* ── Footer com usuário ──────────────────────────────────── */}
-      <div style={{ padding: 12, borderTop: '1px solid var(--fs-border)', background: 'var(--fs-bg)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '6px 8px', background: 'var(--fs-surface-2)', borderRadius: 8 }}>
+      {/* ── Footer com usuário (compacto, sempre visível) ──────────── */}
+      <div style={{ padding: 10, borderTop: '1px solid var(--fs-border)', background: 'var(--fs-bg)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: 'var(--fs-surface-2)', borderRadius: 8, marginBottom: 8 }}>
           <div style={{
-            width: 30, height: 30, borderRadius: '50%',
+            width: 28, height: 28, borderRadius: '50%',
             background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 11, color: '#fff', fontWeight: 800, flexShrink: 0,
@@ -249,25 +250,22 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
             <div style={{ fontSize: 12, color: 'var(--fs-text-1)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{username}</div>
             <div style={{ fontSize: 10, color: 'var(--fs-text-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
           </div>
+          <button
+            className="logout-btn"
+            onClick={handleLogout}
+            title="Sair do sistema"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 30, height: 30, flexShrink: 0,
+              background: 'rgba(239,68,68,0.07)',
+              border: '1px solid rgba(239,68,68,0.15)',
+              borderRadius: 8, color: '#f87171', cursor: 'pointer',
+            }}
+          >
+            <Icon path={ICONS.logout} size={14} color="currentColor" />
+          </button>
         </div>
-        <div style={{ marginBottom: 8 }}>
-          <ThemeToggle />
-        </div>
-        <button
-          className="logout-btn"
-          onClick={handleLogout}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '8px 12px', width: '100%',
-            background: 'rgba(239,68,68,0.07)',
-            border: '1px solid rgba(239,68,68,0.15)',
-            borderRadius: 8, color: '#f87171',
-            fontSize: 12, fontWeight: 600, cursor: 'pointer',
-          }}
-        >
-          <Icon path={ICONS.logout} size={13} color="currentColor" />
-          Sair do sistema
-        </button>
+        <ThemeToggle />
       </div>
     </div>
   )

@@ -247,8 +247,8 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--fs-bg)' }}>
             <tr>
-              {(['Categoria', 'Nome / Cliente', 'Valor', modulo === 'dre' ? 'Competência' : 'Liquidação', 'Status', '']).map(h => (
-                <th key={h} style={{ padding: '9px 12px', textAlign: h === 'Valor' ? 'right' : 'left', color: 'var(--fs-text-4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', borderBottom: '1px solid var(--fs-border)' }}>{h}</th>
+              {(['Categoria', 'Valor', 'Status', ...(modulo === 'dre' ? [''] : [])]).map((h, i) => (
+                <th key={h || 'acao'} style={{ padding: '10px 14px', textAlign: h === 'Valor' ? 'right' : 'left', color: 'var(--fs-text-4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--fs-border)' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -262,31 +262,29 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
               const isEntrada = classificarFluxo(tipoFC) === 'entrada'
               return (
                 <tr key={row.__id} style={{ borderBottom: '1px solid var(--fs-border)' }}>
-                  <td style={{ padding: '9px 12px', color: 'var(--fs-text-1)', fontWeight: 600 }}>{row.__desc || '—'}</td>
-                  <td style={{ padding: '9px 12px', color: 'var(--fs-text-2)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.nome || '—'}</td>
-                  <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 700, color: isEntrada ? 'var(--fs-success)' : row.valor < 0 ? 'var(--fs-danger)' : 'var(--fs-success)' }}>{fmtBRL(row.totalValor)}</td>
-                  <td style={{ padding: '9px 12px', color: 'var(--fs-text-2)' }}>{row.data}</td>
-                  <td style={{ padding: '9px 12px' }}>
+                  <td style={{ padding: '11px 14px', color: 'var(--fs-text-1)', fontWeight: 600, width: '55%' }}>{row.__desc || '—'}</td>
+                  <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: 700, width: '22%', color: isEntrada ? 'var(--fs-success)' : row.valor < 0 ? 'var(--fs-danger)' : 'var(--fs-success)' }}>{fmtBRL(row.totalValor)}</td>
+                  <td style={{ padding: '11px 14px', width: modulo === 'dre' ? '13%' : '23%' }}>
                     {modulo === 'fluxo'
                       ? <span
                           onClick={() => onEdit(row)}
                           title="Clique para alternar entre Entrada e Saída"
-                          style={{ background: isEntrada ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: isEntrada ? '#10b981' : '#ef4444', border: `1px solid ${isEntrada ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', userSelect: 'none' }}>
+                          style={{ background: isEntrada ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: isEntrada ? '#10b981' : '#ef4444', border: `1px solid ${isEntrada ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', userSelect: 'none' }}>
                           {isEntrada ? '↑ ENTRADA' : '↓ SAÍDA'}
                         </span>
                       : map
-                        ? <span style={{ background: 'var(--fs-success-bg)', color: 'var(--fs-success)', border: '1px solid rgba(var(--fs-success-rgb),0.3)', padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>✓ {map.tipo_destino?.toUpperCase()}</span>
-                        : <span style={{ background: 'var(--fs-warning-bg)', color: 'var(--fs-warning)', border: '1px solid rgba(var(--fs-warning-rgb),0.3)', padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>PENDENTE</span>
+                        ? <span style={{ background: 'var(--fs-success-bg)', color: 'var(--fs-success)', border: '1px solid rgba(var(--fs-success-rgb),0.3)', padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>✓ {map.tipo_destino?.toUpperCase()}</span>
+                        : <span style={{ background: 'var(--fs-warning-bg)', color: 'var(--fs-warning)', border: '1px solid rgba(var(--fs-warning-rgb),0.3)', padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>PENDENTE</span>
                     }
                   </td>
-                  <td style={{ padding: '9px 12px' }}>
-                    {modulo === 'dre' && (
+                  {modulo === 'dre' && (
+                    <td style={{ padding: '11px 14px', width: '10%', textAlign: 'right' }}>
                       <button onClick={() => onEdit(row)}
                         style={{ background: map ? 'transparent' : 'var(--fs-brand)', color: map ? 'var(--fs-text-4)' : '#fff', border: map ? '1px solid var(--fs-border)' : 'none', padding: '4px 11px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                         {map ? 'Alterar' : 'Configurar'}
                       </button>
-                    )}
-                  </td>
+                    </td>
+                  )}
                 </tr>
               )
             })}

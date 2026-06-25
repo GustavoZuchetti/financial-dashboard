@@ -104,7 +104,6 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
       position: 'sticky',
       top: 0,
       background: 'var(--fs-bg)',
-      borderRight: '1px solid var(--fs-border)',
       display: 'flex',
       flexDirection: 'column',
       flexShrink: 0,
@@ -237,7 +236,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
       </nav>
 
       {/* ── Bloco de usuário (logo após o menu) ──────────────────── */}
-      <div style={{ padding: 10, borderTop: '1px solid var(--fs-border)', background: 'var(--fs-bg)', marginTop: 8 }}>
+      <div style={{ padding: 10, background: 'var(--fs-bg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: 'var(--fs-surface-2)', borderRadius: 8, marginBottom: 8 }}>
           <div style={{
             width: 28, height: 28, borderRadius: '50%',

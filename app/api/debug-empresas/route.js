@@ -13,34 +13,31 @@ function getAdmin() {
 export async function GET(request) {
   const admin = getAdmin()
   const token = (request.headers.get('authorization') || '').replace('Bearer ', '')
-  const { data: { user }, error: authErr } = await admin.auth.getUser(token)
-  if (authErr || !user) return NextResponse.json({ step: 'auth', err: authErr?.message })
+  const { data: { user } } = await admin.auth.getUser(token)
 
-  // EXATAMENTE como my-empresas faz
-  const { data: profile, error: pErr } = await admin
-    .from('profiles').select('organization_id, role').eq('id', user.id).single()
+  const { data: profile } = await admin
+    .from('profiles').select('organization_id').eq('id', user.id).single()
 
-  let empresas = []
-  let caminhoUsado = 'nenhum'
-  if (profile?.organization_id) {
-    const { data, error } = await admin
-      .from('empresas').select('id, nome')
-      .eq('organization_id', profile.organization_id).order('nome')
-    empresas = data || []
-    caminhoUsado = 'por organization_id: ' + profile.organization_id + ' (count=' + empresas.length + (error ? ' ERRO:'+error.message : '') + ')'
+  const orgFromProfile = profile?.organization_id
+  const orgLiteral = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+
+  // Comparar os dois byte a byte
+  const comparacao = {
+    profileValue: JSON.stringify(orgFromProfile),
+    profileLength: orgFromProfile?.length,
+    literalLength: orgLiteral.length,
+    saoIguais: orgFromProfile === orgLiteral,
+    charCodes: orgFromProfile ? [...orgFromProfile].map(c => c.charCodeAt(0)).join(',') : null,
   }
-  if (empresas.length === 0) {
-    const { data } = await admin.from('empresas').select('id, nome').eq('user_id', user.id).order('nome')
-    empresas = data || []
-    caminhoUsado += ' | fallback user_id (count=' + empresas.length + ')'
-  }
+
+  // Query com o valor do profile
+  const { data: comProfile } = await admin.from('empresas').select('id,nome').eq('organization_id', orgFromProfile).order('nome')
+  // Query com o literal
+  const { data: comLiteral } = await admin.from('empresas').select('id,nome').eq('organization_id', orgLiteral).order('nome')
 
   return NextResponse.json({
-    userIdDoToken: user.id,
-    profileEncontrado: profile,
-    profileErro: pErr?.message,
-    caminhoUsado,
-    empresasFinal: empresas.map(e => e.nome),
-    count: empresas.length,
+    comparacao,
+    countComProfile: comProfile?.length,
+    countComLiteral: comLiteral?.length,
   })
 }

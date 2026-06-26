@@ -3,33 +3,36 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-function getAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key'
-  )
-}
-
 export async function GET(request) {
-  const admin = getAdmin()
-  const token = (request.headers.get('authorization') || '').replace('Bearer ', '')
-  const { data: { user }, error: authErr } = await admin.auth.getUser(token)
-  if (authErr || !user) return NextResponse.json({ step: 'auth', authErr: authErr?.message, hasUser: !!user })
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const srk = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
-  const { data: profile, error: pErr } = await admin
-    .from('profiles').select('organization_id, role').eq('id', user.id).single()
+  // Decodificar o payload do JWT da service role key (sem verificar assinatura)
+  let keyInfo = { present: !!srk, length: srk.length }
+  try {
+    const payload = JSON.parse(Buffer.from(srk.split('.')[1], 'base64').toString())
+    keyInfo.role = payload.role
+    keyInfo.ref = payload.ref
+    keyInfo.iat = payload.iat
+  } catch (e) {
+    keyInfo.decodeError = e.message
+  }
 
-  const orgId = profile?.organization_id
-  const { data: byOrg, error: oErr } = await admin
-    .from('empresas').select('id, nome').eq('organization_id', orgId).order('nome')
+  // Testar a query com essa key
+  const admin = createClient(url, srk)
+  const { data: byOrg, error } = await admin
+    .from('empresas').select('id, nome, organization_id')
+    .eq('organization_id', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+
+  // Testar contagem total de empresas (sem filtro) — se for <3, RLS está ativo
+  const { data: todas } = await admin.from('empresas').select('id')
 
   return NextResponse.json({
-    userId: user.id,
-    profile,
-    profileErr: pErr?.message,
-    orgIdUsado: orgId,
+    keyInfo,
+    urlConfigured: url.substring(0, 40),
     empresasPorOrg: byOrg,
-    empresasErr: oErr?.message,
     countPorOrg: byOrg?.length,
+    queryError: error?.message,
+    totalEmpresasVisiveis: todas?.length,
   })
 }

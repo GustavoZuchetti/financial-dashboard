@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { supabase, fetchAll } from '@/lib/supabase'
+import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE, calcDREMap, DRE_LINES, fmtBRL } from '@/lib/dre-calc'
 
 // ─── Modal de Drill-down ──────────────────────────────────────────────────────
@@ -200,10 +200,8 @@ export default function DREDetalhado() {
       setContas(pc || [])
 
       let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,conta_id,empresa_id').gte('data', debStart).lte('data', debEnd)
-      if (isConsol) {
-        const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
-        if (ue?.length) q = q.in('empresa_id', ue.map(e => e.id))
-      } else { q = q.eq('empresa_id', empresaId) }
+      const ids = await getSelectedEntidadeIds()
+      if (ids.length) q = q.in('empresa_id', ids)
       const rows = await fetchAll(q)
       setData(rows || [])
     } finally { setLoading(false); setFirstLoad(false) }

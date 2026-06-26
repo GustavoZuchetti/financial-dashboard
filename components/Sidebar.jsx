@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -64,6 +64,68 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
   const [userEmail, setUserEmail] = useState('')
   const [userRole,  setUserRole]  = useState('')
   const [hoveredItem, setHoveredItem] = useState(null)
+  // Multi-seleção de entidades
+  const [entDropdownOpen, setEntDropdownOpen] = useState(false)
+  const [selecionadas, setSelecionadas] = useState([]) // ids marcados
+  const entRef = useRef(null)
+
+  // Inicializa a seleção a partir do localStorage
+  useEffect(() => {
+    const initSel = () => {
+      let ids = []
+      try {
+        const raw = localStorage.getItem('empresa_ids')
+        if (raw) ids = JSON.parse(raw)
+      } catch (_) {}
+      if (!Array.isArray(ids) || ids.length === 0) {
+        const single = localStorage.getItem('empresa_id')
+        if (single && single !== 'todas') ids = [single]
+        else if (single === 'todas') ids = (empresas || []).map(e => e.id)
+      }
+      // Filtra ids que ainda existem
+      const validos = (empresas || []).map(e => e.id)
+      ids = ids.filter(id => validos.includes(id))
+      if (ids.length === 0 && empresas?.length) ids = [empresas[0].id]
+      setSelecionadas(ids)
+    }
+    if (empresas?.length) initSel()
+  }, [empresas])
+
+  // Fecha o dropdown ao clicar fora
+  useEffect(() => {
+    const onClick = (e) => { if (entRef.current && !entRef.current.contains(e.target)) setEntDropdownOpen(false) }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  // Persiste a seleção e notifica as páginas
+  const aplicarSelecao = (ids) => {
+    const total = (empresas || []).length
+    // empresa_id mantém compatibilidade: 'todas' se >1 selecionada, senão o id único
+    const empresaIdVal = ids.length === 1 ? ids[0] : 'todas'
+    localStorage.setItem('empresa_ids', JSON.stringify(ids))
+    localStorage.setItem('empresa_id', empresaIdVal)
+    // Dispara o evento que as páginas escutam (mesma aba não recebe 'storage' nativo)
+    window.dispatchEvent(new Event('storage'))
+    onEmpresaChange?.(empresaIdVal)
+    setSelecionadas(ids)
+  }
+
+  const toggleEntidade = (id) => {
+    let novas = selecionadas.includes(id) ? selecionadas.filter(x => x !== id) : [...selecionadas, id]
+    if (novas.length === 0) novas = [id] // nunca deixa zero — mantém a clicada
+    aplicarSelecao(novas)
+  }
+
+  const selecionarTodas = () => aplicarSelecao((empresas || []).map(e => e.id))
+
+  const rotuloSelecao = () => {
+    const total = (empresas || []).length
+    if (selecionadas.length === 0) return 'Nenhuma entidade'
+    if (selecionadas.length === 1) return (empresas.find(e => e.id === selecionadas[0])?.nome) || '1 entidade'
+    if (selecionadas.length === total) return `Todas (${total} entidades)`
+    return `${selecionadas.length} de ${total} entidades`
+  }
 
   useEffect(() => {
     // Usar cache do Supabase em vez de nova requisição
@@ -131,19 +193,46 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
         <label style={{ fontSize: 9, color: 'var(--fs-text-4)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.8px', marginBottom: 4, display: 'block', paddingLeft: 2 }}>
           Entidade
         </label>
-        <select
-          className="select-empresa"
-          style={{ padding: '7px 10px', background: 'var(--fs-surface-2)', border: '1px solid var(--fs-border)', borderRadius: 8, color: 'var(--fs-text-1)', fontSize: 12, width: '100%', outline: 'none', cursor: 'pointer' }}
-          value={empresa || ''}
-          onChange={e => onEmpresaChange(e.target.value)}
-        >
-          {empresas.length === 0 && <option value="">Nenhuma entidade</option>}
-          {(empresas || []).map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
-          {empresas.length > 1 && <option value="todas">Todas (Consolidado)</option>}
-        </select>
-        {empresa === 'todas' && (
+        <div ref={entRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => setEntDropdownOpen(o => !o)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '7px 10px', background: 'var(--fs-surface-2)', border: '1px solid var(--fs-border)', borderRadius: 8, color: 'var(--fs-text-1)', fontSize: 12, width: '100%', outline: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+          >
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rotuloSelecao()}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, transform: entDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+
+          {entDropdownOpen && empresas?.length > 0 && (
+            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 50, background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 8, boxShadow: 'var(--fs-shadow-lg)', overflow: 'hidden', maxHeight: 320, overflowY: 'auto' }}>
+              {empresas.length > 1 && (
+                <button
+                  onClick={selecionarTodas}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--fs-border)', color: '#3b82f6', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  ✓ Selecionar todas (consolidado)
+                </button>
+              )}
+              {empresas.map(e => {
+                const marcada = selecionadas.includes(e.id)
+                return (
+                  <button
+                    key={e.id}
+                    onClick={() => toggleEntidade(e.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', background: marcada ? 'rgba(59,130,246,0.08)' : 'transparent', border: 'none', color: 'var(--fs-text-1)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                  >
+                    <span style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, background: marcada ? '#3b82f6' : 'transparent', border: `1.5px solid ${marcada ? '#3b82f6' : 'var(--fs-text-4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {marcada && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: marcada ? 'var(--fs-text-1)' : 'var(--fs-text-2)', fontWeight: marcada ? 600 : 400 }}>{e.nome}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        {selecionadas.length > 1 && (
           <div style={{ fontSize: 10, color: '#3b82f6', marginTop: 5, padding: '3px 8px', background: 'rgba(59,130,246,0.1)', borderRadius: 4, textAlign: 'center', border: '1px solid rgba(59,130,246,0.2)' }}>
-            Visão Consolidada · FACE + JAM + JB
+            Visão Consolidada · {selecionadas.length} entidades
           </div>
         )}
       </div>

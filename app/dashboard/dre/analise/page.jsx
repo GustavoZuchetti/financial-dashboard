@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase, fetchAll } from '@/lib/supabase'
+import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE, fmtBRL, fmtCompact } from '@/lib/dre-calc'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, ReferenceLine } from 'recharts'
 
@@ -32,10 +32,8 @@ export default function DREAnalise() {
     setLoading(true)
     try {
       let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria').gte('data', debouncedStart).lte('data', debouncedEnd)
-      if (isConsol) {
-        const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
-        if (ue?.length) q = q.in('empresa_id', ue.map(e => e.id))
-      } else { q = q.eq('empresa_id', empresaId) }
+      const ids = await getSelectedEntidadeIds()
+      if (ids.length) q = q.in('empresa_id', ids)
       const rows = await fetchAll(q)
       const all = rows || []
       setData(all)

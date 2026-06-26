@@ -4,7 +4,7 @@ import {
   ComposedChart, BarChart, Bar, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
-import { supabase } from '@/lib/supabase'
+import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 
 // ─── Formatadores ─────────────────────────────────────────────────────────────
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -157,14 +157,11 @@ export default function FluxoCaixaPage() {
     if (!empresaId) { setLoading(false); return }
     setLoading(true)
     try {
-      let empIds = []
-      if (isConsol) {
-        const { data: { session } } = await supabase.auth.getSession()
-        const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', session.user.id)
-        empIds = (ue||[]).map(e=>e.id)
-      } else {
-        empIds = [empresaId]
-        const { data: e } = await supabase.from('empresas').select('nome').eq('id', empresaId).single()
+      let empIds = await getSelectedEntidadeIds()
+      if (isConsol || empIds.length > 1) {
+        setEmpNome('')
+      } else if (empIds.length === 1) {
+        const { data: e } = await supabase.from('empresas').select('nome').eq('id', empIds[0]).single()
         setEmpNome(e?.nome || '')
       }
       if (!empIds.length) { setLoading(false); return }

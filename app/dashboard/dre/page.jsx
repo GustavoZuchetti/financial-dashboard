@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { supabase, fetchAll } from '@/lib/supabase'
+import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
 
@@ -222,19 +222,11 @@ export default function DREGeral() {
     window.addEventListener('storage', h); return () => window.removeEventListener('storage', h)
   }, [])
 
-  // Cache de IDs das empresas para consolidado — busca só uma vez por sessão
-  const empIdsRef = useRef(null)
-
   const fetchPeriod = useCallback(async (s, e, consol, empId) => {
     let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,conta_id,empresa_id').gte('data',s).lte('data',e)
-    if (consol) {
-      if (!empIdsRef.current) {
-        const { data: { session } } = await supabase.auth.getSession()
-        const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', session.user.id)
-        empIdsRef.current = (ue || []).map(x => x.id)
-      }
-      if (empIdsRef.current.length) q = q.in('empresa_id', empIdsRef.current)
-    } else { q = q.eq('empresa_id', empId) }
+    // Resolve as entidades selecionadas (única, múltiplas marcadas, ou todas)
+    const ids = await getSelectedEntidadeIds()
+    if (ids.length) q = q.in('empresa_id', ids)
     const r = await fetchAll(q)
     return r || []
   }, [])

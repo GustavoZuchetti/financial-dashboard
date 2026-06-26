@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE } from '@/lib/dre-calc'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import {
@@ -296,14 +296,11 @@ export default function OverviewPage() {
     try {
       const dr = getRange()
 
-      let empIds = []
-      if (isConsol) {
-        const { data: { session } } = await supabase.auth.getSession()
-        const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', session.user.id)
-        empIds = (ue || []).map(e => e.id)
-      } else {
-        empIds = [empresaId]
-        const { data: e } = await supabase.from('empresas').select('nome').eq('id', empresaId).single()
+      let empIds = await getSelectedEntidadeIds()
+      if (isConsol || empIds.length > 1) {
+        setEmpNome('')
+      } else if (empIds.length === 1) {
+        const { data: e } = await supabase.from('empresas').select('nome').eq('id', empIds[0]).single()
         setEmpNome(e?.nome || '')
       }
       if (!empIds.length) { setLoading(false); return }

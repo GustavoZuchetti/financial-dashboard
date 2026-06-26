@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
-import { supabase } from '@/lib/supabase'
+import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import { CHART_PALETTE, COLORS } from '@/lib/design-tokens'
 
 const fmtFull    = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
@@ -53,11 +53,9 @@ export default function FluxoCaixaAnalise() {
       setLoading(true)
       try {
         let query = supabase.from('fluxo_caixa').select('*').gte('data', debStart).lte('data', debEnd)
-        if (isConsolidado) {
-          const { data: userEmpresas } = await supabase.from('empresas').select('id').eq('user_id', (await supabase.auth.getSession()).data.session.user.id)
-          if (userEmpresas?.length) query = query.in('empresa_id', userEmpresas.map(e => e.id))
-        } else {
-          query = query.eq('empresa_id', empresaId)
+        {
+          const ids = await getSelectedEntidadeIds()
+          if (ids.length) query = query.in('empresa_id', ids)
         }
         const { data: fluxo } = await query
         setData(fluxo || [])

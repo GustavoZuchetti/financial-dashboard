@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase, fetchAll } from '@/lib/supabase'
+import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -54,14 +54,7 @@ export default function FluxoProjecao() {
     if (!empresaId) { setLoading(false); return }
     setLoading(true)
     try {
-      let empIds = []
-      if (isConsol) {
-        const { data: { session } } = await supabase.auth.getSession()
-        const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', session.user.id)
-        empIds = (ue||[]).map(e=>e.id)
-      } else {
-        empIds = [empresaId]
-      }
+      let empIds = await getSelectedEntidadeIds()
       if (!empIds.length) { setLoading(false); return }
 
       // Buscar histórico — últimos N meses

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase, fetchAll } from '@/lib/supabase'
+import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -50,14 +50,7 @@ export default function FluxoComparativo() {
 
   const fetchPeriod = useCallback(async (start, end) => {
     if (!empresaId) return []
-    let empIds = []
-    if (isConsol) {
-      const { data: { session } } = await supabase.auth.getSession()
-      const { data: ue } = await supabase.from('empresas').select('id').eq('user_id', session.user.id)
-      empIds = (ue||[]).map(e=>e.id)
-    } else {
-      empIds = [empresaId]
-    }
+    let empIds = await getSelectedEntidadeIds()
     if (!empIds.length) return []
     let q = supabase.from('fluxo_caixa').select('tipo,valor,data').gte('data', start).lte('data', end)
     q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])

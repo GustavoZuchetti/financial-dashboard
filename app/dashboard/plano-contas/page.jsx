@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, getOrgEmpresaIds } from '@/lib/supabase'
 
 // ─── Ícones SVG profissionais (sem emojis) ────────────────────────────────────
 const Icon = ({ d, color, size = 15 }) => (
@@ -44,7 +44,8 @@ const TIPO_LABELS = Object.fromEntries(DRE_GROUPS.map(g => [g.key, g.label]))
 const TIPO_CORES  = Object.fromEntries(DRE_GROUPS.map(g => [g.key, g.cor]))
 
 export default function PlanoContasPage() {
-  const [empresaId,   setEmpresaId]   = useState(null)
+  const [orgIds,      setOrgIds]      = useState([])     // todas as entidades da organização
+  const [masterId,    setMasterId]    = useState(null)   // entidade "fonte" do plano de contas compartilhado
   const [empresas,    setEmpresas]    = useState([])
   const [contas,      setContas]      = useState([])
   const [mappings,    setMappings]    = useState([])
@@ -61,41 +62,74 @@ export default function PlanoContasPage() {
 
   const toast = (t, ok=true) => { setMsg(t); setTimeout(() => setMsg(''), 3500) }
 
+  // O Plano de Contas é COMPARTILHADO por todas as entidades da organização
+  // (independente de qual entidade está selecionada no menu lateral).
   useEffect(() => {
-    const id = localStorage.getItem('empresa_id') || ''
-    setEmpresaId(id === 'todas' ? null : id)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {})
-    return () => subscription.unsubscribe()
-  }, [])
-
-  useEffect(() => {
-    const id = localStorage.getItem('empresa_id') || ''
-    setEmpresaId(id === 'todas' ? null : id)
+    getOrgEmpresaIds().then(ids => setOrgIds(ids || []))
     supabase.from('empresas').select('id,nome').order('nome').then(({ data }) => setEmpresas(data || []))
-    const h = () => {
-      const nid = localStorage.getItem('empresa_id') || ''
-      setEmpresaId(nid === 'todas' ? null : nid)
-    }
-    window.addEventListener('storage', h)
-    return () => window.removeEventListener('storage', h)
   }, [])
 
   const load = useCallback(async () => {
-    if (!empresaId) return
+    if (!orgIds.length) return
     setLoading(true)
-    const [{ data: c }, { data: m }] = await Promise.all([
-      supabase.from('plano_contas').select('id,codigo,nome,tipo,descricao').eq('empresa_id', empresaId).order('codigo'),
-      supabase.from('categoria_mappings').select('id,categoria_origem,tipo_destino,conta_id').eq('empresa_id', empresaId),
-    ])
-    setContas(c || [])
+    const { data: todasContas } = await supabase
+      .from('plano_contas').select('id,codigo,nome,tipo,descricao,empresa_id').in('empresa_id', orgIds)
+
+    // Entidade "fonte" do plano compartilhado: a que tem mais contas cadastradas
+    // (em operação normal, todas ficam idênticas via sincronização automática)
+    const contagem = {}
+    ;(todasContas || []).forEach(c => { contagem[c.empresa_id] = (contagem[c.empresa_id] || 0) + 1 })
+    let master = orgIds[0]
+    let maxCount = -1
+    for (const id of orgIds) {
+      const n = contagem[id] || 0
+      if (n > maxCount) { maxCount = n; master = id }
+    }
+    setMasterId(master)
+
+    const contasMaster = (todasContas || [])
+      .filter(c => c.empresa_id === master)
+      .sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
+    setContas(contasMaster)
+
+    const { data: m } = await supabase
+      .from('categoria_mappings').select('id,categoria_origem,tipo_destino,conta_id').eq('empresa_id', master)
     setMappings(m || [])
     setLoading(false)
-  }, [empresaId])
+  }, [orgIds])
 
   useEffect(() => { load() }, [load])
 
+  // Propaga o plano de contas da entidade "fonte" (master) para as demais
+  // entidades da organização, mantendo todas com a MESMA estrutura de contas
+  // (mesmo código/nome/tipo/descrição). Contas removidas do master também são
+  // removidas das demais; contas novas/editadas são replicadas por código.
+  const syncEntidades = async (ids, master) => {
+    const { data: masterContas } = await supabase
+      .from('plano_contas').select('codigo,nome,tipo,descricao').eq('empresa_id', master)
+    const outras = ids.filter(id => id !== master)
+    for (const id of outras) {
+      const { data: destContas } = await supabase.from('plano_contas').select('id,codigo').eq('empresa_id', id)
+      const porCodigo = Object.fromEntries((destContas || []).map(c => [c.codigo, c.id]))
+      for (const mc of masterContas || []) {
+        if (porCodigo[mc.codigo]) {
+          await supabase.from('plano_contas').update({ nome: mc.nome, tipo: mc.tipo, descricao: mc.descricao }).eq('id', porCodigo[mc.codigo])
+        } else {
+          await supabase.from('plano_contas').insert([{ ...mc, empresa_id: id }])
+        }
+      }
+      const codigosMaster = new Set((masterContas || []).map(c => c.codigo))
+      for (const dc of destContas || []) {
+        if (!codigosMaster.has(dc.codigo)) {
+          await supabase.from('categoria_mappings').delete().eq('conta_id', dc.id)
+          await supabase.from('plano_contas').delete().eq('id', dc.id)
+        }
+      }
+    }
+  }
+
   const salvar = async () => {
-    if (!nova.codigo || !nova.nome || !empresaId) return
+    if (!nova.codigo || !nova.nome || !masterId) return
     setLoading(true)
     const payload = {
       codigo:    nova.codigo.toUpperCase().trim(),
@@ -108,17 +142,19 @@ export default function PlanoContasPage() {
       toast('Conta atualizada')
     } else {
       const { data: { user } } = await supabase.auth.getUser()
-      await supabase.from('plano_contas').insert([{ ...payload, empresa_id: empresaId, user_id: user.id }])
+      await supabase.from('plano_contas').insert([{ ...payload, empresa_id: masterId, user_id: user.id }])
       toast('Conta adicionada')
     }
+    await syncEntidades(orgIds, masterId)
     setNova({ codigo:'', nome:'', tipo:'receita', descricao:'' }); setEditando(null); setShowAdd(false)
     load()
   }
 
   const excluir = async (id) => {
-    if (!confirm('Excluir esta conta? Os De-Para vinculados também serão removidos.')) return
+    if (!confirm('Excluir esta conta? Os De-Para vinculados também serão removidos — em todas as entidades.')) return
     await supabase.from('categoria_mappings').delete().eq('conta_id', id)
     await supabase.from('plano_contas').delete().eq('id', id)
+    await syncEntidades(orgIds, masterId)
     toast('Conta excluída'); load()
   }
 
@@ -253,6 +289,7 @@ export default function PlanoContasPage() {
           <p style={{ color:'var(--fs-text-4)',fontSize:13,margin:'4px 0 0' }}>
             {contas.length} conta{contas.length !== 1?'s':''} cadastrada{contas.length !== 1?'s':''}
             {mappings.length > 0 && ` · ${mappings.length} De-Para`}
+            {orgIds.length > 1 && ` · compartilhado entre ${orgIds.length} entidades do grupo`}
           </p>
         </div>
         <div style={{ display:'flex',gap:8,alignItems:'center' }}>
@@ -285,8 +322,8 @@ export default function PlanoContasPage() {
 
       {showAdd && formConta}
 
-      {!empresaId ? (
-        <div style={{ textAlign:'center',padding:60,color:'var(--fs-text-4)' }}>Selecione uma empresa no menu lateral.</div>
+      {!masterId ? (
+        <div style={{ textAlign:'center',padding:60,color:'var(--fs-text-4)' }}>Nenhuma empresa cadastrada na organização.</div>
       ) : loading ? (
         <div style={{ textAlign:'center',padding:60,color:'var(--fs-text-4)' }}>Carregando...</div>
       ) : contas.length === 0 ? (

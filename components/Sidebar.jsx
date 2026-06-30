@@ -230,11 +230,6 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
             </div>
           )}
         </div>
-        {selecionadas.length > 1 && (
-          <div style={{ fontSize: 10, color: '#3b82f6', marginTop: 5, padding: '3px 8px', background: 'rgba(59,130,246,0.1)', borderRadius: 4, textAlign: 'center', border: '1px solid rgba(59,130,246,0.2)' }}>
-            Visão Consolidada · {selecionadas.length} entidades
-          </div>
-        )}
       </div>
 
       {/* ── Área rolável: navegação + bloco de usuário juntos ────── */}

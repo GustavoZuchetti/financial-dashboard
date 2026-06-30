@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis,
@@ -96,19 +96,22 @@ export default function CicloFinanceiroPage() {
   }, [])
 
   const load = useCallback(async () => {
-    if (!empresaId || empresaId === 'todas') { setLoading(false); return }
+    if (!empresaId) { setLoading(false); return }
     setLoading(true)
     try {
-      // Nome da empresa
-      const { data: emp } = await supabase.from('empresas').select('nome').eq('id', empresaId).single()
-      setEmpNome(emp?.nome || '')
+      const isConsolidado = empresaId === 'todas'
+      const ids = isConsolidado ? await getSelectedEntidadeIds() : [empresaId]
+      if (!ids.length) { setLoading(false); return }
 
-      // Mês selecionado — buscar na tabela ciclo_financeiro
-      const { data: atual } = await supabase.from('ciclo_financeiro')
-        .select('*').eq('empresa_id', empresaId).eq('ano', anoSel).eq('mes', mesSel).single()
-      setCicloAtual(atual || null)
+      // Nome de exibição
+      if (isConsolidado) {
+        setEmpNome(ids.length > 1 ? `Consolidado (${ids.length} entidades)` : '')
+      } else {
+        const { data: emp } = await supabase.from('empresas').select('nome').eq('id', empresaId).single()
+        setEmpNome(emp?.nome || '')
+      }
 
-      // Histórico dos últimos N meses
+      // Lista de meses do histórico (o último é o mês selecionado)
       const hist = []
       for (let i = mesesHist - 1; i >= 0; i--) {
         let m = mesSel - i, a = anoSel
@@ -116,68 +119,141 @@ export default function CicloFinanceiroPage() {
         hist.push({ ano: a, mes: m })
       }
 
-      const { data: histData = [] } = await supabase.from('ciclo_financeiro')
-        .select('ano,mes,pmr,pmp,pme')
-        .eq('empresa_id', empresaId)
-        .in('ano', [...new Set(hist.map(h=>h.ano))])
-        .order('ano').order('mes')
+      if (!isConsolidado || ids.length === 1) {
+        // ── Caminho original: lê a tabela pré-calculada ciclo_financeiro ──
+        const empId = ids[0]
+        const { data: atual } = await supabase.from('ciclo_financeiro')
+          .select('*').eq('empresa_id', empId).eq('ano', anoSel).eq('mes', mesSel).single()
+        setCicloAtual(atual || null)
 
-      // Montar série histórica com todos os meses (mesmo sem dado)
-      const histMapped = hist.map(({ ano, mes }) => {
-        const found = (histData||[]).find(d => d.ano === ano && d.mes === mes)
-        const pmr = Number(found?.pmr || 0)
-        const pmp = Number(found?.pmp || 0)
-        const pme = Number(found?.pme || 0)
-        const co  = pmr + pme
-        const cf  = co  - pmp
-        return {
-          name:    `${MESES_LABEL[mes-1]}/${String(ano).slice(2)}`,
-          pmr:     Math.round(pmr),
-          pmp:     Math.round(pmp),
-          pme:     Math.round(pme),
-          cicloOp: Math.round(co),
-          cicloCF: Math.round(cf),
-          temDado: !!found,
+        const { data: histData = [] } = await supabase.from('ciclo_financeiro')
+          .select('ano,mes,pmr,pmp,pme')
+          .eq('empresa_id', empId)
+          .in('ano', [...new Set(hist.map(h=>h.ano))])
+          .order('ano').order('mes')
+
+        const histMapped = hist.map(({ ano, mes }) => {
+          const found = (histData||[]).find(d => d.ano === ano && d.mes === mes)
+          const pmr = Number(found?.pmr || 0)
+          const pmp = Number(found?.pmp || 0)
+          const pme = Number(found?.pme || 0)
+          const co  = pmr + pme
+          const cf  = co  - pmp
+          return {
+            name:    `${MESES_LABEL[mes-1]}/${String(ano).slice(2)}`,
+            pmr: Math.round(pmr), pmp: Math.round(pmp), pme: Math.round(pme),
+            cicloOp: Math.round(co), cicloCF: Math.round(cf), temDado: !!found,
+          }
+        })
+        setHistorico(histMapped)
+
+        const mesStart = `${anoSel}-${String(mesSel).padStart(2,'0')}-01`
+        const mesEnd   = new Date(anoSel, mesSel, 0).toISOString().split('T')[0]
+        const { data: fc = [] } = await supabase.from('fluxo_caixa')
+          .select('tipo,valor,data').eq('empresa_id', empId).gte('data', mesStart).lte('data', mesEnd)
+
+        const entradas = (fc||[]).filter(f=>f.tipo==='entrada').reduce((a,c)=>a+Number(c.valor),0)
+        const saidas   = (fc||[]).filter(f=>f.tipo==='saida').reduce((a,c)=>a+Number(c.valor),0)
+        setFcMes({ entradas, saidas, cntE: (fc||[]).filter(f=>f.tipo==='entrada').length, cntS: (fc||[]).filter(f=>f.tipo==='saida').length, total: fc?.length || 0 })
+
+      } else {
+        // ── Consolidado (múltiplas entidades): calcular AO VIVO a partir do
+        // fluxo_caixa bruto de todas as entidades selecionadas. PMR/PMP são
+        // razões (dias do mês / nº de lançamentos) — por isso é preciso somar
+        // as CONTAGENS de todas as entidades antes de calcular a razão, nunca
+        // somar ou tirar média dos PMR/PMP já calculados de cada entidade
+        // isoladamente (isso produziria um número matematicamente errado).
+        const anoMin = Math.min(...hist.map(h=>h.ano))
+        const anoMax = Math.max(...hist.map(h=>h.ano))
+        const rangeStart = `${anoMin}-01-01`
+        const rangeEnd   = new Date(anoMax, 11, 31).toISOString().split('T')[0]
+
+        // Busca paginada (pode passar de 1000 linhas com várias entidades)
+        let all = [], pg = 0
+        while (true) {
+          const { data: batch } = await supabase.from('fluxo_caixa')
+            .select('tipo,valor,data').in('empresa_id', ids)
+            .gte('data', rangeStart).lte('data', rangeEnd)
+            .range(pg * 1000, (pg + 1) * 1000 - 1)
+          if (!batch || batch.length === 0) break
+          all = all.concat(batch)
+          if (batch.length < 1000) break
+          pg++
+          if (pg > 50) break
         }
-      })
-      setHistorico(histMapped)
 
-      // Fluxo de caixa do mês selecionado para contexto financeiro
-      const mesStart = `${anoSel}-${String(mesSel).padStart(2,'0')}-01`
-      const mesEnd   = new Date(anoSel, mesSel, 0).toISOString().split('T')[0]
-      const { data: fc = [] } = await supabase.from('fluxo_caixa')
-        .select('tipo,valor,data')
-        .eq('empresa_id', empresaId)
-        .gte('data', mesStart).lte('data', mesEnd)
+        // Agrupar por ano-mês (contagens combinadas de todas as entidades)
+        const porMes = {}
+        all.forEach(f => {
+          if (!f.data) return
+          const d = new Date(f.data + 'T00:00:00')
+          const key = `${d.getFullYear()}-${d.getMonth()+1}`
+          if (!porMes[key]) porMes[key] = { cntE: 0, cntS: 0 }
+          if (f.tipo === 'entrada') porMes[key].cntE++
+          else if (f.tipo === 'saida') porMes[key].cntS++
+        })
 
-      const entradas = (fc||[]).filter(f=>f.tipo==='entrada').reduce((a,c)=>a+Number(c.valor),0)
-      const saidas   = (fc||[]).filter(f=>f.tipo==='saida').reduce((a,c)=>a+Number(c.valor),0)
-      const cntE = (fc||[]).filter(f=>f.tipo==='entrada').length
-      const cntS = (fc||[]).filter(f=>f.tipo==='saida').length
-      setFcMes({ entradas, saidas, cntE, cntS, total: fc?.length || 0 })
+        const histMapped = hist.map(({ ano, mes }) => {
+          const key = `${ano}-${mes}`
+          const g = porMes[key]
+          const diasNoMes = new Date(ano, mes, 0).getDate()
+          const pmr = g && g.cntE > 0 ? diasNoMes / g.cntE : 0
+          const pmp = g && g.cntS > 0 ? diasNoMes / g.cntS : 0
+          const pme = 0
+          const co  = pmr + pme
+          const cf  = co  - pmp
+          return {
+            name:    `${MESES_LABEL[mes-1]}/${String(ano).slice(2)}`,
+            pmr: Math.round(pmr), pmp: Math.round(pmp), pme: Math.round(pme),
+            cicloOp: Math.round(co), cicloCF: Math.round(cf), temDado: !!g,
+          }
+        })
+        setHistorico(histMapped)
+
+        // Mês selecionado (último item do histórico)
+        const atualKey = `${anoSel}-${mesSel}`
+        const gAtual = porMes[atualKey]
+        const diasNoMesSel = new Date(anoSel, mesSel, 0).getDate()
+        const pmrAtual = gAtual && gAtual.cntE > 0 ? diasNoMesSel / gAtual.cntE : 0
+        const pmpAtual = gAtual && gAtual.cntS > 0 ? diasNoMesSel / gAtual.cntS : 0
+        setCicloAtual(gAtual ? { pmr: pmrAtual, pmp: pmpAtual, pme: 0 } : null)
+
+        // Fluxo do mês selecionado (valores monetários)
+        const mesStart = `${anoSel}-${String(mesSel).padStart(2,'0')}-01`
+        const mesEnd   = new Date(anoSel, mesSel, 0).toISOString().split('T')[0]
+        const doMes = all.filter(f => f.data >= mesStart && f.data <= mesEnd)
+        const entradas = doMes.filter(f=>f.tipo==='entrada').reduce((a,c)=>a+Number(c.valor),0)
+        const saidas   = doMes.filter(f=>f.tipo==='saida').reduce((a,c)=>a+Number(c.valor),0)
+        setFcMes({ entradas, saidas, cntE: doMes.filter(f=>f.tipo==='entrada').length, cntS: doMes.filter(f=>f.tipo==='saida').length, total: doMes.length })
+      }
 
     } catch(e) { console.error('CicloFinanceiro:', e) }
     finally { setLoading(false) }
   }, [empresaId, anoSel, mesSel, mesesHist])
 
   const recalcular = async () => {
-    if (!empresaId || empresaId === 'todas') return
+    if (!empresaId) return
+    const isConsolidado = empresaId === 'todas'
+    const ids = isConsolidado ? await getSelectedEntidadeIds() : [empresaId]
+    if (!ids.length) return
     setRecalcLoading(true)
     setRecalcMsg(null)
     try {
-      // Usa a API route com Service Role (bypassa RLS) — resolve o erro de policy
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/recalcular-ciclo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({ empresa_id: empresaId }),
-      })
-      const json = await res.json()
-      if (!res.ok) { setRecalcMsg(`Erro: ${json.error}`); return }
-      setRecalcMsg(`✓ ${json.meses} meses recalculados (${json.total} lançamentos)`)
+      let totalMeses = 0, totalLanc = 0, erros = []
+      for (const id of ids) {
+        const res = await fetch('/api/recalcular-ciclo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ empresa_id: id }),
+        })
+        const json = await res.json()
+        if (!res.ok) { erros.push(json.error); continue }
+        totalMeses += json.meses || 0
+        totalLanc  += json.total || 0
+      }
+      if (erros.length) setRecalcMsg(`Erro: ${erros[0]}`)
+      else setRecalcMsg(`✓ ${totalMeses} meses recalculados (${totalLanc} lançamentos)${ids.length>1 ? ` em ${ids.length} entidades` : ''}`)
       await load()
     } catch(e) { setRecalcMsg('Erro: ' + e.message) }
     finally { setRecalcLoading(false) }

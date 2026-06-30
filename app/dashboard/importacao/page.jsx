@@ -411,11 +411,21 @@ export default function ImportacaoPage() {
   useEffect(() => {
     const init = async () => {
       try {
-        const [{ data: emps }, { data: plano }] = await Promise.all([
-          supabase.from('empresas').select('id,nome').order('nome'),
-          supabase.from('plano_contas').select('id,nome,tipo,codigo,empresa_id').order('nome'),
-        ])
-        setEmpresas(emps || [])
+        // SEGURANÇA: usar /api/my-empresas (server-side, filtra por organization_id
+        // com service role) em vez de consultar a tabela diretamente sem filtro —
+        // a query direta expunha empresas de OUTRAS organizações no seletor.
+        const { data: { session } } = await supabase.auth.getSession()
+        const empresasRes = await fetch('/api/my-empresas', {
+          headers: { Authorization: 'Bearer ' + (session?.access_token || '') }
+        })
+        const empresasJson = await empresasRes.json()
+        const emps = empresasJson.empresas || []
+        const orgEmpresaIds = emps.map(e => e.id)
+
+        const { data: plano } = orgEmpresaIds.length
+          ? await supabase.from('plano_contas').select('id,nome,tipo,codigo,empresa_id').in('empresa_id', orgEmpresaIds).order('nome')
+          : { data: [] }
+        setEmpresas(emps)
         setPlanoContas(plano || [])
         const savedId = localStorage.getItem('empresa_id')
         const validId = (emps || []).find(e => e.id === savedId) ? savedId : emps?.[0]?.id

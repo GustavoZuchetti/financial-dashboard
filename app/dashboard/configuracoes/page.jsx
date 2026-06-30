@@ -103,8 +103,9 @@ export default function ConfiguracoesPage() {
             setUsuarios(users || [])
           }
         } else {
-          const { data: emps } = await supabase.from('empresas').select('id,nome,cnpj').order('nome')
-          setEmpresas(emps || [])
+          // Usuário sem organization_id: não deve ver empresas de NENHUMA
+          // organização (estado de perfil incompleto/inconsistente).
+          setEmpresas([])
         }
       }
     }

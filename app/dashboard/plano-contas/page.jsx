@@ -46,7 +46,6 @@ const TIPO_CORES  = Object.fromEntries(DRE_GROUPS.map(g => [g.key, g.cor]))
 export default function PlanoContasPage() {
   const [orgIds,      setOrgIds]      = useState([])     // todas as entidades da organização
   const [masterId,    setMasterId]    = useState(null)   // entidade "fonte" do plano de contas compartilhado
-  const [empresas,    setEmpresas]    = useState([])
   const [contas,      setContas]      = useState([])
   const [mappings,    setMappings]    = useState([])
   const [view,        setView]        = useState('dre')
@@ -66,7 +65,6 @@ export default function PlanoContasPage() {
   // (independente de qual entidade está selecionada no menu lateral).
   useEffect(() => {
     getOrgEmpresaIds().then(ids => setOrgIds(ids || []))
-    supabase.from('empresas').select('id,nome').order('nome').then(({ data }) => setEmpresas(data || []))
   }, [])
 
   const load = useCallback(async () => {

@@ -529,7 +529,7 @@ export default function GestaoFluxoCaixaPage() {
               <div>
                 <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Tipo *</div>
                 <div style={{ display:'flex', gap:8 }}>
-                  {[['entrada','↑ Entrada','#22c55e'],['saida','↓ Saída','#ef4444']].map(([v,l,clr])=>(
+                  {[['entrada','Entrada','#22c55e'],['saida','Saída','#ef4444']].map(([v,l,clr])=>(
                     <button key={v} onClick={()=>setEditForm(f=>({...f,tipo:v}))} style={{ flex:1, padding:'8px', borderRadius:8, fontWeight:700, fontSize:13, cursor:'pointer', transition:'all 0.15s', border: editForm.tipo===v ? `2px solid ${clr}` : '2px solid var(--fs-border)', background: editForm.tipo===v ? `rgba(${v==='entrada'?'34,197,94':'239,68,68'},0.12)` : 'var(--fs-bg)', color: editForm.tipo===v ? clr : 'var(--fs-text-3)' }}>
                       {l}
                     </button>
@@ -581,7 +581,7 @@ export default function GestaoFluxoCaixaPage() {
               <div>
                 <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Tipo *</div>
                 <div style={{ display:'flex', gap:8 }}>
-                  {[['entrada','↑ A Receber','#22c55e'],['saida','↓ A Pagar','#ef4444']].map(([v,l,clr])=>(
+                  {[['entrada','A Receber','#22c55e'],['saida','A Pagar','#ef4444']].map(([v,l,clr])=>(
                     <button key={v} onClick={()=>setNovoForm(f=>({...f,tipo:v}))} style={{ flex:1, padding:'8px', borderRadius:8, fontWeight:700, fontSize:13, cursor:'pointer', transition:'all 0.15s', border: novoForm.tipo===v ? `2px solid ${clr}` : '2px solid var(--fs-border)', background: novoForm.tipo===v ? `rgba(${v==='entrada'?'34,197,94':'239,68,68'},0.12)` : 'var(--fs-bg)', color: novoForm.tipo===v ? clr : 'var(--fs-text-3)' }}>
                       {l}
                     </button>
@@ -644,7 +644,7 @@ export default function GestaoFluxoCaixaPage() {
           Fluxo de Caixa · Gestão
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:6 }}>
-          <h1 style={{ fontSize:28, fontWeight:900, margin:0 }}>Gestão de Registros</h1>
+          <h1 style={{ fontSize:28, fontWeight:800, margin:0 }}>Gestão de Registros</h1>
           <span style={{ background:'rgba(239,68,68,0.1)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.2)', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700 }}>
             <span style={{display:'inline-flex',alignItems:'center',gap:5}}><SvgIcon name="lock" size={12} color="currentColor" />Admin only</span>
           </span>
@@ -732,7 +732,7 @@ export default function GestaoFluxoCaixaPage() {
             <span style={{display:'flex',alignItems:'center',gap:7}}><SvgIcon name="wallet" size={14} color="var(--fs-brand)" />Saldo Corrente (todas as movimentações)</span>
           </div>
           <div style={{ display:'flex', alignItems:'baseline', gap:12 }}>
-            <div style={{ fontSize:24, fontWeight:900, color: saldoCorrente >= 0 ? '#22c55e' : '#ef4444' }}>
+            <div style={{ fontSize:24, fontWeight:800, color: saldoCorrente >= 0 ? '#22c55e' : '#ef4444' }}>
               {fCFull(saldoCorrente)}
             </div>
             <div style={{ fontSize:11, color:'var(--fs-text-4)' }}>
@@ -770,8 +770,8 @@ export default function GestaoFluxoCaixaPage() {
         </div>
       </div>
 
-      {/* ── Extrato bancário ──────────────────────────────────────────────────── */}
-      <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, overflow:'hidden' }}>
+      {/* ── Extrato bancário — superfície densa, sem moldura de card ─────────── */}
+      <div style={{ background:'var(--fs-surface)', borderTop:'2px solid var(--fs-border-2)', borderBottom:'1px solid var(--fs-border)' }}>
 
         {/* Cabeçalho */}
         <div style={{ display:'grid', gridTemplateColumns:'40px 1fr 150px 100px 120px 130px 72px', gap:8, padding:'11px 16px', borderBottom:'2px solid var(--fs-border)', background:'var(--fs-bg)' }}>
@@ -791,7 +791,7 @@ export default function GestaoFluxoCaixaPage() {
         ) : extratoComSaldo.map(({ data, lancamentos, saldoDia }, gi) => (
           <div key={data}>
             {/* Separador de data */}
-            <div style={{ display:'flex', alignItems:'center', padding:'7px 16px', background:'var(--fs-bg)', borderBottom:'1px solid var(--fs-border)', borderTop: gi > 0 ? '2px solid var(--fs-border)' : 'none' }}>
+            <div style={{ display:'flex', alignItems:'center', padding:'5px 16px', background:'var(--fs-bg)', borderBottom:'1px solid var(--fs-border)', borderTop: gi > 0 ? '1px solid var(--fs-border)' : 'none' }}>
               <div style={{ fontSize:11, fontWeight:800, color:'var(--fs-text-3)', letterSpacing:'0.4px' }}>
                 {fDateBR(data)}
               </div>
@@ -812,7 +812,7 @@ export default function GestaoFluxoCaixaPage() {
               const isLast    = li === lancamentos.length - 1
               return (
                 <div key={r.id}
-                  style={{ display:'grid', gridTemplateColumns:'40px 1fr 150px 100px 120px 130px 72px', gap:8, padding:'10px 16px',
+                  style={{ display:'grid', gridTemplateColumns:'40px 1fr 150px 100px 120px 130px 72px', gap:8, padding:'6px 16px', minHeight:36,
                     borderBottom: isLast ? 'none' : '1px solid rgba(var(--fs-border-rgb,55,65,81),0.5)',
                     background: isSel ? 'rgba(59,130,246,0.06)' : 'transparent',
                     alignItems:'center', transition:'background 0.1s',
@@ -823,8 +823,8 @@ export default function GestaoFluxoCaixaPage() {
                   <div><input type="checkbox" checked={isSel} onChange={()=>toggleSelect(r.id)} style={{ cursor:'pointer', accentColor:'#3b82f6', width:14, height:14 }} /></div>
 
                   {/* Descrição */}
-                  <div style={{ fontSize:13, color:'var(--fs-text-1)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    <span style={{ color: isEntrada ? '#22c55e' : '#ef4444', marginRight:6, fontSize:11 }}>{isEntrada ? '↑' : '↓'}</span>
+                  <div style={{ fontSize:12.5, color:'var(--fs-text-1)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ width:3, height:16, borderRadius:2, background: isEntrada ? 'var(--fs-success)' : 'var(--fs-danger)', flexShrink:0 }} />
                     {r.descricao || <span style={{ color:'var(--fs-text-4)', fontStyle:'italic' }}>sem descrição</span>}
                   </div>
 
@@ -835,18 +835,16 @@ export default function GestaoFluxoCaixaPage() {
                   <div><Badge tipo={r.tipo} /></div>
 
                   {/* Valor */}
-                  <div style={{ fontSize:13, fontWeight:700, color: isEntrada ? '#22c55e' : '#ef4444', textAlign:'right', fontVariantNumeric:'tabular-nums' }}>
+                  <div className="fs-num" style={{ fontSize:12.5, fontWeight:700, color: isEntrada ? 'var(--fs-success)' : 'var(--fs-danger)', textAlign:'right' }}>
                     {isEntrada ? '+' : '-'}{fC(Math.abs(Number(r.valor)))}
                   </div>
 
                   {/* Saldo do dia (só na última linha do grupo) */}
                   <div style={{ textAlign:'right', fontVariantNumeric:'tabular-nums' }}>
                     {isLast ? (
-                      <div style={{ background: saldoDia >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border:`1px solid ${saldoDia>=0?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)'}`, borderRadius:6, padding:'3px 8px', display:'inline-block' }}>
-                        <span style={{ fontSize:12, fontWeight:800, color: saldoDia >= 0 ? '#22c55e' : '#ef4444' }}>
-                          {fC(saldoDia)}
-                        </span>
-                      </div>
+                      <span className="fs-num" style={{ fontSize:12.5, fontWeight:800, color: saldoDia >= 0 ? 'var(--fs-text-1)' : 'var(--fs-danger)', borderBottom:'2px solid ' + (saldoDia >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)'), paddingBottom:1 }}>
+                        {fC(saldoDia)}
+                      </span>
                     ) : (
                       <span style={{ fontSize:11, color:'var(--fs-border)' }}>·</span>
                     )}

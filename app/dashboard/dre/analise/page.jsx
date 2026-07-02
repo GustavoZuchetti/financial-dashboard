@@ -105,7 +105,7 @@ export default function DREAnalise() {
         ].map(k => (
           <div key={k.label} style={{ background:'var(--fs-surface)', border:`1px solid var(--fs-border)`, borderRadius:10, padding:'14px 16px', borderTop:`3px solid ${k.color}` }}>
             <div style={{ fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase', marginBottom:6 }}>{k.label}</div>
-            <div style={{ fontSize:18, fontWeight:900, color: k.val>=0 ? k.color : '#ef4444' }}>{fmtBRL(k.val)}</div>
+            <div style={{ fontSize:18, fontWeight:800, color: k.val>=0 ? k.color : '#ef4444' }}>{fmtBRL(k.val)}</div>
             {v.rb > 0 && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:4 }}>{(k.val/v.rb*100).toFixed(1)}% da receita</div>}
           </div>
         ))}

@@ -60,7 +60,7 @@ function AceitarConviteForm() {
       <div style={{ width:'100%', maxWidth:440, background:'#1a1f2e', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:40 }}>
 
         <div style={{ textAlign:'center', marginBottom:32 }}>
-          <div style={{ width:52,height:52,background:'linear-gradient(135deg,#1d4ed8,#3b82f6)',borderRadius:13,margin:'0 auto 14px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:900,color:'#fff' }}>FS</div>
+          <div style={{ width:52,height:52,background:'linear-gradient(135deg,#1d4ed8,#3b82f6)',borderRadius:13,margin:'0 auto 14px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:800,color:'#fff' }}>FS</div>
           <h1 style={{ fontSize:20,fontWeight:800,color:'#f1f5f9',margin:0 }}>Financial Dashboard</h1>
         </div>
 

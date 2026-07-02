@@ -141,7 +141,7 @@ function KPICard({ title, value, prev, accent, isExpense, loading, large }) {
         <div style={{ height:32, background:'linear-gradient(90deg,var(--fs-surface) 25%,var(--fs-surface-2) 50%,var(--fs-surface) 75%)', backgroundSize:'200% 100%', animation:'shimmer 1.5s infinite', borderRadius:6 }} />
       ) : (
         <>
-          <div style={{ fontSize: large?28:22, fontWeight:900, color:accent, letterSpacing:'-0.5px', animation:'countUp 0.4s ease' }}>
+          <div style={{ fontSize: large?28:22, fontWeight:800, color:accent, letterSpacing:'-0.5px', animation:'countUp 0.4s ease' }}>
             {fmtFull(value)}
           </div>
           {delta !== null && (
@@ -265,7 +265,7 @@ export default function DREGeral() {
         <div style={{ position:'fixed', inset:0, zIndex:9999, background:'var(--fs-bg)', display:'flex', flexDirection:'column', padding:'36px 48px', overflowY:'auto' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:28 }}>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <div style={{ width:40,height:40,background:'linear-gradient(135deg,#1d4ed8,#3b82f6)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,color:'#fff',fontSize:16 }}>FS</div>
+              <div style={{ width:40,height:40,background:'linear-gradient(135deg,#1d4ed8,#3b82f6)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,color:'#fff',fontSize:16 }}>FS</div>
               <div>
                 <div style={{ fontWeight:800, fontSize:18, color:'var(--fs-text-1)' }}>Facesign {isConsol&&<span style={{...badge,display:'inline-flex',alignItems:'center',gap:5}}><SvgIcon name="layers" size={11} color="currentColor" />Consolidado</span>}</div>
                 <div style={{ fontSize:12, color:'var(--fs-text-4)' }}>DRE — {formatPeriod(startDate,endDate)}</div>
@@ -283,7 +283,7 @@ export default function DREGeral() {
             {[{l:'Margem Bruta',v:mB,c:C.purple},{l:'Margem EBITDA',v:mE,c:C.teal},{l:'Margem Líquida',v:mL,c:C.blue}].map(m=>(
               <div key={m.l} style={{ background:'var(--fs-surface-2)',border:'1px solid var(--fs-border)',borderRadius:10,padding:'14px 18px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
                 <span style={{ color:'var(--fs-text-4)',fontSize:13 }}>{m.l}</span>
-                <span style={{ color:m.v>=0?m.c:C.red,fontSize:24,fontWeight:900 }}>{m.v.toFixed(1)}%</span>
+                <span style={{ color:m.v>=0?m.c:C.red,fontSize:24,fontWeight:800 }}>{m.v.toFixed(1)}%</span>
               </div>
             ))}
           </div>

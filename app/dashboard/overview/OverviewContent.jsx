@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import SvgIcon from '@/components/SvgIcon'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE } from '@/lib/dre-calc'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
@@ -43,26 +44,34 @@ const Spark = ({ data, dataKey, color }) => (
 )
 
 // ─── KPI Card grande ──────────────────────────────────────────────────────────
-const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, isNegative, sub }) => {
+const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, isNegative, sub, hero }) => {
   const pctNum = pct !== undefined && pct !== null ? Number(pct) : null
   const pos = pctNum === null ? null : !isNegative ? pctNum >= 0 : pctNum <= 0
   return (
-    <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'18px 20px', flex:1, minWidth:0 }}>
+    <div style={{
+      background: hero ? 'var(--fs-surface-2)' : 'var(--fs-surface)',
+      border:'1px solid var(--fs-border)',
+      borderTop: hero ? '2px solid var(--fs-brand)' : '1px solid var(--fs-border)',
+      borderRadius:12, padding: hero ? '20px 24px' : '18px 20px',
+      flex: hero ? 1.6 : 1, minWidth:0,
+    }}>
       <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:10 }}>{label}</div>
       <div style={{ display:'flex', alignItems:'flex-end', gap:8 }}>
         <div style={{ flex:1 }}>
-          <div style={{ fontSize:26, fontWeight:900, color:'var(--fs-text-1)', lineHeight:1.1, marginBottom:6 }}>{value}</div>
+          <div className="fs-num" style={{ fontSize: hero ? 36 : 24, fontWeight: hero ? 800 : 750, fontFamily: hero ? 'var(--fs-font-display)' : undefined, color:'var(--fs-text-1)', lineHeight:1.1, marginBottom:6 }}>{value}</div>
           {pctNum !== null && (
             <div style={{ display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
-              <span style={{ fontSize:12, fontWeight:700, color: pos ? '#22c55e' : '#ef4444' }}>
-                {pos ? '▲' : '▼'} {Math.abs(pctNum).toFixed(1)}%
+              <span style={{ fontSize:12, fontWeight:700, color: pos ? 'var(--fs-success)' : 'var(--fs-danger)', display:'inline-flex', alignItems:'center', gap:4 }}>
+                <SvgIcon name={pctNum >= 0 ? 'trendingUp' : 'trendingDown'} size={13} color="currentColor" />
+                {Math.abs(pctNum).toFixed(1)}%
               </span>
               {pctLabel && <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{pctLabel}</span>}
             </div>
           )}
+          {sub && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:4 }}>{sub}</div>}
         </div>
         {sparkData && sparkData.length > 1 && (
-          <div style={{ width:90, height:42, flexShrink:0 }}>
+          <div style={{ width: hero ? 130 : 84, height: hero ? 54 : 40, flexShrink:0 }}>
             <Spark data={sparkData} dataKey={sparkKey} color={sparkColor || '#3b82f6'} />
           </div>
         )}
@@ -72,10 +81,12 @@ const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, i
 }
 
 // ─── KPI Card secundário ──────────────────────────────────────────────────────
-const SCard = ({ label, value, sub, color }) => (
-  <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'16px 20px', flex:1, minWidth:0 }}>
-    <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:8 }}>{label}</div>
-    <div style={{ fontSize:22, fontWeight:800, color: color || 'var(--fs-text-1)', lineHeight:1.2 }}>{value}</div>
+// Célula da faixa de indicadores secundários — uma única superfície com
+// divisórias internas em vez de quatro cards idênticos
+const SCard = ({ label, value, sub, color, first }) => (
+  <div style={{ padding:'14px 20px', flex:1, minWidth:0, borderLeft: first ? 'none' : '1px solid var(--fs-border)' }}>
+    <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>{label}</div>
+    <div className="fs-num" style={{ fontSize:19, fontWeight:750, color: color || 'var(--fs-text-1)', lineHeight:1.2 }}>{value}</div>
     {sub && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>{sub}</div>}
   </div>
 )
@@ -456,7 +467,7 @@ export default function OverviewPage() {
         </div>
 
         <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-          <h1 style={{ fontSize:30, fontWeight:900, color:'var(--fs-text-1)', margin:0 }}>Overview</h1>
+          <h1 style={{ fontSize:30, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>Overview</h1>
 
           {/* Botão mês corrente */}
           <QuickBtn
@@ -505,16 +516,16 @@ export default function OverviewPage() {
         <>
           {/* ── KPIs principais ─────────────────────────────────────────────── */}
           <div style={{ display:'flex', gap:12, marginBottom:12, flexWrap:'wrap' }}>
-            <KCard label={`Receita Bruta · ${dr.subLabel}`} value={fC(kpis.rb)} pct={kpis.rbPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="receita" sparkColor="#22c55e" sub={kpis.rl !== kpis.rb ? `Rec. Líquida: ${fC(kpis.rl)}` : null} />
+            <KCard hero label={`Receita Bruta · ${dr.subLabel}`} value={fC(kpis.rb)} pct={kpis.rbPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="receita" sparkColor="#22c55e" sub={kpis.rl !== kpis.rb ? `Rec. Líquida: ${fC(kpis.rl)}` : null} />
             <KCard label="EBITDA"          value={fC(kpis.ebt)}                   pct={kpis.ebtPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="#3b82f6" />
             <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`}     pct={kpis.margDiff} pctLabel="p.p. vs anterior"  sparkData={monthly} sparkKey="resLiq" sparkColor="#8b5cf6" />
             <KCard label="Caixa Disponível" value={fC(kpis.caixa)} pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="#f59e0b" />
           </div>
 
           {/* ── KPIs secundários ────────────────────────────────────────────── */}
-          <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
-            <SCard label="A Receber · 30 Dias" value={kpis.aReceber>0?fC(kpis.aReceber):'—'} color="#22c55e" />
-            <SCard label="A Pagar · 30 Dias"   value={kpis.aPagar>0?fC(kpis.aPagar):'—'}     color="#ef4444" />
+          <div style={{ display:'flex', marginBottom:20, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, overflow:'hidden', flexWrap:'wrap' }}>
+            <SCard first label="A Receber · 30 Dias" value={kpis.aReceber>0?fC(kpis.aReceber):'—'} color="var(--fs-success)" />
+            <SCard label="A Pagar · 30 Dias"   value={kpis.aPagar>0?fC(kpis.aPagar):'—'}     color="var(--fs-danger)" />
             <SCard label="Burn Rate Mensal"     value={fC(kpis.burnRate)} sub="custos + despesas / mês" />
             <SCard label="Runway"               value={kpis.runway?`${kpis.runway.toFixed(1)} meses`:'—'} sub="caixa ÷ burn rate" />
           </div>

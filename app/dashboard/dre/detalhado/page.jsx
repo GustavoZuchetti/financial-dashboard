@@ -77,7 +77,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
               <span style={{ textTransform:'uppercase' }}>{clienteSel || item.nome}</span>
             </div>
             <div style={{ display:'flex', gap:16, alignItems:'center', flexWrap:'wrap' }}>
-              <span style={{ fontSize:22, fontWeight:900, color:'#3b82f6' }}>{fmtBRL(clienteSel ? clienteAtual?.total || 0 : total)}</span>
+              <span style={{ fontSize:22, fontWeight:800, color:'#3b82f6' }}>{fmtBRL(clienteSel ? clienteAtual?.total || 0 : total)}</span>
               {clientes && !clienteSel
                 ? <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>{clientes.length} conta{clientes.length !== 1 ? 's' : ''} · {lancamentos.length} lançamentos</span>
                 : <><span style={{ fontSize:12, color:'var(--fs-text-4)' }}>{lancAtual.length} lançamento{lancAtual.length !== 1 ? 's' : ''}</span>
@@ -356,7 +356,7 @@ export default function DREDetalhado() {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexWrap:'wrap', gap:12 }}>
         <div>
           <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>Demonstrativos · Drill-down</div>
-          <h1 style={{ fontSize:26, fontWeight:900, color:'var(--fs-text-1)', margin:0 }}>DRE Detalhado</h1>
+          <h1 style={{ fontSize:26, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>DRE Detalhado</h1>
           <p style={{ color:'var(--fs-text-4)', fontSize:12, margin:'3px 0 0' }}>Clique em qualquer linha ou conta para ver os lançamentos individuais</p>
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center', background:'var(--fs-surface)', padding:'8px 14px', borderRadius:10, border:'1px solid var(--fs-border)' }}>
@@ -400,7 +400,7 @@ export default function DREDetalhado() {
                   return (
                     <tr key={line.key} style={{ background:'var(--fs-surface-2)', borderTop:'2px solid var(--fs-border)', borderBottom:'2px solid var(--fs-border)' }}>
                       <td style={{ padding:'13px 16px', fontWeight:800, color:line.color, fontSize:14 }}>{line.label}</td>
-                      <td style={{ padding:'13px 16px', textAlign:'right', fontWeight:900, color: lineValue>=0 ? line.color : '#ef4444', fontSize:15 }}>{fmtBRL(lineValue)}</td>
+                      <td style={{ padding:'13px 16px', textAlign:'right', fontWeight:800, color: lineValue>=0 ? line.color : '#ef4444', fontSize:15 }}>{fmtBRL(lineValue)}</td>
                       <td style={{ padding:'13px 16px', textAlign:'right', color:'var(--fs-text-4)', fontWeight:600 }}>{pct(lineValue)}</td>
                       <DeltaCell line={line} pad="13px 16px" />
                       <td />

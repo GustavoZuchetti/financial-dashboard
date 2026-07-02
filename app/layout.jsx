@@ -1,3 +1,5 @@
+import '@fontsource-variable/inter'
+import '@fontsource-variable/sora'
 import './globals.css'
 import { ToastProvider } from '@/components/Toast'
 import { OrgProvider } from '@/lib/org-context'

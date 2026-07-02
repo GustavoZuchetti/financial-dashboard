@@ -147,7 +147,7 @@ const DREColumn = ({ label, startDate, endDate, waterfallData, kpis, onDateChang
     {/* Variação Receita → Resultado */}
     <div style={{ ...S.card, padding:'14px 16px' }}>
       <div style={S.kpiTitle}>Resultado Líquido</div>
-      <div style={{ fontSize:22, fontWeight:900, color: kpis.resultado >= 0 ? '#22c55e' : '#ef4444' }}>
+      <div style={{ fontSize:22, fontWeight:800, color: kpis.resultado >= 0 ? '#22c55e' : '#ef4444' }}>
         {fmt(kpis.resultado)}
       </div>
       {kpis.receita > 0 && (
@@ -259,7 +259,7 @@ export default function DREComparativo() {
         <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>
           Demonstrativos · Análise Comparativa
         </div>
-        <h1 style={{ fontSize:28, fontWeight:900, margin:0 }}>DRE Comparativo</h1>
+        <h1 style={{ fontSize:28, fontWeight:800, margin:0 }}>DRE Comparativo</h1>
         <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:4 }}>
           Compare dois períodos lado a lado com estrutura de resultado e variação
         </div>

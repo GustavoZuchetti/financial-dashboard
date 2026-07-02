@@ -125,7 +125,7 @@ export default function FluxoProjecao() {
     <div style={{ color:'var(--fs-text-1)', width:'100%' }}>
       <div style={{ marginBottom:24 }}>
         <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>Fluxo de Caixa · Análise</div>
-        <h1 style={{ fontSize:28, fontWeight:900, margin:0 }}>Projeção de Caixa</h1>
+        <h1 style={{ fontSize:28, fontWeight:800, margin:0 }}>Projeção de Caixa</h1>
         <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:4 }}>
           Projeção calculada com base na média histórica + tendência dos últimos {mesesBase} meses
         </div>

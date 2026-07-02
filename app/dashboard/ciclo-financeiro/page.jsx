@@ -56,7 +56,7 @@ const KpiCard = ({ label, sigla, valor, descricao, cor, aviso, hint }) => {
           </span>
         )}
       </div>
-      <div style={{ fontSize:32, fontWeight:900, color:'var(--fs-text-1)', lineHeight:1, marginBottom:4 }}>
+      <div style={{ fontSize:32, fontWeight:800, color:'var(--fs-text-1)', lineHeight:1, marginBottom:4 }}>
         {v > 0 ? fDias(v) : <span style={{ fontSize:18, color:'var(--fs-text-4)' }}>Sem dados</span>}
       </div>
       {descricao && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:4 }}>{descricao}</div>}
@@ -283,7 +283,7 @@ export default function CicloFinanceiroPage() {
           <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>
             {empNome || 'Empresa'} · Liquidez Operacional
           </div>
-          <h1 style={{ fontSize:28, fontWeight:900, margin:0 }}>Ciclo Financeiro</h1>
+          <h1 style={{ fontSize:28, fontWeight:800, margin:0 }}>Ciclo Financeiro</h1>
           <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:4 }}>
             Prazos médios de recebimento, pagamento e estoque derivados do Fluxo de Caixa
           </div>
@@ -389,7 +389,7 @@ export default function CicloFinanceiroPage() {
                 ) : (
                   <div key={i} style={{ background:`${item.cor}15`, border:`1px solid ${item.cor}44`, borderRadius:10, padding:'10px 16px', textAlign:'center', minWidth:90 }}>
                     <div style={{ fontSize:10, fontWeight:700, color:item.cor, textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:4 }}>{item.label}</div>
-                    <div style={{ fontSize:22, fontWeight:900, color:'var(--fs-text-1)' }}>{Math.abs(item.valor)}d</div>
+                    <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-text-1)' }}>{Math.abs(item.valor)}d</div>
                   </div>
                 ))}
               </div>

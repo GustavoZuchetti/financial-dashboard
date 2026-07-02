@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE, calcDREMap, DRE_LINES, fmtBRL } from '@/lib/dre-calc'
+import SvgIcon from '@/components/SvgIcon'
+import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 
 // ─── Modal de Drill-down ──────────────────────────────────────────────────────
 function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
@@ -57,7 +59,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
             <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>
               {clienteSel
                 ? <span style={{ cursor:'pointer', display:'flex', alignItems:'center', gap:6 }} onClick={() => setClienteSel(null)}>
-                    <span style={{ color:'#3b82f6' }}>← {item.nome}</span>
+                    <span style={{ color:'#3b82f6', display:'inline-flex', alignItems:'center', gap:5 }}><SvgIcon name="arrowLeft" size={12} color="#3b82f6" />{item.nome}</span>
                     <span style={{ color:'var(--fs-text-4)' }}>· {periodo}</span>
                   </span>
                 : `Detalhamento · ${periodo}`
@@ -79,8 +81,8 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
           <button onClick={onClose} style={{
             background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8,
             width:34, height:34, display:'flex', alignItems:'center', justifyContent:'center',
-            cursor:'pointer', color:'var(--fs-text-3)', fontSize:18, flexShrink:0,
-          }}>×</button>
+            cursor:'pointer', color:'var(--fs-text-3)', flexShrink:0,
+          }}><SvgIcon name="close" size={15} color="currentColor" /></button>
         </div>
 
         {/* Corpo — scroll */}
@@ -98,7 +100,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
                   <div style={{ width:7, height:7, borderRadius:'50%', background:'#3b82f6', flexShrink:0 }} />
                   <span style={{ fontSize:14, fontWeight:600, color:'var(--fs-text-1)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textTransform:'uppercase' }}>{cli.nome}</span>
                   <span style={{ fontSize:11, color:'var(--fs-text-4)', flexShrink:0 }}>{cli.count}×</span>
-                  <span className="cli-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'#3b82f6', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', padding:'2px 7px', borderRadius:4, whiteSpace:'nowrap', flexShrink:0 }}>ver →</span>
+                  <span className="cli-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'#3b82f6', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', padding:'2px 7px', borderRadius:4, whiteSpace:'nowrap', flexShrink:0 }}>ver<SvgIcon name="arrowRight" size={10} color="#3b82f6" style={{ marginLeft:4, verticalAlign:'-1px' }} /></span>
                 </div>
                 <div style={{ textAlign:'right', fontSize:14, fontWeight:700, color:'var(--fs-text-1)', fontVariantNumeric:'tabular-nums' }}>{fmtBRL(cli.total)}</div>
                 <div style={{ textAlign:'right', fontSize:11, color:'var(--fs-text-4)' }}>
@@ -246,6 +248,35 @@ export default function DREDetalhado() {
     return `${MESES[Number(sm)-1]}/${sy} – ${MESES[Number(em)-1]}/${ey}`
   })()
 
+  // ─── Exportação Excel ─────────────────────────────────────────────────────
+  const handleExport = () => {
+    // Aba 1 — DRE estruturado (linha → categoria)
+    const dreAoa = [['Linha DRE', 'Categoria', 'Valor (R$)', '% Receita', 'Lançamentos']]
+    DRE_LINES.forEach(line => {
+      const lineValue = vMap[line.key] ?? 0
+      const hierarchy = !line.isSubtotal ? buildHierarchy(line.tipos) : []
+      const isVisible = !line.isSubtotal || Math.abs(lineValue) > 0.001
+        || ['receita_liquida','lucro_bruto','ebitda','resultado_final'].includes(line.key)
+      if (!isVisible) return
+      const totalLanc = hierarchy.reduce((a,c) => a + c.lancamentos.length, 0)
+      dreAoa.push([line.label, '', Number(lineValue.toFixed(2)), pct(lineValue), line.isSubtotal ? '' : totalLanc])
+      hierarchy.forEach(cat => {
+        dreAoa.push(['', cat.nome, Number(cat.total.toFixed(2)), pct(cat.total), cat.lancamentos.length])
+      })
+    })
+
+    // Aba 2 — Lançamentos individuais do período
+    const lancAoa = [['Data', 'Tipo', 'Categoria', 'Descrição', 'Valor (R$)']]
+    ;[...data].sort((a,b) => (a.data||'').localeCompare(b.data||'')).forEach(l => {
+      lancAoa.push([l.data || '', l.tipo || '', l.categoria || '', l.descricao || '', Number(Number(l.valor).toFixed(2))])
+    })
+
+    downloadWorkbook([
+      { name: 'DRE',         aoa: dreAoa,  colWidths: [26, 34, 16, 10, 12], currencyCols: [2] },
+      { name: 'Lançamentos', aoa: lancAoa, colWidths: [12, 10, 26, 48, 16], currencyCols: [4] },
+    ], exportFilename('DRE_Detalhado', debStart, debEnd))
+  }
+
   const TH = ({ children, right }) => (
     <th style={{ padding:'10px 16px', textAlign: right?'right':'left', color:'var(--fs-text-4)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.7px', borderBottom:'1px solid var(--fs-border)', whiteSpace:'nowrap', background:'var(--fs-bg)' }}>
       {children}
@@ -276,9 +307,14 @@ export default function DREDetalhado() {
         <div style={{ display:'flex', gap:8, alignItems:'center', background:'var(--fs-surface)', padding:'8px 14px', borderRadius:10, border:'1px solid var(--fs-border)' }}>
           <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>Período:</span>
           <input type="date" style={{ background:'transparent', border:'none', color:'var(--fs-text-1)', fontSize:12, outline:'none', colorScheme:'dark' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
-          <span style={{ color:'var(--fs-text-4)' }}>→</span>
+          <SvgIcon name="arrowRight" size={12} color="var(--fs-text-4)" />
           <input type="date" style={{ background:'transparent', border:'none', color:'var(--fs-text-1)', fontSize:12, outline:'none', colorScheme:'dark' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
         </div>
+        <button onClick={handleExport} disabled={loading || !data.length} title="Exportar para Excel (DRE + lançamentos do período)"
+          style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'9px 16px', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor: (loading || !data.length) ? 'not-allowed' : 'pointer', opacity: (loading || !data.length) ? 0.5 : 1 }}>
+          <SvgIcon name="download" size={14} color="currentColor" />
+          Exportar Excel
+        </button>
       </div>
 
       {firstLoad ? (
@@ -325,7 +361,7 @@ export default function DREDetalhado() {
                     onMouseLeave={e => e.currentTarget.style.background='transparent'}
                   >
                     <td style={{ padding:'12px 16px', fontWeight:700, color:'var(--fs-text-1)' }}>
-                      <span style={{ marginRight:8, color: hasData ? line.color : 'var(--fs-text-4)', fontSize:11 }}>{hasData ? (isExpLine?'▼':'▶') : '  '}</span>
+                      <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:20, marginRight:6, verticalAlign:'-3px' }}>{hasData ? <SvgIcon name={isExpLine ? 'chevronDown' : 'chevronRight'} size={14} color={line.color} /> : null}</span>
                       {line.label}
                     </td>
                     <td style={{ padding:'12px 16px', textAlign:'right', fontWeight:700, color: lineValue>=0 ? line.color : '#ef4444' }}>{fmtBRL(lineValue)}</td>
@@ -345,7 +381,7 @@ export default function DREDetalhado() {
                         <span style={{ color:line.color, fontWeight:700, fontSize:13, textTransform:'uppercase' }}>{cat.nome}</span>
                         <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{cat.clientes.length} conta{cat.clientes.length !== 1 ? 's' : ''}</span>
                         <span className="cat-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'#3b82f6', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', padding:'2px 8px', borderRadius:4, whiteSpace:'nowrap' }}>
-                          ver contas →
+                          ver contas<SvgIcon name="arrowRight" size={10} color="#3b82f6" style={{ marginLeft:4, verticalAlign:'-1px' }} />
                         </span>
                       </td>
                       <td style={{ padding:'11px 16px', textAlign:'right', fontWeight:700, color:'var(--fs-text-1)' }}>{fmtBRL(cat.total)}</td>

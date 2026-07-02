@@ -128,7 +128,7 @@ supabase/migrations/                 — Migrações SQL versionadas (aplicar no
 | 19/jun | DRE: impostos como dedução + paginação de lançamentos |
 | 21–25/jun | Plano de contas editável; sprint importação; sidebar reformulado |
 | 26–30/jun | Multi-entidade (seletor + consolidação); SECURITY FIX cross-org; favicon |
-| 02/jul | Exportação Excel (DRE Detalhado + FC Gestão); ícones SVG no DRE Detalhado; validação de seleção de entidades; migração RLS versionada |
+| 02/jul | Exportação Excel (DRE Detalhado + FC Gestão + FC Visão Geral); ícones SVG e coluna Δ Período Ant. (F/D) no DRE Detalhado; hover adaptativo por tema; skeleton + sticky header; validação de seleção de entidades; migração RLS versionada |
 
 ---
 
@@ -137,7 +137,7 @@ supabase/migrations/                 — Migrações SQL versionadas (aplicar no
 - [ ] **CRÍTICO — Confirmar aplicação da migração RLS** (20260630_fix_rls_cross_org.sql)
       no Supabase e validar com teste cross-org via REST
 - [ ] Teste de regressão multi-entidade (FACE vs JAM vs JB) nos módulos DRE/FC/Ciclo
-- [ ] Wire dos botões "Filtrar" e "Exportar" da FC Visão Geral (hoje sem onClick)
+- [x] ~~Wire dos botões "Filtrar" e "Exportar" da FC Visão Geral~~ (feito 02/jul)
 - [ ] Notificações de vencimentos no badge do sidebar
 - [ ] Drill-down nos gráficos (clicar numa barra = ver lançamentos do mês)
 - [ ] PME real: fixo em 0 (estoque não vem no CSV do Bling)

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import EmptyState from '@/components/EmptyState'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import { useOrg } from '@/lib/org-context'
@@ -495,7 +496,7 @@ export default function GestaoFluxoCaixaPage() {
   // Aguarda o perfil carregar antes de avaliar isAdmin — evita bloqueio indevido
   if (orgLoading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'40vh', color:'var(--fs-text-4)', fontSize:14 }}>
-      Carregando...
+      Carregando permissões da organização...
     </div>
   )
 
@@ -508,7 +509,9 @@ export default function GestaoFluxoCaixaPage() {
   )
 
   if (!empresaId) return (
-    <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)' }}>Selecione uma empresa no menu lateral.</div>
+    <EmptyState icon="building" title="Nenhuma entidade selecionada">
+      Escolha uma entidade do grupo no seletor do menu lateral para abrir o extrato.
+    </EmptyState>
   )
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -640,9 +643,6 @@ export default function GestaoFluxoCaixaPage() {
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div style={{ marginBottom:22 }}>
-        <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>
-          Fluxo de Caixa · Gestão
-        </div>
         <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:6 }}>
           <h1 style={{ fontSize:28, fontWeight:800, margin:0 }}>Gestão de Registros</h1>
           <span style={{ background:'rgba(239,68,68,0.1)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.2)', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700 }}>
@@ -785,9 +785,17 @@ export default function GestaoFluxoCaixaPage() {
         {loading ? (
           <div style={{ textAlign:'center', padding:60, color:'var(--fs-text-4)', fontSize:13 }}>Carregando...</div>
         ) : extratoComSaldo.length === 0 ? (
-          <div style={{ textAlign:'center', padding:60, color:'var(--fs-text-4)', fontSize:13 }}>
-            {busca ? 'Nenhum resultado para a busca.' : 'Sem registros no período selecionado.'}
-          </div>
+          busca ? (
+            <EmptyState compact icon="search" title={`Nenhum registro contém “${busca}”`}>
+              Nenhuma descrição ou categoria corresponde à busca no período de {startDate.split('-').reverse().join('/')} a {endDate.split('-').reverse().join('/')}.
+            </EmptyState>
+          ) : (
+            <EmptyState compact icon="inbox" title="Sem movimentações no período"
+              actionHref="/dashboard/importacao" actionLabel="Importar extrato do Bling">
+              Nenhum lançamento entre {startDate.split('-').reverse().join('/')} e {endDate.split('-').reverse().join('/')}
+              {tipoFiltro !== 'todos' ? ` com o filtro “${tipoFiltro}” ativo` : ''}. Ajuste o período ou importe o extrato.
+            </EmptyState>
+          )
         ) : extratoComSaldo.map(({ data, lancamentos, saldoDia }, gi) => (
           <div key={data}>
             {/* Separador de data */}

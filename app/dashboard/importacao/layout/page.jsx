@@ -148,7 +148,7 @@ export default function LayoutImportacao() {
 
   if (orgLoading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'40vh', color:'var(--fs-text-4)', fontSize:14 }}>
-      Carregando...
+      Carregando permissões da organização...
     </div>
   )
 

@@ -52,7 +52,6 @@ export default function AuditoriaPage() {
     <div style={S.page}>
       <div style={S.header}>
         <h1 style={S.title}>Auditoria do Plano de Contas</h1>
-        <p style={S.subtitle}>Historico de alteracoes e log de acoes</p>
       </div>
 
       <div style={S.kpiRow}>

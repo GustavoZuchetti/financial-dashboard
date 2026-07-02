@@ -118,7 +118,6 @@ export default function FluxoCaixaAnalise() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 }}>Análise do Fluxo de Caixa</h1>
-          <p style={{ color: 'var(--fs-text-4)', fontSize: 14, margin: '4px 0 0' }}>Composição, evolução e indicadores de saúde financeira</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--fs-surface)', padding: '8px 14px', borderRadius: 8, border: '1px solid var(--fs-border)' }}>
           <span style={{ fontSize: 12, color: 'var(--fs-text-4)' }}>Período:</span>

@@ -1025,9 +1025,6 @@ export default function ImportacaoPage() {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24, flexWrap:'wrap', gap:12 }}>
         <div>
           <h1 style={{ fontSize:24, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>Importação de Dados</h1>
-          <p style={{ color:'var(--fs-text-4)', fontSize:13, margin:'4px 0 0' }}>
-            Importe arquivos CSV ou XLSX para o sistema financeiro
-          </p>
         </div>
         {isAdmin && (
           <button

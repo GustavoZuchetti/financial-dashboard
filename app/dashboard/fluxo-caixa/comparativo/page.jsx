@@ -136,7 +136,6 @@ export default function FluxoComparativo() {
   return (
     <div style={{ color:'var(--fs-text-1)', width:'100%' }}>
       <div style={{ marginBottom:24 }}>
-        <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>Fluxo de Caixa · Análise</div>
         <h1 style={{ fontSize:28, fontWeight:800, margin:0 }}>Comparativo de Períodos</h1>
         <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:4 }}>Compare dois períodos de movimentação financeira lado a lado</div>
       </div>

@@ -1,5 +1,7 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
+import EmptyState from '@/components/EmptyState'
+import { TableSkeleton } from '@/components/Skeleton'
 import { supabase, getOrgEmpresaIds } from '@/lib/supabase'
 
 // ─── Ícones SVG profissionais (sem emojis) ────────────────────────────────────
@@ -321,9 +323,12 @@ export default function PlanoContasPage() {
       {showAdd && formConta}
 
       {!masterId ? (
-        <div style={{ textAlign:'center',padding:60,color:'var(--fs-text-4)' }}>Nenhuma empresa cadastrada na organização.</div>
+        <EmptyState icon="building" title="Nenhuma empresa cadastrada"
+          actionHref="/dashboard/configuracoes" actionLabel="Cadastrar empresa">
+          O plano de contas é compartilhado entre as entidades do grupo — cadastre a primeira empresa em Configurações.
+        </EmptyState>
       ) : loading ? (
-        <div style={{ textAlign:'center',padding:60,color:'var(--fs-text-4)' }}>Carregando...</div>
+        <TableSkeleton rows={10} cols={4} />
       ) : contas.length === 0 ? (
         <div style={{ textAlign:'center',padding:60,color:'var(--fs-text-4)' }}>
           <p style={{ marginBottom:16 }}>Nenhuma conta cadastrada para esta empresa.</p>

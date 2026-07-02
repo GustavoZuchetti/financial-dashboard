@@ -85,7 +85,6 @@ export default function DREAnalise() {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexWrap:'wrap', gap:12 }}>
         <div>
           <h1 style={{ fontSize:22, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>DRE Análise</h1>
-          <p style={{ color:'var(--fs-text-4)', fontSize:13, margin:'3px 0 0' }}>Evolução mensal e distribuição de receitas</p>
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center', background:'var(--fs-surface)', padding:'7px 14px', borderRadius:8, border:'1px solid var(--fs-border)' }}>
           <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>Período:</span>

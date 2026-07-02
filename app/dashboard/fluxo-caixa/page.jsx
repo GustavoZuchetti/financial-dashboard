@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import EmptyState from '@/components/EmptyState'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 import {
   ComposedChart, BarChart, Bar, Line, AreaChart, Area,
@@ -331,7 +332,9 @@ export default function FluxoCaixaPage() {
   const handleFiltrar = () => { setDebStart(startDate); setDebEnd(endDate) }
 
   if (!empresaId) return (
-    <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)' }}>Selecione uma empresa no menu lateral.</div>
+    <EmptyState icon="building" title="Nenhuma entidade selecionada">
+      Escolha uma entidade do grupo no seletor do menu lateral para carregar o fluxo de caixa.
+    </EmptyState>
   )
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -341,9 +344,6 @@ export default function FluxoCaixaPage() {
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:24, flexWrap:'wrap', gap:12 }}>
         <div>
-          <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>
-            Liquidez · Movimentação Financeira
-          </div>
           <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
             <h1 style={{ fontSize:28, fontWeight:800, margin:0, color:'var(--fs-text-1)' }}>Fluxo de Caixa</h1>
             {isConsol && (

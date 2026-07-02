@@ -283,9 +283,6 @@ export default function OrcamentoPage() {
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 }}>Budget vs. Realizado</h1>
-          <p style={{ color: 'var(--fs-text-4)', fontSize: '14px', margin: '4px 0 0' }}>
-            Análise de atingimento orçamentário com indicadores F/D (Favorável / Desfavorável)
-          </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {editMode ? (

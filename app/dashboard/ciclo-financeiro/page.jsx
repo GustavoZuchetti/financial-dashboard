@@ -281,7 +281,7 @@ export default function CicloFinanceiroPage() {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24, flexWrap:'wrap', gap:12 }}>
         <div>
           <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>
-            {empNome || 'Empresa'} · Liquidez Operacional
+            {empNome || 'Consolidado'}
           </div>
           <h1 style={{ fontSize:28, fontWeight:800, margin:0 }}>Ciclo Financeiro</h1>
           <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:4 }}>

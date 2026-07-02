@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import EmptyState from '@/components/EmptyState'
 import SvgIcon from '@/components/SvgIcon'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE } from '@/lib/dre-calc'
@@ -454,7 +455,9 @@ export default function OverviewPage() {
   const dr = getRange()
 
   if (!empresaId) return (
-    <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)' }}>Selecione uma empresa no menu lateral.</div>
+    <EmptyState icon="building" title="Nenhuma entidade selecionada">
+      Escolha uma entidade do grupo no seletor do menu lateral para carregar os indicadores.
+    </EmptyState>
   )
 
   return (

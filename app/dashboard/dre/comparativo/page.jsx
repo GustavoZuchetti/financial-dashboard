@@ -256,9 +256,6 @@ export default function DREComparativo() {
 
       {/* Header */}
       <div style={{ marginBottom:24 }}>
-        <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'1px', marginBottom:4 }}>
-          Demonstrativos · Análise Comparativa
-        </div>
         <h1 style={{ fontSize:28, fontWeight:800, margin:0 }}>DRE Comparativo</h1>
         <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:4 }}>
           Compare dois períodos lado a lado com estrutura de resultado e variação

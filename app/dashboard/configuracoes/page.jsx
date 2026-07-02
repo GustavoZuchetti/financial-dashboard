@@ -234,7 +234,6 @@ export default function ConfiguracoesPage() {
     <div style={{ color: 'var(--fs-text-1)' }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--fs-text-1)', margin: 0 }}>Configurações</h1>
-        <p style={{ color: 'var(--fs-text-4)', fontSize: 13, margin: '4px 0 0' }}>Gerencie seu perfil, empresas e usuários</p>
       </div>
 
       {/* Tabs */}

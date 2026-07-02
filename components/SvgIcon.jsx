@@ -38,6 +38,8 @@ export const ICON_PATHS = {
   calendar:     'M8 7V3 M16 7V3 M3 11h18 M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
   chartBar:     'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
   chartLine:    'M22 12h-4l-3 9L9 3l-3 9H2',
+  trendingUp:   'M23 6l-9.5 9.5-5-5L1 18 M17 6h6v6',
+  trendingDown: 'M23 18l-9.5-9.5-5 5L1 6 M17 18h6v-6',
   wallet:       'M21 12V7H5a2 2 0 010-4h14v4 M3 7v12a2 2 0 002 2h16v-5 M16 14a1 1 0 100 2 1 1 0 000-2z',
   bank:         'M3 21h18 M6 21V7 M18 21V7 M3 7l9-4 9 4',
   presentation: 'M4 3h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z M8 21l4-4 4 4 M12 17V8',

@@ -1,10 +1,12 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
-import { supabase } from '@/lib/supabase'
+import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
+import { calcDRE } from '@/lib/dre-calc'
+import SvgIcon from '@/components/SvgIcon'
 
 // ─── Formatadores ─────────────────────────────────────────────────────────────
 const fmt     = (v) => new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', notation:'compact', maximumFractionDigits:1 }).format(Number(v)||0)
@@ -72,7 +74,7 @@ const DREColumn = ({ label, startDate, endDate, waterfallData, kpis, onDateChang
       <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:8 }}>{label}</div>
       <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
         <input type="date" style={S.input} value={startDate} onChange={e=>onDateChange('start', e.target.value)} />
-        <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>→</span>
+        <SvgIcon name="arrowRight" size={11} color="var(--fs-text-4)" />
         <input type="date" style={S.input} value={endDate}   onChange={e=>onDateChange('end',   e.target.value)} />
       </div>
     </div>
@@ -167,40 +169,55 @@ export default function DREComparativo() {
   const [p2Start, setP2Start] = useState(`${yr-1}-01-01`)
   const [p2End,   setP2End]   = useState(`${yr-1}-12-31`)
 
+  // Debounce das datas — evita query (e sumiço da tela) a cada clique no calendário
+  const [deb, setDeb] = useState({ p1s:`${yr}-01-01`, p1e: now.toISOString().split('T')[0], p2s:`${yr-1}-01-01`, p2e:`${yr-1}-12-31` })
+  useEffect(() => {
+    const t = setTimeout(() => setDeb({ p1s:p1Start, p1e:p1End, p2s:p2Start, p2e:p2End }), 500)
+    return () => clearTimeout(t)
+  }, [p1Start, p1End, p2Start, p2End])
+
   const [data1,      setData1]      = useState([])
   const [data2,      setData2]      = useState([])
   const [loading,    setLoading]    = useState(true)
+  const [firstLoad,  setFirstLoad]  = useState(true)
   const [empresaId,  setEmpresaId]  = useState(null)
 
   useEffect(() => {
-    const id = localStorage.getItem('empresa_id')
-    if (id) setEmpresaId(id)
+    setEmpresaId(localStorage.getItem('empresa_id'))
+    // Reagir à troca de entidade no Sidebar (mesmo padrão das demais páginas)
+    const h = () => setEmpresaId(localStorage.getItem('empresa_id'))
+    window.addEventListener('storage', h)
+    return () => window.removeEventListener('storage', h)
   }, [])
 
   useEffect(() => {
     if (!empresaId) return
     const fetch = async () => {
       setLoading(true)
-      const q = (s, e) => supabase.from('lancamentos').select('tipo,valor')
-        .eq('empresa_id', empresaId).gte('data', s).lte('data', e)
-      const [{ data: d1 }, { data: d2 }] = await Promise.all([q(p1Start, p1End), q(p2Start, p2End)])
-      setData1(d1 || [])
-      setData2(d2 || [])
-      setLoading(false)
+      try {
+        // Multi-entidade: resolve 'todas' / multi-seleção / id único para lista
+        // de IDs validados da organização — .eq('empresa_id','todas') retornava vazio
+        const ids = await getSelectedEntidadeIds()
+        const q = (s, e) => {
+          let qb = supabase.from('lancamentos').select('tipo,valor').gte('data', s).lte('data', e)
+          if (ids.length) qb = qb.in('empresa_id', ids)
+          return qb
+        }
+        // fetchAll: paginação completa (Supabase corta em 1000 linhas/request)
+        const [d1, d2] = await Promise.all([fetchAll(q(deb.p1s, deb.p1e)), fetchAll(q(deb.p2s, deb.p2e))])
+        setData1(d1 || [])
+        setData2(d2 || [])
+      } finally { setLoading(false); setFirstLoad(false) }
     }
     fetch()
-  }, [empresaId, p1Start, p1End, p2Start, p2End])
+  }, [empresaId, deb])
 
+  // KPIs pelo cálculo central do sistema (lib/dre-calc) — inclui impostos,
+  // resultado financeiro e investimentos, consistente com o DRE oficial
   const calcKPIs = (data) => {
-    const sum  = (tipo) => data.filter(d=>d.tipo===tipo).reduce((a,c)=>a+Number(c.valor||0),0)
-    const receita  = sum('receita')
-    const custos   = sum('custo')
-    const despesas = sum('despesa')
-    const deducoes = sum('deducao')
-    const recLiq   = receita - deducoes
-    const ebitda   = recLiq  - custos
-    const resultado= ebitda  - despesas
-    return { receita, custos, despesas, deducoes, recLiq, ebitda, resultado }
+    const v = calcDRE(data)
+    return { receita: v.rb, deducoes: v.ded, recLiq: v.rl, custos: v.cv,
+             despesas: v.df, ebitda: v.ebt, resultado: v.resF }
   }
 
   // ── Waterfall com base + display (evita NaN do range array) ──────────────
@@ -248,10 +265,10 @@ export default function DREComparativo() {
         </div>
       </div>
 
-      {loading ? (
+      {firstLoad ? (
         <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)', fontSize:14 }}>Carregando dados...</div>
       ) : (
-        <>
+        <div style={{ opacity: loading ? 0.55 : 1, transition:'opacity 0.2s', pointerEvents: loading ? 'none' : 'auto' }}>
           {/* Colunas comparativas */}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24, marginBottom:24 }}>
             <DREColumn
@@ -283,25 +300,26 @@ export default function DREComparativo() {
                 const pct = varPct(row.v1, row.v2)
                 const pos = pct === null ? null : row.inv ? Number(pct) <= 0 : Number(pct) >= 0
                 return (
-                  <>
+                  <Fragment key={row.label}>
                     <div key={`l-${i}`} style={{ fontSize:13, fontWeight:600, color:'var(--fs-text-2)', padding:'12px', borderBottom:'1px solid var(--fs-border)' }}>{row.label}</div>
                     <div key={`v1-${i}`} style={{ fontSize:13, fontWeight:700, color:'var(--fs-text-1)', padding:'12px', borderBottom:'1px solid var(--fs-border)', fontVariantNumeric:'tabular-nums' }}>{fmtFull(row.v1)}</div>
                     <div key={`v2-${i}`} style={{ fontSize:13, color:'var(--fs-text-3)', padding:'12px', borderBottom:'1px solid var(--fs-border)', fontVariantNumeric:'tabular-nums' }}>{fmtFull(row.v2)}</div>
                     <div key={`p-${i}`}  style={{ padding:'12px', borderBottom:'1px solid var(--fs-border)', display:'flex', alignItems:'center' }}>
                       {pct !== null ? (
-                        <span style={{ fontSize:12, fontWeight:700, color: pos ? '#22c55e' : '#ef4444' }}>
-                          {pos ? '▲' : '▼'} {Math.abs(Number(pct))}%
+                        <span style={{ fontSize:12, fontWeight:700, color: pos ? 'var(--fs-success)' : 'var(--fs-danger)', display:'inline-flex', alignItems:'center', gap:4 }}>
+                          <SvgIcon name={Number(pct) >= 0 ? 'trendingUp' : 'trendingDown'} size={13} color="currentColor" />
+                          {Math.abs(Number(pct))}%
                         </span>
                       ) : (
                         <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>—</span>
                       )}
                     </div>
-                  </>
+                  </Fragment>
                 )
               })}
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   )

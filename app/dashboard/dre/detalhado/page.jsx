@@ -1,9 +1,10 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE, calcDREMap, DRE_LINES, fmtBRL } from '@/lib/dre-calc'
 import SvgIcon from '@/components/SvgIcon'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
+import { TableSkeleton } from '@/components/Skeleton'
 
 // ─── Modal de Drill-down ──────────────────────────────────────────────────────
 function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
@@ -21,8 +22,15 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
     return () => document.removeEventListener('keydown', h)
   }, [onClose])
 
-  const isDark = typeof document !== 'undefined'
-    ? document.documentElement.getAttribute('data-theme') !== 'light' : true
+  // Tema reativo: acompanha mudanças em data-theme mesmo com o modal aberto
+  const [isDark, setIsDark] = useState(() => typeof document !== 'undefined'
+    ? document.documentElement.getAttribute('data-theme') !== 'light' : true)
+  useEffect(() => {
+    const obs = new MutationObserver(() =>
+      setIsDark(document.documentElement.getAttribute('data-theme') !== 'light'))
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => obs.disconnect()
+  }, [])
 
   const total = lancamentos.reduce((a, l) => a + Number(l.valor), 0)
   const [clienteSel, setClienteSel] = useState(null) // drill dentro do modal: cliente selecionado
@@ -155,14 +163,14 @@ function LancRow({ l, isLast }) {
   const dataFmt = l.data ? `${d}/${m}` : '—'
   return (
     <div style={{ display:'grid', gridTemplateColumns:'52px 1fr 120px', gap:12, padding:'11px 24px', borderBottom: isLast ? 'none' : '1px solid rgba(var(--fs-border-rgb,55,65,81),0.5)', alignItems:'center' }}
-      onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.02)'}
+      onMouseEnter={e => e.currentTarget.style.background='var(--fs-hover)'}
       onMouseLeave={e => e.currentTarget.style.background='transparent'}
     >
       <div style={{ fontSize:12, fontWeight:600, color:'var(--fs-text-4)', fontVariantNumeric:'tabular-nums' }}>{dataFmt}</div>
       <div style={{ fontSize:13, color:'var(--fs-text-1)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
         {l.descricao || l.categoria || '—'}
       </div>
-      <div style={{ fontSize:13, fontWeight:700, color:'var(--fs-text-1)', textAlign:'right', fontVariantNumeric:'tabular-nums' }}>
+      <div style={{ fontSize:13, fontWeight:700, color: Number(l.valor) < 0 ? 'var(--fs-danger)' : 'var(--fs-text-1)', textAlign:'right', fontVariantNumeric:'tabular-nums' }}>
         {fmtBRL(Number(l.valor))}
       </div>
     </div>
@@ -179,18 +187,17 @@ export default function DREDetalhado() {
   useEffect(() => { const t = setTimeout(() => setDebStart(startDate), 500); return () => clearTimeout(t) }, [startDate])
   useEffect(() => { const t = setTimeout(() => setDebEnd(endDate), 500);     return () => clearTimeout(t) }, [endDate])
   const [empresaId, setEmpresaId] = useState(null)
-  const [isConsol,  setIsConsol]  = useState(false)
   const [loading,   setLoading]   = useState(true)
   const [firstLoad, setFirstLoad] = useState(true)
   const [data,      setData]      = useState([])
-  const [contas,    setContas]    = useState([])
+  const [dataPrev,  setDataPrev]  = useState([])   // período anterior equivalente (coluna Δ)
   const [expanded,  setExpanded]  = useState({})
   const [modal,     setModal]     = useState(null) // { item, lancamentos }
 
   useEffect(() => {
     const id = localStorage.getItem('empresa_id')
-    setEmpresaId(id); setIsConsol(id === 'todas')
-    const h = () => { const nid=localStorage.getItem('empresa_id'); setEmpresaId(nid); setIsConsol(nid==='todas') }
+    setEmpresaId(id)
+    const h = () => setEmpresaId(localStorage.getItem('empresa_id'))
     window.addEventListener('storage', h); return () => window.removeEventListener('storage', h)
   }, [])
 
@@ -198,23 +205,36 @@ export default function DREDetalhado() {
     if (!empresaId) return
     setLoading(true)
     try {
-      const { data: pc } = await supabase.from('plano_contas').select('id,codigo,nome,tipo')
-      setContas(pc || [])
-
-      let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,conta_id,empresa_id').gte('data', debStart).lte('data', debEnd)
       const ids = await getSelectedEntidadeIds()
-      if (ids.length) q = q.in('empresa_id', ids)
-      const rows = await fetchAll(q)
+
+      // Período anterior equivalente (mesma duração, imediatamente antes)
+      const msDia = 86400000
+      const dStart = new Date(debStart + 'T00:00:00'), dEnd = new Date(debEnd + 'T00:00:00')
+      const dur = Math.max(0, dEnd - dStart)
+      const prevEnd   = new Date(dStart.getTime() - msDia).toISOString().split('T')[0]
+      const prevStart = new Date(dStart.getTime() - msDia - dur).toISOString().split('T')[0]
+
+      const buildQ = (gte, lte) => {
+        let q = supabase.from('lancamentos').select('id,tipo,valor,data,descricao,categoria,empresa_id').gte('data', gte).lte('data', lte)
+        if (ids.length) q = q.in('empresa_id', ids)
+        return q
+      }
+      const [rows, rowsPrev] = await Promise.all([
+        fetchAll(buildQ(debStart, debEnd)),
+        fetchAll(buildQ(prevStart, prevEnd)),
+      ])
       setData(rows || [])
+      setDataPrev(rowsPrev || [])
     } finally { setLoading(false); setFirstLoad(false) }
-  }, [empresaId, debStart, debEnd, isConsol])
+  }, [empresaId, debStart, debEnd])
 
   useEffect(() => { fetchData() }, [fetchData])
 
   const toggle = (k) => setExpanded(p => ({ ...p, [k]: !p[k] }))
 
-  const v    = calcDRE(data)
-  const vMap = calcDREMap(data)
+  const v        = useMemo(() => calcDRE(data), [data])
+  const vMap     = useMemo(() => calcDREMap(data), [data])
+  const vMapPrev = useMemo(() => calcDREMap(dataPrev), [dataPrev])
 
   // Hierarquia: Categoria → Clientes (descricao)
   const buildHierarchy = (tipos) => {
@@ -237,7 +257,41 @@ export default function DREDetalhado() {
       .sort((a, b) => b.total - a.total)
   }
 
+  const hierarchies = useMemo(() => {
+    const map = {}
+    DRE_LINES.forEach(line => { if (!line.isSubtotal) map[line.key] = buildHierarchy(line.tipos) })
+    return map
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
+
   const pct = (val) => v.rb > 0 ? (Math.abs(val) / v.rb * 100).toFixed(1) + '%' : '—'
+
+  // ── (Δ) Variação vs período anterior equivalente ────────────────────────────
+  // Favorabilidade contábil: linhas de custo/despesa (sign:+1) → aumento é
+  // Desfavorável (D); receitas e resultados (sign:-1 ou subtotal) → aumento é
+  // Favorável (F).
+  const deltaInfo = (line) => {
+    const cur  = vMap[line.key] ?? 0
+    const prev = vMapPrev[line.key] ?? 0
+    if (Math.abs(prev) < 0.005) {
+      if (Math.abs(cur) < 0.005) return null
+      return { label: 'novo', fav: line.sign !== 1 ? (cur >= 0) : false, pct: null }
+    }
+    const p = (cur - prev) / Math.abs(prev) * 100
+    const up = p >= 0
+    const fav = line.sign === 1 ? !up : up
+    return { label: `${up ? '+' : ''}${p.toFixed(1)}%`, fav, pct: p }
+  }
+  const DeltaCell = ({ line, pad = '12px 16px' }) => {
+    const d = deltaInfo(line)
+    if (!d) return <td style={{ padding: pad, textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>—</td>
+    return (
+      <td style={{ padding: pad, textAlign:'right', fontSize:11, fontWeight:700, color: d.fav ? 'var(--fs-success)' : 'var(--fs-danger)', whiteSpace:'nowrap' }}
+        title={`vs período anterior equivalente · ${d.fav ? 'Favorável' : 'Desfavorável'}`}>
+        {d.label} <span style={{ fontWeight:800 }}>({d.fav ? 'F' : 'D'})</span>
+      </td>
+    )
+  }
 
   // Formatar período para exibir no modal
   const periodoLabel = (() => {
@@ -251,17 +305,18 @@ export default function DREDetalhado() {
   // ─── Exportação Excel ─────────────────────────────────────────────────────
   const handleExport = () => {
     // Aba 1 — DRE estruturado (linha → categoria)
-    const dreAoa = [['Linha DRE', 'Categoria', 'Valor (R$)', '% Receita', 'Lançamentos']]
+    const dreAoa = [['Linha DRE', 'Categoria', 'Valor (R$)', '% Receita', 'Δ vs Período Ant.', 'F/D', 'Lançamentos']]
     DRE_LINES.forEach(line => {
       const lineValue = vMap[line.key] ?? 0
-      const hierarchy = !line.isSubtotal ? buildHierarchy(line.tipos) : []
+      const hierarchy = !line.isSubtotal ? (hierarchies[line.key] || []) : []
       const isVisible = !line.isSubtotal || Math.abs(lineValue) > 0.001
         || ['receita_liquida','lucro_bruto','ebitda','resultado_final'].includes(line.key)
       if (!isVisible) return
       const totalLanc = hierarchy.reduce((a,c) => a + c.lancamentos.length, 0)
-      dreAoa.push([line.label, '', Number(lineValue.toFixed(2)), pct(lineValue), line.isSubtotal ? '' : totalLanc])
+      const d = deltaInfo(line)
+      dreAoa.push([line.label, '', Number(lineValue.toFixed(2)), pct(lineValue), d ? d.label : '—', d ? (d.fav ? 'F' : 'D') : '', line.isSubtotal ? '' : totalLanc])
       hierarchy.forEach(cat => {
-        dreAoa.push(['', cat.nome, Number(cat.total.toFixed(2)), pct(cat.total), cat.lancamentos.length])
+        dreAoa.push(['', cat.nome, Number(cat.total.toFixed(2)), pct(cat.total), '', '', cat.lancamentos.length])
       })
     })
 
@@ -272,13 +327,13 @@ export default function DREDetalhado() {
     })
 
     downloadWorkbook([
-      { name: 'DRE',         aoa: dreAoa,  colWidths: [26, 34, 16, 10, 12], currencyCols: [2] },
+      { name: 'DRE',         aoa: dreAoa,  colWidths: [26, 34, 16, 10, 16, 6, 12], currencyCols: [2] },
       { name: 'Lançamentos', aoa: lancAoa, colWidths: [12, 10, 26, 48, 16], currencyCols: [4] },
     ], exportFilename('DRE_Detalhado', debStart, debEnd))
   }
 
   const TH = ({ children, right }) => (
-    <th style={{ padding:'10px 16px', textAlign: right?'right':'left', color:'var(--fs-text-4)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.7px', borderBottom:'1px solid var(--fs-border)', whiteSpace:'nowrap', background:'var(--fs-bg)' }}>
+    <th style={{ padding:'10px 16px', textAlign: right?'right':'left', color:'var(--fs-text-4)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.7px', borderBottom:'1px solid var(--fs-border)', whiteSpace:'nowrap', background:'var(--fs-bg)', position:'sticky', top:0, zIndex:2 }}>
       {children}
     </th>
   )
@@ -318,22 +373,23 @@ export default function DREDetalhado() {
       </div>
 
       {firstLoad ? (
-        <div style={{ textAlign:'center', padding:60, color:'var(--fs-text-4)', fontSize:14 }}>Carregando lançamentos...</div>
+        <TableSkeleton rows={12} cols={5} />
       ) : (
-        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, overflow:'hidden' }}>
+        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, overflow:'auto', maxHeight:'74vh' }}>
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
             <thead>
               <tr>
                 <TH>Linha / Conta / Cliente</TH>
                 <TH right>Valor</TH>
                 <TH right>% Receita</TH>
+                <TH right>Δ Período Ant.</TH>
                 <TH right>Lançamentos</TH>
               </tr>
             </thead>
             <tbody>
               {DRE_LINES.map(line => {
                 const lineValue = vMap[line.key] ?? 0
-                const hierarchy = !line.isSubtotal ? buildHierarchy(line.tipos) : []
+                const hierarchy = !line.isSubtotal ? (hierarchies[line.key] || []) : []
                 const isExpLine = expanded[line.key]
                 const hasData   = hierarchy.length > 0
                 const isVisible = !line.isSubtotal || Math.abs(lineValue) > 0.001
@@ -346,6 +402,7 @@ export default function DREDetalhado() {
                       <td style={{ padding:'13px 16px', fontWeight:800, color:line.color, fontSize:14 }}>{line.label}</td>
                       <td style={{ padding:'13px 16px', textAlign:'right', fontWeight:900, color: lineValue>=0 ? line.color : '#ef4444', fontSize:15 }}>{fmtBRL(lineValue)}</td>
                       <td style={{ padding:'13px 16px', textAlign:'right', color:'var(--fs-text-4)', fontWeight:600 }}>{pct(lineValue)}</td>
+                      <DeltaCell line={line} pad="13px 16px" />
                       <td />
                     </tr>
                   )
@@ -357,7 +414,7 @@ export default function DREDetalhado() {
                   <tr key={line.key}
                     style={{ borderTop:'1px solid var(--fs-border)', cursor: hasData?'pointer':'default' }}
                     onClick={() => hasData && toggle(line.key)}
-                    onMouseEnter={e => { if (hasData) e.currentTarget.style.background='rgba(255,255,255,0.02)' }}
+                    onMouseEnter={e => { if (hasData) e.currentTarget.style.background='var(--fs-hover)' }}
                     onMouseLeave={e => e.currentTarget.style.background='transparent'}
                   >
                     <td style={{ padding:'12px 16px', fontWeight:700, color:'var(--fs-text-1)' }}>
@@ -366,16 +423,17 @@ export default function DREDetalhado() {
                     </td>
                     <td style={{ padding:'12px 16px', textAlign:'right', fontWeight:700, color: lineValue>=0 ? line.color : '#ef4444' }}>{fmtBRL(lineValue)}</td>
                     <td style={{ padding:'12px 16px', textAlign:'right', color:'var(--fs-text-4)' }}>{pct(lineValue)}</td>
+                    <DeltaCell line={line} />
                     <td style={{ padding:'12px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{totalLanc > 0 ? totalLanc : '—'}</td>
                   </tr>,
 
                   // ── Categorias filhas (nível 2) ──────────────────────
                   ...(isExpLine ? hierarchy.map(cat => (
                     <tr key={`${line.key}-${cat.nome}`}
-                      style={{ background:'rgba(255,255,255,0.02)', borderTop:'1px solid var(--fs-border)', cursor:'pointer' }}
+                      style={{ background:'var(--fs-hover)', borderTop:'1px solid var(--fs-border)', cursor:'pointer' }}
                       onClick={(e) => { e.stopPropagation(); setModal({ item: cat, lancamentos: cat.lancamentos, clientes: cat.clientes }) }}
-                      onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.04)'; e.currentTarget.querySelector('.cat-hint').style.opacity='1' }}
-                      onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.02)'; e.currentTarget.querySelector('.cat-hint').style.opacity='0' }}
+                      onMouseEnter={e => { e.currentTarget.style.background='var(--fs-hover-2)'; e.currentTarget.querySelector('.cat-hint').style.opacity='1' }}
+                      onMouseLeave={e => { e.currentTarget.style.background='var(--fs-hover)'; e.currentTarget.querySelector('.cat-hint').style.opacity='0' }}
                     >
                       <td style={{ padding:'11px 16px 11px 36px', display:'flex', alignItems:'center', gap:10 }}>
                         <span style={{ color:line.color, fontWeight:700, fontSize:13, textTransform:'uppercase' }}>{cat.nome}</span>
@@ -386,6 +444,7 @@ export default function DREDetalhado() {
                       </td>
                       <td style={{ padding:'11px 16px', textAlign:'right', fontWeight:700, color:'var(--fs-text-1)' }}>{fmtBRL(cat.total)}</td>
                       <td style={{ padding:'11px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{pct(cat.total)}</td>
+                      <td style={{ padding:'11px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>—</td>
                       <td style={{ padding:'11px 16px', textAlign:'right', color:'var(--fs-text-4)', fontSize:11 }}>{cat.lancamentos.length}</td>
                     </tr>
                   )) : [])

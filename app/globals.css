@@ -28,6 +28,9 @@
   --fs-border:    #334155;
   --fs-border-2:  #475569;
 
+  --fs-hover:   rgba(255, 255, 255, 0.03);
+  --fs-hover-2: rgba(255, 255, 255, 0.055);
+
   --fs-brand:      #3b82f6;
   --fs-brand-dark: #2563eb;
   --fs-brand-deep: #1e3a8a;
@@ -91,6 +94,9 @@
 
   --fs-border:    #e2e8f0;
   --fs-border-2:  #cbd5e1;
+
+  --fs-hover:   rgba(15, 23, 42, 0.045);
+  --fs-hover-2: rgba(15, 23, 42, 0.075);
 
   --fs-brand:      #2563eb;
   --fs-brand-dark: #1d4ed8;

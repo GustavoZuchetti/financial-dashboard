@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import { useOrg } from '@/lib/org-context'
+import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 
 // ─── Formatadores ─────────────────────────────────────────────────────────────
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -286,6 +287,78 @@ export default function GestaoFluxoCaixaPage() {
     } catch(e) {
       showToast('Erro ao excluir: ' + e.message, 'error')
     } finally { setDelLoading(false) }
+  }
+
+  // ─── Exportação Excel ───────────────────────────────────────────────────────
+  const [exportLoading, setExportLoading] = useState(false)
+  const handleExport = async () => {
+    setExportLoading(true)
+    try {
+      const empIds = await getSelectedEntidadeIds()
+      if (!empIds.length) return
+
+      // Busca completa (paginada) com os MESMOS filtros da tela — não apenas a página atual
+      let rows = [], pg = 0, done = false
+      while (!done) {
+        let q = supabase.from('fluxo_caixa')
+          .select('data,descricao,categoria,tipo,valor')
+          .gte('data', startDate).lte('data', endDate)
+          .order('data', { ascending: true })
+          .order('created_at', { ascending: true })
+          .range(pg * 1000, (pg + 1) * 1000 - 1)
+        q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
+        if (tipoFiltro !== 'todos') q = q.eq('tipo', tipoFiltro)
+        const { data: batch, error } = await q
+        if (error) throw error
+        rows = rows.concat(batch || [])
+        if (!batch || batch.length < 1000) done = true
+        pg++
+      }
+      // Filtro de busca textual (aplicado client-side, como na tela)
+      const termo = busca.trim().toLowerCase()
+      if (termo) rows = rows.filter(r =>
+        (r.descricao || '').toLowerCase().includes(termo) || (r.categoria || '').toLowerCase().includes(termo))
+
+      // Aba 1 — Resumo
+      const entradas = rows.filter(r => r.tipo === 'entrada').reduce((a, r) => a + Number(r.valor), 0)
+      const saidas   = rows.filter(r => r.tipo === 'saida').reduce((a, r) => a + Number(r.valor), 0)
+      const resumoAoa = [
+        ['Extrato — Fluxo de Caixa', ''],
+        ['Entidade', empNome || 'Consolidado'],
+        ['Período', `${startDate} a ${endDate}`],
+        ['Filtro de tipo', tipoFiltro === 'todos' ? 'Todos' : tipoFiltro],
+        ['Registros exportados', rows.length],
+        ['', ''],
+        ['Entradas (R$)', Number(entradas.toFixed(2))],
+        ['Saídas (R$)', Number(saidas.toFixed(2))],
+        ['Resultado do período (R$)', Number((entradas - saidas).toFixed(2))],
+        ['Saldo inicial configurado (R$)', Number(Number(saldoInicialDB).toFixed(2))],
+      ]
+
+      // Aba 2 — Extrato com saldo acumulado (partindo do saldo inicial)
+      const extratoAoa = [['Data', 'Descrição', 'Categoria', 'Tipo', 'Entrada (R$)', 'Saída (R$)', 'Saldo Acumulado (R$)']]
+      let acum = Number(saldoInicialDB) || 0
+      rows.forEach(r => {
+        const v = Number(r.valor)
+        acum += r.tipo === 'entrada' ? v : -v
+        extratoAoa.push([
+          r.data || '', r.descricao || '', r.categoria || '',
+          r.tipo === 'entrada' ? 'Entrada' : 'Saída',
+          r.tipo === 'entrada' ? Number(v.toFixed(2)) : '',
+          r.tipo === 'saida'   ? Number(v.toFixed(2)) : '',
+          Number(acum.toFixed(2)),
+        ])
+      })
+
+      downloadWorkbook([
+        { name: 'Resumo',  aoa: resumoAoa,  colWidths: [32, 22], currencyCols: [1] },
+        { name: 'Extrato', aoa: extratoAoa, colWidths: [12, 46, 24, 10, 16, 16, 20], currencyCols: [4, 5, 6] },
+      ], exportFilename('Fluxo_Caixa_Gestao', startDate, endDate))
+      showToast(`${rows.length} registros exportados para Excel`, 'success')
+    } catch (e) {
+      console.error('Export:', e)
+      showToast('Erro ao exportar: ' + e.message, 'error')
+    } finally { setExportLoading(false) }
   }
 
   // ─── Seleção ────────────────────────────────────────────────────────────────
@@ -589,7 +662,7 @@ export default function GestaoFluxoCaixaPage() {
           <span style={{ fontSize:11, color:'var(--fs-text-4)', fontWeight:600 }}>Período</span>
           <input type="date" value={startDate} onChange={e=>{setStartDate(e.target.value);setPage(0)}}
             style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:7, color:'var(--fs-text-2)', fontSize:12, padding:'5px 8px', outline:'none', colorScheme:'dark' }} />
-          <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>→</span>
+          <SvgIcon name="arrowRight" size={11} color="var(--fs-text-4)" />
           <input type="date" value={endDate} onChange={e=>{setEndDate(e.target.value);setPage(0)}}
             style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:7, color:'var(--fs-text-2)', fontSize:12, padding:'5px 8px', outline:'none', colorScheme:'dark' }} />
         </div>
@@ -613,8 +686,15 @@ export default function GestaoFluxoCaixaPage() {
             style={{ background:'transparent', border:'none', color:'var(--fs-text-2)', fontSize:12, outline:'none', flex:1 }} />
         </div>
 
+        {/* Botão exportar Excel */}
+        <button onClick={handleExport} disabled={exportLoading || loading} title="Exportar registros filtrados para Excel"
+          style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, padding:'7px 14px', color:'var(--fs-text-2)', fontSize:12, fontWeight:700, cursor: (exportLoading || loading) ? 'not-allowed' : 'pointer', whiteSpace:'nowrap', marginLeft:'auto', opacity: (exportLoading || loading) ? 0.6 : 1 }}>
+          <SvgIcon name="download" size={13} color="currentColor" />
+          {exportLoading ? 'Exportando...' : 'Exportar Excel'}
+        </button>
+
         {/* Botão novo lançamento */}
-        <button onClick={()=>setNovoModal(true)} style={{ display:'flex', alignItems:'center', gap:6, background:'#3b82f6', border:'none', borderRadius:8, padding:'7px 14px', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', marginLeft:'auto' }}>
+        <button onClick={()=>setNovoModal(true)} style={{ display:'flex', alignItems:'center', gap:6, background:'#3b82f6', border:'none', borderRadius:8, padding:'7px 14px', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Novo Lançamento
         </button>

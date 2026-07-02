@@ -293,6 +293,19 @@ export default function DREDetalhado() {
     return out
   }, [data, monthKeys])
 
+  // Formato compacto da grade mensal (sem prefixo R$, como planilha)
+  const fmtM = (v) => {
+    if (v === null || v === undefined || Math.abs(v) < 0.005) return '—'
+    return Math.round(v).toLocaleString('pt-BR')
+  }
+
+  const hierarchies = useMemo(() => {
+    const map = {}
+    DRE_LINES.forEach(line => { if (!line.isSubtotal) map[line.key] = buildHierarchy(line.tipos) })
+    return map
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
+
   // Totais mensais por categoria (nível 2), derivados das hierarquias
   const catMonthTotals = useMemo(() => {
     const out = {} // `${lineKey}|${catNome}` -> { 'YYYY-MM': total }
@@ -310,18 +323,6 @@ export default function DREDetalhado() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hierarchies])
 
-  // Formato compacto da grade mensal (sem prefixo R$, como planilha)
-  const fmtM = (v) => {
-    if (v === null || v === undefined || Math.abs(v) < 0.005) return '—'
-    return Math.round(v).toLocaleString('pt-BR')
-  }
-
-  const hierarchies = useMemo(() => {
-    const map = {}
-    DRE_LINES.forEach(line => { if (!line.isSubtotal) map[line.key] = buildHierarchy(line.tipos) })
-    return map
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data])
 
   const pct = (val) => v.rb > 0 ? (Math.abs(val) / v.rb * 100).toFixed(1) + '%' : '—'
 

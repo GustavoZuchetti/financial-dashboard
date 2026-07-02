@@ -1,14 +1,14 @@
 # Facesign Financial Dashboard — Resumo Completo do Projeto
 
-**Data:** Maio 2026 | **Usuário:** Gustavo Garcia, Controller | **Cidade:** Votuporanga-SP
+**Última atualização:** 02/07/2026 | **Usuário:** Gustavo Garcia, Controller | **Cidade:** Votuporanga-SP
 
 ---
 
 ## 1. O que é o sistema
 
-SaaS financeiro multi-tenant construído para a Facesign (grupo FACE, JAM, JB).  
-Exibe DRE, Fluxo de Caixa, Ciclo Financeiro e Orçamento em tempo real,  
-com dados importados do ERP Bling via CSV.
+SaaS financeiro multi-tenant construído para a Facesign (grupo FACE, JAM, JB).
+Exibe DRE, Fluxo de Caixa, Ciclo Financeiro, Plano de Contas e Orçamento em tempo real,
+com dados importados do ERP Bling via CSV. Consolidação multi-entidade por organization_id.
 
 ---
 
@@ -21,7 +21,7 @@ Next.js 14 (App Router)  →  Supabase (PostgreSQL + Auth + RLS)  →  Vercel
 - **Client:** financial-dashboard-omega-six.vercel.app
 - **Repo:** github.com/GustavoZuchetti/financial-dashboard (branch: main)
 - **Supabase project:** wbrjdehmauaincgtcjrk
-- **empresa_id ativo (FACE):** 2cb67427-fa9f-4f64-a77f-543dca1a1ab7
+- **empresa_id (FACE):** 2cb67427-fa9f-4f64-a77f-543dca1a1ab7
 
 ---
 
@@ -32,28 +32,40 @@ app/dashboard/
   overview/OverviewContent.jsx       — KPIs gerais + gráfico evolução
   dre/
     page.jsx                         — DRE Visão Geral
-    detalhado/page.jsx               — Drill-down: Linha→Categoria→[modal]Clientes→Lançamentos
+    detalhado/page.jsx               — Drill-down + Exportação Excel (2 abas)
     analise/page.jsx                 — Análise gráfica
     comparativo/page.jsx             — Comparativo de períodos
   fluxo-caixa/
     page.jsx                         — Visão Geral (KPIs, gráfico, vencidos)
-    gestao/page.jsx                  — Extrato bancário + saldo corrente + novo/editar lançamento
-    analise/page.jsx                 — Análise gráfica
-    comparativo/page.jsx             — Comparativo P1 vs P2
-    projecao/page.jsx                — Projeção baseada em histórico
-  ciclo-financeiro/page.jsx          — PMR, PMP, PME + botão Recalcular
-  importacao/
-    page.jsx                         — Importação CSV (FC e DRE)
-    layout/page.jsx                  — Configuração de layouts (ADM)
-  configuracoes/page.jsx             — Perfil, Empresas, Usuários + roles
+    gestao/page.jsx                  — Extrato bancário + CRUD + Exportação Excel
+    analise|comparativo|projecao/    — Análises complementares
+  ciclo-financeiro/page.jsx          — PMR, PMP, PME + Recalcular (consolida multi-entidade)
+  plano-contas/page.jsx              — Plano de contas com edição de categorias
+  plano-contas/auditoria/page.jsx    — Auditoria de classificação
+  importacao/page.jsx                — Importação CSV Bling (empresas via /api/my-empresas)
+  configuracoes/page.jsx             — Perfil, Empresas, Usuários, Identidade Visual, Admin
   orcamento/page.jsx                 — Orçamento vs Realizado
 
-components/Sidebar.jsx               — Menu lateral com roles/ADM badges
+components/
+  Sidebar.jsx                        — Menu com seletor multi-entidade + footer fixo
+  SvgIcon.jsx                        — Biblioteca de ícones SVG (padrão do sistema)
+  IdleTimeout.jsx                    — Logout por inatividade (45 min)
+  Skeleton.jsx / Toast.jsx / OrgLogo.jsx / ThemeToggle.jsx
+
 lib/
-  supabase.js                        — Client Supabase
-  dre-calc.js                        — Cálculos DRE (calcDRE, calcDREMap, DRE_LINES)
-  supabase-paginated.js              — fetchAllRows() utilitário
-app/api/recalcular-ciclo/route.js    — API para popular ciclo_financeiro retroativamente
+  supabase.js                        — Client + getSelectedEntidadeIds (validação de org)
+  dre-calc.js                        — calcDRE, calcDREMap, DRE_LINES
+  export-excel.js                    — downloadWorkbook/exportFilename (SheetJS)
+  excel.js                           — Importação de planilhas
+  org-context.js                     — Contexto de organização/roles
+
+app/api/
+  my-empresas/route.js               — Lista empresas da org (server-side, service role)
+  auth/ | admin/ | invite/           — Fluxos de autenticação e administração
+  recalcular-ciclo/route.js          — Popular ciclo_financeiro retroativamente
+
+supabase/migrations/                 — Migrações SQL versionadas (aplicar no SQL Editor)
+  20260630_fix_rls_cross_org.sql     — Isolamento RLS multi-organização (CRÍTICO)
 ```
 
 ---
@@ -61,38 +73,31 @@ app/api/recalcular-ciclo/route.js    — API para popular ciclo_financeiro retro
 ## 4. Módulos e status
 
 ### DRE
-- Visão Geral com KPIs (RB, RL, LB, EBITDA, Resultado)
-- Detalhado com drill: Linha → Categoria → [modal] Lista de Clientes → Lançamentos por mês
-- Análise gráfica (barras por conta, pizza por grupo)
-- Comparativo de períodos com variação %
+- Visão Geral, Detalhado (drill 3 níveis com modal), Análise, Comparativo
+- Impostos PIS/COFINS/ISS classificados como dedução (fix 19/jun)
+- **Exportação Excel:** botão no header — aba "DRE" (linha→categoria) + aba "Lançamentos"
+- Ícones SVG (chevrons/setas) — sem caracteres unicode
 
 ### Fluxo de Caixa
-- **Visão Geral:** KPIs paginados (>1000 registros), cards de vencidos (A Pagar/Receber vencido e próx. 30 dias)
-- **Gestão (ADM):** Extrato bancário agrupado por dia com saldo acumulado. Saldo Inicial editável. Saldo Corrente = Saldo Inicial + Entradas - Saídas (sem filtro de data). Botão "+ Novo Lançamento" e botão ✏️ Editar por linha
-- **Análise:** Composição entradas/saídas, evolução mensal, saúde financeira
-- **Comparativo:** P1 vs P2 com gráfico e tabela delta
-- **Projeção:** Média histórica + tendência, N meses à frente
+- Visão Geral com KPIs paginados e cards de vencidos
+- **Gestão (ADM):** extrato bancário, saldo inicial/corrente, CRUD, exclusão em massa,
+  **Exportação Excel** (busca paginada completa com filtros — abas Resumo + Extrato c/ saldo acumulado)
+- Análise, Comparativo, Projeção
 
-### Ciclo Financeiro
-- PMR = dias_no_mês / count_entradas (proxy para empresa de serviços)
-- PMP = dias_no_mês / count_saídas
-- Tabela: id, empresa_id, ano, mes, pmr, pmp, pme (sem ciclo_operacional/ciclo_financeiro_valor)
-- Botão "🔄 Recalcular" processa todos os lançamentos do FC e faz upsert em lote
+### Multi-entidade (jun/2026)
+- Seletor multi-seleção no Sidebar; consolidação por organization_id
+- getSelectedEntidadeIds() resolve e VALIDA a seleção contra a org (defesa em profundidade)
+- Ciclo financeiro consolidado; plano de contas compartilhado
+
+### Segurança (jun/2026)
+- SECURITY FIX 38f616e: telas não expõem mais empresas de outras organizações
+- Migração RLS versionada: supabase/migrations/20260630_fix_rls_cross_org.sql
+  (⚠️ confirmar aplicação no banco — ver seção 7)
+- Anti-escalada de role, logout por inatividade, esqueci-senha via admin SDK
 
 ### Importação
-- CSV do Bling (separador `;`, encoding UTF-8 BOM)
-- parseCSV robusto: trata quebras de linha dentro de campos com aspas
-- FC: valor = valor_pago > 0 ? valor_pago : valor_previsto
-- Tipo: "Conta a receber" → entrada | "Conta a pagar" → saída
-- Data: Liquidação → Vencimento → Data
-- Modal de reimportação: 2 opções: "Atualizar previsões" (parcial) ou "Substituir tudo" (replace total)
-
-### Configurações
-- 3 abas: Perfil, Empresas, Usuários
-- Roles: super_admin, org_admin, user
-- Select editável de role na lista de usuários
-- Convite com opção Super Admin
-- Sidebar: item único (sem cascata)
+- CSV Bling (`;`, UTF-8 BOM); tipo derivado da conta vinculada
+- Mensagens de contagem transparentes (toast × cards); reimportação parcial ou total
 
 ---
 
@@ -101,48 +106,46 @@ app/api/recalcular-ciclo/route.js    — API para popular ciclo_financeiro retro
 | Regra | Detalhe |
 |---|---|
 | Paginação Supabase | Sempre `.range(pg*1000, (pg+1)*1000-1)` ou loop while |
-| cursor Recharts | `cursor={false}` em TODOS os `<Tooltip>` — sem exceção |
+| cursor Recharts | `cursor={false}` em TODOS os `<Tooltip>` |
 | fluxo_caixa | Não tem coluna `conta_id` |
 | ciclo_financeiro | Não tem `ciclo_operacional` nem `ciclo_financeiro_valor` |
-| Vercel Hobby | Timeout 10s em serverless — usar upsert em lote, não loop sequencial |
-| empresa_config | tabela para saldo_inicial: `{empresa_id, chave, valor}` |
+| Vercel Hobby | Timeout 10s — upsert em lote, não loop sequencial |
+| Build Vercel | Node 20 (.nvmrc); sem next/font/google; createClient com placeholder |
+| Segurança | `empresas` só via /api/my-empresas; filtros via getSelectedEntidadeIds() |
+| UI | Ícones via SvgIcon.jsx — proibido emoji/unicode (▶▼→←×) |
+| Excel | lib/export-excel.js para toda exportação |
 
 ---
 
-## 6. Últimos commits relevantes (mai/2026)
+## 6. Histórico recente (jun–jul/2026)
 
-| Hash | O que fez |
+| Período | Entrega |
 |---|---|
-| 79703b1 | DRE Detalhado: hierarquia Categoria→Clientes→Lançamentos no modal |
-| 6271660 | DRE Detalhado: primeiro modal com backdrop blur |
-| b24fc2f | Sidebar: Configurações sem cascata |
-| f562bae | cursor={false} em TODOS os Tooltips (varredura completa) |
-| 58bb219 | Config: useSearchParams, super_admin, roles editáveis |
-| f32d27d | Remover colunas inexistentes ciclo_operacional/ciclo_financeiro_valor |
-| dfe8c0e | Ciclo Financeiro: recálculo client-side sem API route |
-| f681acd | Paginação em todas as queries (fix limite 1000 Supabase) |
-| 8590b22 | Importação: botão "Substituir Tudo" no modal de reimportação |
-| db00239 | FC Gestão: saldo inicial, saldo corrente, cards vencidos, novo lançamento |
-| 83a9f3e | FC Gestão: extrato bancário com saldo acumulado dia a dia |
-| 20b0d4a | Ciclo Financeiro: reformulação com dados reais e seletor de período |
+| 02/jun | Pacote 6 fixes + ícones SVG substituindo emojis em todo o sistema |
+| 10–12/jun | Recuperação de senha, admin global, crise de build resolvida (Node 20) |
+| 11/jun | Idle timeout, error boundary, skeleton loading, debounce de períodos |
+| 15/jun | Logo adaptativa por tema; fix org nula no login SPA |
+| 19/jun | DRE: impostos como dedução + paginação de lançamentos |
+| 21–25/jun | Plano de contas editável; sprint importação; sidebar reformulado |
+| 26–30/jun | Multi-entidade (seletor + consolidação); SECURITY FIX cross-org; favicon |
+| 02/jul | Exportação Excel (DRE Detalhado + FC Gestão); ícones SVG no DRE Detalhado; validação de seleção de entidades; migração RLS versionada |
 
 ---
 
-## 7. Pendências / próximos passos sugeridos
+## 7. Pendências / próximos passos
 
-- [ ] Exportar para Excel (DRE Detalhado e FC Gestão)
+- [ ] **CRÍTICO — Confirmar aplicação da migração RLS** (20260630_fix_rls_cross_org.sql)
+      no Supabase e validar com teste cross-org via REST
+- [ ] Teste de regressão multi-entidade (FACE vs JAM vs JB) nos módulos DRE/FC/Ciclo
+- [ ] Wire dos botões "Filtrar" e "Exportar" da FC Visão Geral (hoje sem onClick)
 - [ ] Notificações de vencimentos no badge do sidebar
-- [ ] Skeleton loading nas páginas (em vez de "Carregando...")
-- [ ] Drill-down nos gráficos (clicar numa barra = ver lançamentos daquele mês)
-- [ ] DRE multi-entidade: comparativo FACE vs JAM vs JB
-- [ ] Ciclo Financeiro: o usuário deve clicar em "Recalcular" ao acessar pela primeira vez (tabela vazia até então)
-- [ ] PME real: atualmente fixo em 0 pois o estoque não é capturado no CSV do Bling
+- [ ] Drill-down nos gráficos (clicar numa barra = ver lançamentos do mês)
+- [ ] PME real: fixo em 0 (estoque não vem no CSV do Bling)
+- [ ] Ciclo Financeiro: primeiro acesso exige clique em "Recalcular"
 
 ---
 
 ## 8. Como retomar em nova conversa
-
-Cole este prompt para o Claude:
 
 > "Estou trabalhando no projeto Facesign Financial Dashboard.
 > Stack: Next.js 14 + Supabase + Vercel.

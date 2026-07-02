@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 import {
   ComposedChart, BarChart, Bar, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -301,6 +302,34 @@ export default function FluxoCaixaPage() {
   // ─── Período label ────────────────────────────────────────────────────────
   const fDateFull = (iso) => { if (!iso) return ''; const [y,m,d]=iso.split('-'); return `${d} ${MESES[Number(m)-1]}, ${y}` }
 
+  // ─── Exportação Excel (usa os registros já carregados do período) ──────────
+  const handleExport = () => {
+    if (!raw.length) return
+    const resumoAoa = [
+      ['Fluxo de Caixa — Visão Geral', ''],
+      ['Período', `${debStart} a ${debEnd}`],
+      ['Registros', raw.length],
+      ['', ''],
+      ['Entradas (R$)', Number(totalEntradas.toFixed(2))],
+      ['Saídas (R$)', Number(totalSaidas.toFixed(2))],
+      ['Saldo do período (R$)', Number((totalEntradas - totalSaidas).toFixed(2))],
+    ]
+    const lancAoa = [['Data', 'Descrição', 'Categoria', 'Tipo', 'Entrada (R$)', 'Saída (R$)']]
+    ;[...raw].sort((a,b) => (a.data||'').localeCompare(b.data||'')).forEach(r => {
+      const val = Math.abs(Number(r.valor) || 0)
+      const ent = entradaTipos.includes(r.tipo)
+      lancAoa.push([r.data || '', r.descricao || '', r.categoria || '',
+        ent ? 'Entrada' : 'Saída', ent ? Number(val.toFixed(2)) : '', ent ? '' : Number(val.toFixed(2))])
+    })
+    downloadWorkbook([
+      { name: 'Resumo',      aoa: resumoAoa, colWidths: [30, 20], currencyCols: [1] },
+      { name: 'Lançamentos', aoa: lancAoa,   colWidths: [12, 46, 24, 10, 16, 16], currencyCols: [4, 5] },
+    ], exportFilename('Fluxo_Caixa', debStart, debEnd))
+  }
+
+  // Aplicar filtros imediatamente (sem esperar o debounce de 500ms)
+  const handleFiltrar = () => { setDebStart(startDate); setDebEnd(endDate) }
+
   if (!empresaId) return (
     <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)' }}>Selecione uma empresa no menu lateral.</div>
   )
@@ -336,12 +365,14 @@ export default function FluxoCaixaPage() {
               style={{ background:'transparent', border:'none', color:'var(--fs-text-2)', fontSize:12, outline:'none', colorScheme:'dark' }} />
           </div>
 
-          <button style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'8px 16px', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+          <button onClick={handleFiltrar} title="Aplicar o período selecionado imediatamente"
+            style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'8px 16px', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             Filtrar
           </button>
 
-          <button style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'8px 16px', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+          <button onClick={handleExport} disabled={loading || !raw.length} title="Exportar lançamentos do período para Excel"
+            style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'8px 16px', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor: (loading || !raw.length) ? 'not-allowed' : 'pointer', opacity: (loading || !raw.length) ? 0.5 : 1 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
             Exportar
           </button>

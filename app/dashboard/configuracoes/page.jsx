@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
+import IntegracoesTab from '@/components/IntegracoesTab'
 
 const inp = {
   width: '100%', background: 'var(--fs-input-bg)',
@@ -228,6 +229,7 @@ export default function ConfiguracoesPage() {
     { v: 'empresas',    l: 'Empresas',          icon: 'building'   },
     { v: 'usuarios',    l: 'Usuários',          icon: 'users'      },
     { v: 'identidade',  l: 'Identidade Visual', icon: 'paintBrush' },
+    ...(['admin','super_admin'].includes(myRole) ? [{ v: 'integracoes', l: 'Integrações (API)', icon: 'plug' }] : []),
   ]
 
   return (
@@ -460,6 +462,10 @@ export default function ConfiguracoesPage() {
       )}
 
       {/* ─── Tab: Identidade Visual ───────────────────────────── */}
+      {tab === 'integracoes' && ['admin','super_admin'].includes(myRole) && (
+        <IntegracoesTab empresas={empresas} showToast={toast} />
+      )}
+
       {tab === 'identidade' && (
         <>
           <div style={card}>

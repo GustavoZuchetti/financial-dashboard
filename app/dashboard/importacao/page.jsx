@@ -369,8 +369,24 @@ function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
 // ─── Página Principal ─────────────────────────────────────────────────────────
 export default function ImportacaoPage() {
   const [activeTab,      setActiveTab]      = useState('dre')
+  const [apiAtivo,       setApiAtivo]       = useState({ dre: false, fluxo: false }) // módulo importado via API p/ a entidade selecionada
   const [empresaId,      setEmpresaId]      = useState(null)
   const [empresas,       setEmpresas]       = useState([])
+
+  // Trava anti-duplicidade: módulos com importação via API ativa bloqueiam
+  // a importação por arquivo da entidade correspondente
+  useEffect(() => {
+    if (!empresaId) return
+    ;(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const r = await fetch('/api/integracoes', { headers: { 'Authorization': `Bearer ${session?.access_token}` } })
+        const j = await r.json()
+        const integ = (j.integracoes || []).find(i => i.empresa_id === empresaId)
+        setApiAtivo({ dre: !!integ?.modulo_dre_ativo, fluxo: !!integ?.modulo_fluxo_ativo })
+      } catch { setApiAtivo({ dre: false, fluxo: false }) }
+    })()
+  }, [empresaId])
   const [planoContas,    setPlanoContas]    = useState([])
   const [mappingsDre,    setMappingsDre]    = useState([])
   const [mappingsFluxo,  setMappingsFluxo]  = useState([])
@@ -1079,7 +1095,18 @@ export default function ImportacaoPage() {
 
       {/* Info card por módulo */}
       <div style={{ background: activeTab === 'dre' ? 'rgba(var(--fs-brand-rgb),0.06)' : 'rgba(var(--fs-success-rgb),0.06)', border: `1px solid ${activeTab === 'dre' ? 'rgba(var(--fs-brand-rgb),0.2)' : 'rgba(var(--fs-success-rgb),0.2)'}`, borderRadius: 10, padding: '10px 16px', marginBottom: 20, fontSize: 13 }}>
-        {activeTab === 'dre' ? (
+        {(activeTab === 'dre' ? apiAtivo.dre : apiAtivo.fluxo) ? (
+        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'28px 24px', textAlign:'center' }}>
+          <div style={{ fontSize:14, fontWeight:800, color:'var(--fs-text-1)', marginBottom:8 }}>
+            Importação por arquivo desabilitada — {activeTab === 'dre' ? 'DRE' : 'Fluxo de Caixa'} via API
+          </div>
+          <div style={{ fontSize:12.5, color:'var(--fs-text-4)', maxWidth:520, margin:'0 auto', lineHeight:1.6 }}>
+            Esta entidade está com o módulo {activeTab === 'dre' ? 'DRE' : 'Fluxo de Caixa'} integrado via API (Bling).
+            Para evitar duplicidade de informações, a importação por arquivo deste módulo fica bloqueada.
+            Gerencie a sincronização em <a href="/dashboard/configuracoes?tab=integracoes" style={{ color:'var(--fs-brand)', fontWeight:700 }}>Configurações → Integrações (API)</a>.
+          </div>
+        </div>
+      ) : activeTab === 'dre' ? (
           <span style={{ color: 'var(--fs-text-2)' }}>
             <strong style={{ color: 'var(--fs-brand)' }}>DRE:</strong> Os lançamentos serão salvos na tabela de <strong>Demonstrativos</strong> (receitas, custos e despesas), alimentando o DRE, Análise e Comparativo.
           </span>

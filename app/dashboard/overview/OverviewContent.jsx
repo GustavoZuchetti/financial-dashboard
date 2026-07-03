@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import EmptyState from '@/components/EmptyState'
 import SvgIcon from '@/components/SvgIcon'
-import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
+import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE } from '@/lib/dre-calc'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import {
@@ -324,21 +324,32 @@ export default function OverviewPage() {
         return isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empresaId)
       }
 
-      const [
-        { data: curLanc   = [] },
-        { data: prevLanc  = [] },
-        { data: fcAll     = [] },
-        { data: planoContas = [] },
-      ] = await Promise.all([
-        buildQ('lancamentos', 'id,tipo,valor,data,descricao,categoria,conta_id')
-          .gte('data', dr.start).lte('data', dr.end),
-        buildQ('lancamentos', 'tipo,valor,data')
-          .gte('data', dr.prevStart).lte('data', dr.prevEnd),
-        buildQ('fluxo_caixa', 'id,tipo,valor,data,descricao')
-          .gte('data', dr.start).order('data'),
-        supabase.from('plano_contas').select('id,nome,tipo,codigo')
-          .eq('empresa_id', isConsol ? empIds[0] : empresaId),
+      // fetchAll: Supabase corta em 1000 linhas/request — a FACE sozinha já
+      // ultrapassa esse limite, o que distorcia KPIs e gráficos
+      const [curLanc, prevLanc, fcAll, fcAnterior, planoContas, cfgRows] = await Promise.all([
+        fetchAll(buildQ('lancamentos', 'id,tipo,valor,data,descricao,categoria,conta_id')
+          .gte('data', dr.start).lte('data', dr.end)),
+        fetchAll(buildQ('lancamentos', 'tipo,valor,data')
+          .gte('data', dr.prevStart).lte('data', dr.prevEnd)),
+        fetchAll(buildQ('fluxo_caixa', 'id,tipo,valor,data,descricao')
+          .gte('data', dr.start).lte('data', dr.end).order('data')),
+        // Movimentos ANTERIORES ao período — compõem o saldo de partida
+        fetchAll(buildQ('fluxo_caixa', 'tipo,valor').lt('data', dr.start)),
+        fetchAll(supabase.from('plano_contas').select('id,nome,tipo,codigo')
+          .eq('empresa_id', isConsol ? empIds[0] : empresaId)),
+        // Saldo inicial configurado (soma das entidades selecionadas)
+        fetchAll(supabase.from('empresa_config').select('valor')
+          .eq('chave', 'saldo_inicial')
+          .in('empresa_id', isConsol ? empIds : [empresaId])),
       ])
+
+      const ENTRADA_TIPOS = ['entrada','fluxo_entrada','receita','receita_financeira']
+      const saldoInicial = (cfgRows || []).reduce((a, r) => a + (Number(r.valor) || 0), 0)
+      const netAnterior  = (fcAnterior || []).reduce((a, f) => {
+        const v = Math.abs(Number(f.valor) || 0)
+        return a + (ENTRADA_TIPOS.includes(f.tipo) ? v : -v)
+      }, 0)
+      const saldoBase = saldoInicial + netAnterior
 
       const planMap = Object.fromEntries((planoContas||[]).map(p=>[p.id,p.nome]))
       const vCur    = calcDRE(curLanc  || [])
@@ -377,21 +388,24 @@ export default function OverviewPage() {
         const m = new Date(f.data+'T00:00:00').getMonth()
         if (!fcByMonth[m]) fcByMonth[m] = { entradas:0, saidas:0 }
         const v = Math.abs(Number(f.valor)||0)
-        if (['entrada','fluxo_entrada','receita','receita_financeira'].includes(f.tipo)) fcByMonth[m].entradas += v
+        if (ENTRADA_TIPOS.includes(f.tipo)) fcByMonth[m].entradas += v
         else fcByMonth[m].saidas += v
       })
-      let saldo = 0
+      // Saldo acumulado REAL: parte do saldo inicial + histórico anterior e
+      // preserva valores negativos — truncar em zero mascara ruptura de caixa
+      let saldo = saldoBase
+      const temFluxo = (fcAll || []).length > 0
       const fcChart = monthRange.map(i => {
-        const fc = fcByMonth[i] || { entradas:0, saidas:0 }
-        if (!fcByMonth[i]) {
-          // fallback: lançamentos
+        if (!temFluxo) {
+          // fallback: aproxima pelo regime de competência (lançamentos)
           const saidas = (byMonth[i]||[]).filter(l=>['custo','despesa','despesa_financeira','deducao'].includes(l.tipo)).reduce((a,l)=>a+Number(l.valor),0)
           const entradas = (byMonth[i]||[]).filter(l=>l.tipo==='receita').reduce((a,l)=>a+Number(l.valor),0)
           saldo += entradas - saidas
-          return { name:MESES[i], entradas, saidas, saldo:Math.max(0,saldo) }
+          return { name:MESES[i], entradas, saidas, saldo }
         }
+        const fc = fcByMonth[i] || { entradas:0, saidas:0 }
         saldo += fc.entradas - fc.saidas
-        return { name:MESES[i], entradas:fc.entradas, saidas:fc.saidas, saldo:Math.max(0,saldo) }
+        return { name:MESES[i], entradas:fc.entradas, saidas:fc.saidas, saldo }
       })
       setFcMensal(fcChart)
 
@@ -424,8 +438,8 @@ export default function OverviewPage() {
 
       // ── Métricas auxiliares ───────────────────────────────────────────────
       const burnRate = (vCur.cv + vCur.df) / dr.nMonths
-      const caixa    = fcChart.length>0 ? fcChart[fcChart.length-1].saldo : Math.max(0, vCur.rb-vCur.cv-vCur.df)
-      const runway   = burnRate>0 ? caixa/burnRate : null
+      const caixa    = fcChart.length>0 ? fcChart[fcChart.length-1].saldo : (vCur.rb-vCur.cv-vCur.df)
+      const runway   = (burnRate>0 && caixa>0) ? caixa/burnRate : null
       const fc30     = (fcAll||[]).filter(f=>f.data>today&&f.data<=next30str)
       const aReceber = fc30.filter(f=>['entrada','fluxo_entrada','receita'].includes(f.tipo)).reduce((a,f)=>a+Math.abs(Number(f.valor)||0),0)
       const aPagar   = fc30.filter(f=>['saida','fluxo_saida','despesa','custo'].includes(f.tipo)).reduce((a,f)=>a+Math.abs(Number(f.valor)||0),0)
@@ -506,9 +520,6 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:5 }}>
-          {dr.label}
-        </div>
       </div>
 
       {firstLoad ? (

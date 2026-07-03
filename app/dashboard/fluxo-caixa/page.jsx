@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import EmptyState from '@/components/EmptyState'
+import SvgIcon from '@/components/SvgIcon'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 import {
   ComposedChart, BarChart, Bar, Line, AreaChart, Area,
@@ -46,8 +47,8 @@ const TT = ({ active, payload, label }) => {
 }
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
-const Spark = ({ data, color, positive }) => {
-  const c = positive ? '#22c55e' : '#ef4444'
+const Spark = ({ data, color, positive, good }) => {
+  const c = (good !== undefined ? good : positive) ? 'var(--fs-success)' : 'var(--fs-danger)'
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} margin={{top:2,right:2,bottom:2,left:2}}>
@@ -64,7 +65,7 @@ const Spark = ({ data, color, positive }) => {
 }
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
-const KCard = ({ label, value, pct, sparkData, positive = true }) => {
+const KCard = ({ label, value, pct, sparkData, positive = true, sparkGood }) => {
   const pctNum = pct !== null && pct !== undefined ? Number(pct) : null
   const up = pctNum === null ? null : positive ? pctNum >= 0 : pctNum <= 0
   return (
@@ -75,15 +76,16 @@ const KCard = ({ label, value, pct, sparkData, positive = true }) => {
           <div style={{ fontSize:28, fontWeight:800, color:'var(--fs-text-1)', lineHeight:1.1, marginBottom:6, letterSpacing:'-0.5px' }}>{value}</div>
           {pctNum !== null && (
             <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-              <span style={{ fontSize:12, fontWeight:700, color: up ? '#22c55e' : '#ef4444' }}>
-                {up ? '↑' : '↓'}{Math.abs(pctNum).toFixed(1)}%
+              <span style={{ fontSize:12, fontWeight:700, color: up ? 'var(--fs-success)' : 'var(--fs-danger)', display:'inline-flex', alignItems:'center', gap:3 }}>
+                <SvgIcon name={pctNum >= 0 ? 'trendingUp' : 'trendingDown'} size={12} color="currentColor" />
+                {Math.abs(pctNum).toFixed(1)}%
               </span>
             </div>
           )}
         </div>
         {sparkData && sparkData.length > 1 && (
           <div style={{ width:100, height:44, flexShrink:0 }}>
-            <Spark data={sparkData} color={label} positive={positive} />
+            <Spark data={sparkData} color={label} positive={positive} good={sparkGood} />
           </div>
         )}
       </div>
@@ -144,6 +146,7 @@ export default function FluxoCaixaPage() {
 
   const [raw,          setRaw]          = useState([])
   const [vencidos,     setVencidos]     = useState({ e:0, s:0, aE:0, aS:0 })    // todos os registros do período
+  const [saldoBase,    setSaldoBase]    = useState(0)  // saldo inicial + histórico anterior ao período
   const [rawPrev,      setRawPrev]      = useState([])    // período anterior (para % variação)
   const [lancRecentes, setLancRecentes] = useState([])    // lançamentos da tabela
 
@@ -197,14 +200,26 @@ export default function FluxoCaixaPage() {
         return all
       }
 
-      const [fc, fcPrev, fcAll] = await Promise.all([
+      const [fc, fcPrev, fcAll, cfgRes] = await Promise.all([
         fetchAll('id,tipo,valor,data,descricao,categoria', debStart, debEnd),
         fetchAll('tipo,valor', prevStartStr, prevEndStr),
         fetchAll('tipo,valor,data', '2020-01-01', null),
+        supabase.from('empresa_config').select('valor').eq('chave', 'saldo_inicial')
+          .in('empresa_id', empIds),
       ])
 
       setRaw(fc || [])
       setRawPrev(fcPrev || [])
+
+      // Saldo de partida do acumulado: saldo inicial configurado + movimentos
+      // anteriores ao período (fcAll já cobre o histórico completo)
+      const saldoIni = (cfgRes.data || []).reduce((a, r) => a + (Number(r.valor) || 0), 0)
+      const ENTR = ['entrada','fluxo_entrada','receita','receita_financeira']
+      const netAnt = (fcAll || []).filter(f => f.data < debStart).reduce((a, f) => {
+        const v = Math.abs(Number(f.valor) || 0)
+        return a + (ENTR.includes(f.tipo) ? v : -v)
+      }, 0)
+      setSaldoBase(saldoIni + netAnt)
 
       // Lançamentos recentes
       const lRecentes = [...(fc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,20)
@@ -244,41 +259,65 @@ export default function FluxoCaixaPage() {
   const pctM = prevMargem   !== 0 ? margem - prevMargem : null
 
   // ─── Dados para gráfico (agrupa por granularidade) ────────────────────────
-  const getKey = (iso) => {
-    const d = new Date(iso + 'T00:00:00')
-    if (granular === 'mensal')     return MESES[d.getMonth()] + '/' + String(d.getFullYear()).slice(2)
-    if (granular === 'trimestral') return `T${Math.floor(d.getMonth()/3)+1}/${String(d.getFullYear()).slice(2)}`
-    return String(d.getFullYear())
+  // Chave ordenável SEMPRE com ano (YYYY-MM / YYYY-Q / YYYY) — evita misturar
+  // Jan/24 com Jan/26 em períodos multi-ano
+  const getSortKey = (iso) => {
+    if (granular === 'mensal')     return iso.slice(0, 7)
+    if (granular === 'trimestral') return `${iso.slice(0,4)}-T${Math.floor((Number(iso.slice(5,7))-1)/3)+1}`
+    return iso.slice(0, 4)
+  }
+  const keyLabel = (k) => {
+    if (granular === 'mensal')     { const [y, m] = k.split('-'); return `${MESES[Number(m)-1]}/${y.slice(2)}` }
+    if (granular === 'trimestral') { const [y, t] = k.split('-'); return `${t}/${y.slice(2)}` }
+    return k
+  }
+  // Sequência CONTÍNUA entre o primeiro e o último balde com dados — meses
+  // sem movimento aparecem zerados em vez de sumir e esticar o gráfico
+  const nextKey = (k) => {
+    if (granular === 'mensal') { let [y, m] = k.split('-').map(Number); m++; if (m > 12) { m = 1; y++ } return `${y}-${String(m).padStart(2,'0')}` }
+    if (granular === 'trimestral') { let [y, t] = k.split('-T').map(Number); t++; if (t > 4) { t = 1; y++ } return `${y}-T${t}` }
+    return String(Number(k) + 1)
   }
 
   const chartMap = {}
   raw.forEach(f => {
-    const k = getKey(f.data)
-    if (!chartMap[k]) chartMap[k] = { name:k, entradas:0, saidas:0, saldo:0 }
+    const k = getSortKey(f.data)
+    if (!chartMap[k]) chartMap[k] = { entradas:0, saidas:0 }
     const v = Math.abs(Number(f.valor)||0)
     if (entradaTipos.includes(f.tipo)) chartMap[k].entradas += v
     else if (saidaTipos.includes(f.tipo)) chartMap[k].saidas += v
   })
 
-  // Ordenar cronologicamente
-  const chartData = Object.values(chartMap).map(c => ({
-    ...c,
-    saldo: c.entradas - c.saidas
-  }))
+  const presentes = Object.keys(chartMap).sort()
+  const chartData = []
+  if (presentes.length) {
+    let running = saldoBase
+    let k = presentes[0]
+    const fim = presentes[presentes.length - 1]
+    let guarda = 0
+    while (k <= fim && guarda < 400) {
+      const c = chartMap[k] || { entradas:0, saidas:0 }
+      running += c.entradas - c.saidas
+      // saldo ACUMULADO real (parte do saldo inicial + histórico anterior)
+      chartData.push({ name: keyLabel(k), entradas: c.entradas, saidas: c.saidas, saldo: running })
+      k = nextKey(k); guarda++
+    }
+  }
 
   // Sparklines — evolução mensal de cada KPI
   const sparkByMonth = {}
   raw.forEach(f => {
-    const m = new Date(f.data+'T00:00:00').getMonth()
+    const m = (f.data || '').slice(0, 7) // YYYY-MM — não mistura anos
     if (!sparkByMonth[m]) sparkByMonth[m] = { e:0, s:0 }
     const v = Math.abs(Number(f.valor)||0)
     if (entradaTipos.includes(f.tipo)) sparkByMonth[m].e += v
     else sparkByMonth[m].s += v
   })
-  const sparkE    = Object.entries(sparkByMonth).sort((a,b)=>a[0]-b[0]).map(([,v])=>({ v:v.e }))
-  const sparkS    = Object.entries(sparkByMonth).sort((a,b)=>a[0]-b[0]).map(([,v])=>({ v:v.s }))
-  const sparkSald = Object.entries(sparkByMonth).sort((a,b)=>a[0]-b[0]).map(([,v])=>({ v:v.e-v.s }))
-  const sparkM    = Object.entries(sparkByMonth).sort((a,b)=>a[0]-b[0]).map(([,v])=>({ v: v.e>0?(v.e-v.s)/v.e*100:0 }))
+  const sparkOrd  = Object.keys(sparkByMonth).sort()
+  const sparkE    = sparkOrd.map(k=>({ v: sparkByMonth[k].e }))
+  const sparkS    = sparkOrd.map(k=>({ v: sparkByMonth[k].s }))
+  const sparkSald = sparkOrd.map(k=>({ v: sparkByMonth[k].e - sparkByMonth[k].s }))
+  const sparkM    = sparkOrd.map(k=>({ v: sparkByMonth[k].e>0 ? (sparkByMonth[k].e-sparkByMonth[k].s)/sparkByMonth[k].e*100 : 0 }))
 
   // ─── Top categorias saídas ────────────────────────────────────────────────
   const catMap = {}
@@ -392,8 +431,8 @@ export default function FluxoCaixaPage() {
           <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
             <KCard label="Total Recebido"  value={fC(totalEntradas)} pct={pctE}    sparkData={sparkE}    positive={true} />
             <KCard label="Total Pago"      value={fC(totalSaidas)}   pct={pctS}    sparkData={sparkS}    positive={false} />
-            <KCard label="Saldo do Período" value={fC(saldo)}        pct={pctD}    sparkData={sparkSald} positive={true} />
-            <KCard label="Margem de Caixa" value={`${margem.toFixed(1)}%`} pct={pctM !== null ? pctM : null} sparkData={sparkM} positive={true} />
+            <KCard label="Saldo do Período" value={fC(saldo)}        pct={pctD}    sparkData={sparkSald} positive={true} sparkGood={saldo >= 0} />
+            <KCard label="Margem de Caixa" value={`${margem.toFixed(1)}%`} pct={pctM !== null ? pctM : null} sparkData={sparkM} positive={true} sparkGood={margem >= 0} />
           </div>
 
           {/* ── Cards Vencidos + A Vencer ─────────────────────────────────────── */}

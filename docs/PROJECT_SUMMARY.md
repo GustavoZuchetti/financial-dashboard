@@ -91,8 +91,8 @@ supabase/migrations/                 — Migrações SQL versionadas (aplicar no
 
 ### Segurança (jun/2026)
 - SECURITY FIX 38f616e: telas não expõem mais empresas de outras organizações
-- Migração RLS versionada: supabase/migrations/20260630_fix_rls_cross_org.sql
-  (⚠️ confirmar aplicação no banco — ver seção 7)
+- Migração RLS 20260630_fix_rls_cross_org.sql APLICADA E VALIDADA (02/07):
+  isolamento cross-org confirmado por testes de impersonação
 - Anti-escalada de role, logout por inatividade, esqueci-senha via admin SDK
 
 ### Importação
@@ -134,8 +134,10 @@ supabase/migrations/                 — Migrações SQL versionadas (aplicar no
 
 ## 7. Pendências / próximos passos
 
-- [ ] **CRÍTICO — Confirmar aplicação da migração RLS** (20260630_fix_rls_cross_org.sql)
-      no Supabase e validar com teste cross-org via REST
+- [x] ~~CRÍTICO — Migração RLS multi-org~~ **APLICADA E VALIDADA em 02/07/2026**:
+      7 políticas *_org_isolation ativas; zero políticas legadas; impersonação
+      confirmou SELECT restrito à própria org e INSERT cruzado bloqueado
+      (ERROR 42501). Executada via Management API (rota temporária, removida).
 - [ ] Teste de regressão multi-entidade (FACE vs JAM vs JB) nos módulos DRE/FC/Ciclo
 - [x] ~~Wire dos botões "Filtrar" e "Exportar" da FC Visão Geral~~ (feito 02/jul)
 - [ ] Notificações de vencimentos no badge do sidebar

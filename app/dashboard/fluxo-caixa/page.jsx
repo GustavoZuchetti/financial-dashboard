@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useId } from 'react'
 import EmptyState from '@/components/EmptyState'
 import SvgIcon from '@/components/SvgIcon'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
@@ -47,18 +47,21 @@ const TT = ({ active, payload, label }) => {
 }
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
-const Spark = ({ data, color, positive, good }) => {
+const Spark = ({ data, positive, good }) => {
+  // useId: o rótulo do card era usado como ID de SVG — espaços/acentos
+  // quebravam o url(#...) e o preenchimento caía no preto padrão
+  const gid = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const c = (good !== undefined ? good : positive) ? 'var(--fs-success)' : 'var(--fs-danger)'
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} margin={{top:2,right:2,bottom:2,left:2}}>
         <defs>
-          <linearGradient id={`sg-${color}`} x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={`sg${gid}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor={c} stopOpacity={0.25} />
             <stop offset="95%" stopColor={c} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <Area type="monotone" dataKey="v" stroke={c} fill={`url(#sg-${color})`} dot={false} strokeWidth={2} />
+        <Area type="monotone" dataKey="v" stroke={c} fill={`url(#sg${gid})`} dot={false} strokeWidth={2} />
       </AreaChart>
     </ResponsiveContainer>
   )
@@ -85,7 +88,7 @@ const KCard = ({ label, value, pct, sparkData, positive = true, sparkGood }) => 
         </div>
         {sparkData && sparkData.length > 1 && (
           <div style={{ width:100, height:44, flexShrink:0 }}>
-            <Spark data={sparkData} color={label} positive={positive} good={sparkGood} />
+            <Spark data={sparkData} positive={positive} good={sparkGood} />
           </div>
         )}
       </div>
@@ -305,19 +308,26 @@ export default function FluxoCaixaPage() {
   }
 
   // Sparklines — evolução mensal de cada KPI
-  const sparkByMonth = {}
+  // Granularidade adaptativa: com ≤2 meses de dados, uma sparkline mensal
+  // vira um segmento reto de 2 pontos — nesse caso, agrupamos por DIA
+  const mesesComDado = new Set(raw.map(f => (f.data || '').slice(0, 7)))
+  const sparkKeyFn = mesesComDado.size <= 2
+    ? (f) => (f.data || '').slice(0, 10)   // diária
+    : (f) => (f.data || '').slice(0, 7)    // mensal (YYYY-MM, sem misturar anos)
+  const sparkBy = {}
   raw.forEach(f => {
-    const m = (f.data || '').slice(0, 7) // YYYY-MM — não mistura anos
-    if (!sparkByMonth[m]) sparkByMonth[m] = { e:0, s:0 }
+    const k = sparkKeyFn(f)
+    if (!sparkBy[k]) sparkBy[k] = { e:0, s:0 }
     const v = Math.abs(Number(f.valor)||0)
-    if (entradaTipos.includes(f.tipo)) sparkByMonth[m].e += v
-    else sparkByMonth[m].s += v
+    if (entradaTipos.includes(f.tipo)) sparkBy[k].e += v
+    else sparkBy[k].s += v
   })
-  const sparkOrd  = Object.keys(sparkByMonth).sort()
-  const sparkE    = sparkOrd.map(k=>({ v: sparkByMonth[k].e }))
-  const sparkS    = sparkOrd.map(k=>({ v: sparkByMonth[k].s }))
-  const sparkSald = sparkOrd.map(k=>({ v: sparkByMonth[k].e - sparkByMonth[k].s }))
-  const sparkM    = sparkOrd.map(k=>({ v: sparkByMonth[k].e>0 ? (sparkByMonth[k].e-sparkByMonth[k].s)/sparkByMonth[k].e*100 : 0 }))
+  const sparkOrd  = Object.keys(sparkBy).sort()
+  let acumSpark = 0
+  const sparkE    = sparkOrd.map(k=>({ v: sparkBy[k].e }))
+  const sparkS    = sparkOrd.map(k=>({ v: sparkBy[k].s }))
+  const sparkSald = sparkOrd.map(k=>{ acumSpark += sparkBy[k].e - sparkBy[k].s; return { v: acumSpark } })
+  const sparkM    = sparkOrd.map(k=>({ v: sparkBy[k].e>0 ? (sparkBy[k].e-sparkBy[k].s)/sparkBy[k].e*100 : 0 }))
 
   // ─── Top categorias saídas ────────────────────────────────────────────────
   const catMap = {}

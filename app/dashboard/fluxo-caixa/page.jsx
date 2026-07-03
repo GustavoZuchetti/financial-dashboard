@@ -206,7 +206,7 @@ export default function FluxoCaixaPage() {
       const [fc, fcPrev, fcAll, cfgRes] = await Promise.all([
         fetchAll('id,tipo,valor,data,descricao,categoria', debStart, debEnd),
         fetchAll('tipo,valor', prevStartStr, prevEndStr),
-        fetchAll('tipo,valor,data', '2020-01-01', null),
+        fetchAll('tipo,valor,data,status', '2020-01-01', null),
         supabase.from('empresa_config').select('valor').eq('chave', 'saldo_inicial')
           .in('empresa_id', empIds),
       ])
@@ -229,11 +229,14 @@ export default function FluxoCaixaPage() {
       setLancRecentes(lRecentes)
 
       // Vencidos e a vencer — usa fcAll (todos os registros)
-      const fcFuture = fcAll
-      const vencidosE  = (fcFuture||[]).filter(f => f.tipo==='entrada' && f.data < today).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
-      const vencidosS  = (fcFuture||[]).filter(f => f.tipo==='saida'   && f.data < today).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
-      const aVencerE   = (fcFuture||[]).filter(f => f.tipo==='entrada' && f.data >= today && f.data <= next30str).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
-      const aVencerS   = (fcFuture||[]).filter(f => f.tipo==='saida'   && f.data >= today && f.data <= next30str).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
+      // Vencido REAL: título em aberto/parcial com vencimento passado —
+      // antes, tudo com data passada contava como vencido (mesmo o já pago)
+      const emAberto   = (f) => ['aberto','parcial'].includes(f.status || 'aberto')
+      const fcFuture   = (fcAll||[]).filter(emAberto)
+      const vencidosE  = fcFuture.filter(f => f.tipo==='entrada' && f.data < today).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
+      const vencidosS  = fcFuture.filter(f => f.tipo==='saida'   && f.data < today).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
+      const aVencerE   = fcFuture.filter(f => f.tipo==='entrada' && f.data >= today && f.data <= next30str).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
+      const aVencerS   = fcFuture.filter(f => f.tipo==='saida'   && f.data >= today && f.data <= next30str).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
       setVencidos({ e: vencidosE, s: vencidosS, aE: aVencerE, aS: aVencerS })
 
     } catch(e) { console.error('FluxoCaixa:', e) }

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import EmptyState from '@/components/EmptyState'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
+import { getStatusInfo } from '@/lib/fluxo-status'
 import { useOrg } from '@/lib/org-context'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 
@@ -155,6 +156,7 @@ export default function GestaoFluxoCaixaPage() {
   const [startDate,  setStartDate]  = useState(`${curYear - 2}-01-01`)
   const [endDate,    setEndDate]    = useState(today)
   const [tipoFiltro, setTipoFiltro] = useState('todos')
+  const [statusFiltro, setStatusFiltro] = useState('todos') // todos|abertos|vencidos|pagos
   const [busca,      setBusca]      = useState('')
   const [page,       setPage]       = useState(0)
   const PAGE_SIZE = 50
@@ -211,7 +213,7 @@ export default function GestaoFluxoCaixaPage() {
 
       let q = supabase
         .from('fluxo_caixa')
-        .select('id,data,descricao,tipo,valor,categoria,created_at', { count:'exact' })
+        .select('id,data,descricao,tipo,valor,categoria,created_at,status,data_liquidacao,valor_liquidado', { count:'exact' })
         .gte('data', startDate)
         .lte('data', endDate)
         .order('data', { ascending: false })
@@ -220,6 +222,10 @@ export default function GestaoFluxoCaixaPage() {
       q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
 
       if (tipoFiltro !== 'todos') q = q.eq('tipo', tipoFiltro)
+      const hoje = new Date().toISOString().split('T')[0]
+      if (statusFiltro === 'abertos')  q = q.in('status', ['aberto','parcial'])
+      if (statusFiltro === 'vencidos') q = q.in('status', ['aberto','parcial']).lt('data', hoje)
+      if (statusFiltro === 'pagos')    q = q.eq('status', 'pago')
 
       const { data, count, error } = await q.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
       if (error) throw error
@@ -254,7 +260,7 @@ export default function GestaoFluxoCaixaPage() {
 
     } catch(e) { console.error('GestaoFluxo:', e); showToast('Erro ao carregar dados', 'error') }
     finally { setLoading(false) }
-  }, [empresaId, isConsol, startDate, endDate, tipoFiltro, page])
+  }, [empresaId, isConsol, startDate, endDate, tipoFiltro, statusFiltro, page])
 
   useEffect(() => { if (empresaId !== null) load() }, [load, empresaId])
 
@@ -290,6 +296,17 @@ export default function GestaoFluxoCaixaPage() {
     } finally { setDelLoading(false) }
   }
 
+  // ─── Baixa rápida: marcar título como liquidado hoje ───────────────────────
+  const handleBaixar = async (r) => {
+    const hoje = new Date().toISOString().split('T')[0]
+    const { error } = await supabase.from('fluxo_caixa')
+      .update({ status: 'pago', data_liquidacao: hoje, valor_liquidado: r.valor })
+      .eq('id', r.id)
+    if (error) { showToast('Erro ao baixar: ' + error.message, 'error'); return }
+    showToast(`Título baixado: ${r.descricao || 'sem descrição'}`, 'success')
+    load()
+  }
+
   // ─── Exportação Excel ───────────────────────────────────────────────────────
   const [exportLoading, setExportLoading] = useState(false)
   const handleExport = async () => {
@@ -302,13 +319,17 @@ export default function GestaoFluxoCaixaPage() {
       let rows = [], pg = 0, done = false
       while (!done) {
         let q = supabase.from('fluxo_caixa')
-          .select('data,descricao,categoria,tipo,valor')
+          .select('data,descricao,categoria,tipo,valor,status,data_liquidacao')
           .gte('data', startDate).lte('data', endDate)
           .order('data', { ascending: true })
           .order('created_at', { ascending: true })
           .range(pg * 1000, (pg + 1) * 1000 - 1)
         q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
         if (tipoFiltro !== 'todos') q = q.eq('tipo', tipoFiltro)
+        const hojeX = new Date().toISOString().split('T')[0]
+        if (statusFiltro === 'abertos')  q = q.in('status', ['aberto','parcial'])
+        if (statusFiltro === 'vencidos') q = q.in('status', ['aberto','parcial']).lt('data', hojeX)
+        if (statusFiltro === 'pagos')    q = q.eq('status', 'pago')
         const { data: batch, error } = await q
         if (error) throw error
         rows = rows.concat(batch || [])
@@ -337,14 +358,16 @@ export default function GestaoFluxoCaixaPage() {
       ]
 
       // Aba 2 — Extrato com saldo acumulado (partindo do saldo inicial)
-      const extratoAoa = [['Data', 'Descrição', 'Categoria', 'Tipo', 'Entrada (R$)', 'Saída (R$)', 'Saldo Acumulado (R$)']]
+      const extratoAoa = [['Data', 'Descrição', 'Categoria', 'Tipo', 'Situação', 'Dias em Atraso', 'Entrada (R$)', 'Saída (R$)', 'Saldo Acumulado (R$)']]
       let acum = Number(saldoInicialDB) || 0
       rows.forEach(r => {
         const v = Number(r.valor)
         acum += r.tipo === 'entrada' ? v : -v
+        const stX = getStatusInfo(r)
         extratoAoa.push([
           r.data || '', r.descricao || '', r.categoria || '',
           r.tipo === 'entrada' ? 'Entrada' : 'Saída',
+          stX.label, stX.diasVencido || '',
           r.tipo === 'entrada' ? Number(v.toFixed(2)) : '',
           r.tipo === 'saida'   ? Number(v.toFixed(2)) : '',
           Number(acum.toFixed(2)),
@@ -353,7 +376,7 @@ export default function GestaoFluxoCaixaPage() {
 
       downloadWorkbook([
         { name: 'Resumo',  aoa: resumoAoa,  colWidths: [32, 22], currencyCols: [1] },
-        { name: 'Extrato', aoa: extratoAoa, colWidths: [12, 46, 24, 10, 16, 16, 20], currencyCols: [4, 5, 6] },
+        { name: 'Extrato', aoa: extratoAoa, colWidths: [12, 46, 24, 10, 20, 12, 16, 16, 20], currencyCols: [6, 7, 8] },
       ], exportFilename('Fluxo_Caixa_Gestao', startDate, endDate))
       showToast(`${rows.length} registros exportados para Excel`, 'success')
     } catch (e) {
@@ -676,6 +699,13 @@ export default function GestaoFluxoCaixaPage() {
             <option value="entrada">Entrada</option>
             <option value="saida">Saída</option>
           </select>
+          <select value={statusFiltro} onChange={e=>{setStatusFiltro(e.target.value);setPage(0)}}
+            style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:7, color:'var(--fs-text-2)', fontSize:12, padding:'5px 8px', outline:'none' }}>
+            <option value="todos">Todas as situações</option>
+            <option value="abertos">Em aberto</option>
+            <option value="vencidos">Vencidos</option>
+            <option value="pagos">Liquidados</option>
+          </select>
         </div>
 
         {/* Busca */}
@@ -774,9 +804,9 @@ export default function GestaoFluxoCaixaPage() {
       <div style={{ background:'var(--fs-surface)', borderTop:'2px solid var(--fs-border-2)', borderBottom:'1px solid var(--fs-border)' }}>
 
         {/* Cabeçalho */}
-        <div style={{ display:'grid', gridTemplateColumns:'40px 1fr 150px 100px 120px 130px 72px', gap:8, padding:'11px 16px', borderBottom:'2px solid var(--fs-border)', background:'var(--fs-bg)' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'40px 1fr 140px 100px 132px 116px 130px 96px', gap:8, padding:'11px 16px', borderBottom:'2px solid var(--fs-border)', background:'var(--fs-bg)' }}>
           <div><input type="checkbox" checked={registros.length > 0 && selected.size === registros.length} onChange={toggleAll} style={{ cursor:'pointer', accentColor:'#3b82f6', width:14, height:14 }} /></div>
-          {['Descrição','Categoria','Tipo','Valor','Saldo do Dia',''].map(h=>(
+          {['Descrição','Categoria','Tipo','Situação','Valor','Saldo do Dia',''].map(h=>(
             <div key={h} style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', display:'flex', alignItems:'center', justifyContent: h==='Valor'||h==='Saldo do Dia' ? 'flex-end' : 'flex-start' }}>{h}</div>
           ))}
         </div>
@@ -820,12 +850,12 @@ export default function GestaoFluxoCaixaPage() {
               const isLast    = li === lancamentos.length - 1
               return (
                 <div key={r.id}
-                  style={{ display:'grid', gridTemplateColumns:'40px 1fr 150px 100px 120px 130px 72px', gap:8, padding:'6px 16px', minHeight:36,
+                  style={{ display:'grid', gridTemplateColumns:'40px 1fr 140px 100px 132px 116px 130px 96px', gap:8, padding:'6px 16px', minHeight:36,
                     borderBottom: isLast ? 'none' : '1px solid rgba(var(--fs-border-rgb,55,65,81),0.5)',
                     background: isSel ? 'rgba(59,130,246,0.06)' : 'transparent',
                     alignItems:'center', transition:'background 0.1s',
                   }}
-                  onMouseEnter={e=>{ if(!isSel) e.currentTarget.style.background='rgba(255,255,255,0.02)' }}
+                  onMouseEnter={e=>{ if(!isSel) e.currentTarget.style.background='var(--fs-hover)' }}
                   onMouseLeave={e=>{ if(!isSel) e.currentTarget.style.background='transparent' }}
                 >
                   <div><input type="checkbox" checked={isSel} onChange={()=>toggleSelect(r.id)} style={{ cursor:'pointer', accentColor:'#3b82f6', width:14, height:14 }} /></div>
@@ -841,6 +871,15 @@ export default function GestaoFluxoCaixaPage() {
 
                   {/* Tipo */}
                   <div><Badge tipo={r.tipo} /></div>
+
+                  {/* Situação (vencido derivado + dias) */}
+                  <div>
+                    {(() => { const st = getStatusInfo(r); return (
+                      <span title={st.label} style={{ display:'inline-block', maxWidth:'100%', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:10.5, fontWeight:700, color:st.color, background:st.bg, border:`1px solid ${st.color}`, borderRadius:20, padding:'2px 8px', opacity:0.95 }}>
+                        {st.label}
+                      </span>
+                    )})()}
+                  </div>
 
                   {/* Valor */}
                   <div className="fs-num" style={{ fontSize:12.5, fontWeight:700, color: isEntrada ? 'var(--fs-success)' : 'var(--fs-danger)', textAlign:'right' }}>
@@ -858,8 +897,17 @@ export default function GestaoFluxoCaixaPage() {
                     )}
                   </div>
 
-                  {/* Editar + Excluir */}
+                  {/* Baixar + Editar + Excluir */}
                   <div style={{ display:'flex', justifyContent:'center', gap:4 }}>
+                    {(r.status || 'aberto') !== 'pago' && (r.status || 'aberto') !== 'cancelado' && (
+                      <button onClick={()=>handleBaixar(r)} title="Baixar (marcar como liquidado hoje)"
+                        style={{ background:'transparent', border:'1px solid transparent', borderRadius:6, padding:'5px 6px', cursor:'pointer', color:'var(--fs-text-4)', transition:'all 0.15s', display:'flex', alignItems:'center' }}
+                        onMouseEnter={e=>{ e.currentTarget.style.background='rgba(34,197,94,0.1)'; e.currentTarget.style.color='var(--fs-success)'; e.currentTarget.style.borderColor='rgba(34,197,94,0.25)' }}
+                        onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--fs-text-4)'; e.currentTarget.style.borderColor='transparent' }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                      </button>
+                    )}
                     <button onClick={()=>openEdit(r)} title="Editar"
                       style={{ background:'transparent', border:'1px solid transparent', borderRadius:6, padding:'5px 6px', cursor:'pointer', color:'var(--fs-text-4)', transition:'all 0.15s', display:'flex', alignItems:'center' }}
                       onMouseEnter={e=>{ e.currentTarget.style.background='rgba(59,130,246,0.1)'; e.currentTarget.style.color='#60a5fa'; e.currentTarget.style.borderColor='rgba(59,130,246,0.2)' }}

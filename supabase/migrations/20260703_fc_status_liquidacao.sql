@@ -16,10 +16,11 @@ alter table public.fluxo_caixa add constraint fc_status_check
 create index if not exists idx_fc_emp_status_data
   on public.fluxo_caixa (empresa_id, status, data);
 
--- BACKFILL (EXECUTAR UMA ÚNICA VEZ — não incluir em reexecuções):
--- premissa conservadora aprovada: registros com vencimento passado assumem-se
--- liquidados na data; a primeira reimportação com o novo De-Para corrige os
--- que estavam de fato em aberto/atrasados.
--- update public.fluxo_caixa
---   set status='pago', data_liquidacao=data, valor_liquidado=valor
---   where data < current_date and status='aberto' and data_liquidacao is null;
+-- BACKFILL — NÃO EXECUTAR.
+-- A premissa "vencimento passado = pago" mostrou-se incorreta para a Facesign:
+-- o relatório do Bling só exporta títulos EM ABERTO/ATRASADOS, logo títulos
+-- passados podem estar vencidos (não pagos). Um backfill assim marcou como
+-- 'pago' justamente os 8 títulos 'Atrasada' de junho/2026 — foi revertido.
+-- A verdade de liquidação deve vir SEMPRE da importação com De-Para de
+-- Situação (Em aberto|Atrasada→aberto, Parcial→parcial, Pago/Recebido→pago).
+-- Novos registros nascem 'aberto' (default) até a importação informar o status.

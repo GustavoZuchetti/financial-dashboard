@@ -128,6 +128,7 @@ supabase/migrations/                 — Migrações SQL versionadas (aplicar no
 | 19/jun | DRE: impostos como dedução + paginação de lançamentos |
 | 21–25/jun | Plano de contas editável; sprint importação; sidebar reformulado |
 | 26–30/jun | Multi-entidade (seletor + consolidação); SECURITY FIX cross-org; favicon |
+| 03/jul | Ciclo de vida dos títulos no fluxo: colunas status/data_liquidacao/valor_liquidado/doc_ref (migração 20260703), lib/fluxo-status.js, coluna Situação + filtro + baixa rápida no Gestão, vencidos reais na Visão Geral. Backfill "vencimento passado = pago" testado e DESCARTADO (marcava atrasados como pagos); status virá da importação (De-Para de Situação, chave composta Número+valor+vencimento+descrição) — 2ª entrega pendente |
 | 02/jul | Exportação Excel (DRE Detalhado + FC Gestão + FC Visão Geral); ícones SVG e coluna Δ Período Ant. (F/D) no DRE Detalhado; hover adaptativo por tema; skeleton + sticky header; validação de seleção de entidades; migração RLS versionada |
 
 ---

@@ -52,13 +52,19 @@ export default function IntegracoesTab({ empresas, showToast }) {
   }
 
   const sincronizar = async (integ, modulo) => {
+    // Anti-duplicidade título CSV × título API: oferecer substituição dos
+    // registros de origem arquivo (sem doc_ref) desta entidade
+    const limpar = window.confirm(
+      `Substituir os registros de ${modulo === 'dre' ? 'DRE' : 'Fluxo de Caixa'} importados por ARQUIVO desta entidade pelos dados da API?\n\n` +
+      `Recomendado: a API traz o histórico completo e evita duplicidade com importações antigas por CSV.\n\n` +
+      `OK = substituir (remove os registros sem vínculo com a API antes de gravar)\nCancelar = manter e apenas adicionar/atualizar os vindos da API`)
     setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `Sincronizando ${modulo.toUpperCase()}...` } }))
     let fase = 0, pagina = 1, total = 0, pend = 0, guarda = 0
     try {
       while (guarda++ < 60) {
         const r = await authFetch('/api/integracoes/bling/sync', {
           method: 'POST',
-          body: JSON.stringify({ integracao_id: integ.id, modulo, fase, pagina }),
+          body: JSON.stringify({ integracao_id: integ.id, modulo, fase, pagina, limpar_origem_arquivo: limpar && fase === 0 && pagina === 1 }),
         })
         if (r.error) throw new Error(r.error)
         total += r.gravados || 0; pend += r.total_pendencias || 0

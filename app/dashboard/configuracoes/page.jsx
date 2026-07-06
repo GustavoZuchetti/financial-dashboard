@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import IntegracoesTab from '@/components/IntegracoesTab'
+import { useOrg } from '@/lib/org-context'
 
 const inp = {
   width: '100%', background: 'var(--fs-input-bg)',
@@ -54,7 +55,11 @@ export default function ConfiguracoesPage() {
   const logoInputRefDark  = React.useRef(null)
   const logoInputRefLight = React.useRef(null)
   // ─── Role do usuário logado e redefinição de senha ─────────────
-  const [myRole,      setMyRole]      = useState(null)
+  const orgCtx = useOrg()
+  // Papel semeado do contexto (cache em memória do OrgProvider) — a aba
+  // Integrações aparece de imediato, sem esperar o fetch local do perfil
+  const [myRole,      setMyRole]      = useState(orgCtx?.profile?.role || null)
+  useEffect(() => { if (orgCtx?.profile?.role) setMyRole(orgCtx.profile.role) }, [orgCtx?.profile?.role])
   const [resetModal,  setResetModal]  = useState(null) // { userId, email } | null
   const [resetResult, setResetResult] = useState(null) // { email, password } | null
   const [resetting,   setResetting]   = useState(false)

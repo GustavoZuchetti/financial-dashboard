@@ -151,6 +151,11 @@ export default function IntegracoesTab({ empresas, showToast }) {
                 </div>
 
                 {/* Sincronização */}
+                {!integ.modulo_dre_ativo && !integ.modulo_fluxo_ativo && (
+                  <div style={{ fontSize: 12, color: 'var(--fs-text-4)', background: 'var(--fs-hover)', border: '1px dashed var(--fs-border)', borderRadius: 8, padding: '10px 14px' }}>
+                    Ative ao menos um módulo acima para habilitar o botão de sincronização.
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   {integ.modulo_fluxo_ativo && (
                     <button onClick={() => sincronizar(integ, 'fluxo')} disabled={st.rodando}

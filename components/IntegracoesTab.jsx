@@ -51,6 +51,32 @@ export default function IntegracoesTab({ empresas, showToast }) {
     carregar()
   }
 
+  const enriquecer = async (integ) => {
+    setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: 'Enriquecendo títulos (nomes, categorias, competência, datas)...' } }))
+    let feitos = 0, erros = 0, guarda = 0, primeira = true, avisoEscopo = null
+    try {
+      while (guarda++ < 500) {
+        const r = await authFetch('/api/integracoes/bling/enrich', {
+          method: 'POST',
+          body: JSON.stringify({ integracao_id: integ.id, setup: primeira }),
+        })
+        primeira = false
+        if (r.error) throw new Error(r.error)
+        feitos += r.processados || 0; erros += r.erros || 0
+        if (r.escopo_contatos && r.escopo_contatos !== 'ok') avisoEscopo = r.escopo_contatos
+        setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `Enriquecidos ${feitos} · restantes ${r.restantes}${erros ? ` · ${erros} erros` : ''}` } }))
+        if (r.concluido) break
+      }
+      const fim = `Enriquecimento concluído: ${feitos} títulos${erros ? ` · ${erros} erros` : ''}${avisoEscopo ? ` · ATENÇÃO: ${avisoEscopo}` : ''}`
+      setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log: fim } }))
+      showToast?.(avisoEscopo ? 'Concluído com aviso de escopo — veja o card' : `Enriquecimento concluído: ${feitos} títulos`, avisoEscopo ? 'error' : 'success')
+    } catch (e) {
+      setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log: `Erro: ${e.message}` } }))
+      showToast?.('Erro no enriquecimento: ' + e.message, 'error')
+    }
+    carregar()
+  }
+
   const sincronizar = async (integ, modulo) => {
     // Anti-duplicidade título CSV × título API: oferecer substituição dos
     // registros de origem arquivo (sem doc_ref) desta entidade
@@ -173,6 +199,13 @@ export default function IntegracoesTab({ empresas, showToast }) {
                     <button onClick={() => sincronizar(integ, 'dre')} disabled={st.rodando}
                       style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 14px', color: 'var(--fs-text-2)', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: st.rodando ? 0.5 : 1 }}>
                       Sincronizar DRE agora
+                    </button>
+                  )}
+                  {(integ.modulo_fluxo_ativo || integ.modulo_dre_ativo) && (
+                    <button onClick={() => enriquecer(integ)} disabled={st.rodando}
+                      title="Completa nome do cliente/fornecedor, categoria, competência, data de pagamento e parciais buscando o detalhe de cada título"
+                      style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 14px', color: 'var(--fs-text-2)', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: st.rodando ? 0.5 : 1 }}>
+                      Enriquecer dados
                     </button>
                   )}
                   {integ.ultima_sync && !st.log && (

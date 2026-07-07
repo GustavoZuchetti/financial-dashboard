@@ -53,7 +53,7 @@ export async function POST(request) {
     let escopoContatosOk = true
     let processados = 0, erros = 0
 
-    for (const grupo of chunk(rows, 4)) {
+    for (const grupo of chunk(rows, 3)) {
       await Promise.all(grupo.map(async (row) => {
         try {
           const [, tipoRef, blingId] = row.doc_ref.split(':')
@@ -68,8 +68,9 @@ export async function POST(request) {
           const cid = det?.contato?.id
           if (!nome && cid != null && escopoContatosOk) {
             if (nomesCache[cid] === undefined) {
-              nomesCache[cid] = await fetchContatoNome(integ, cid)
-              if (nomesCache[cid] === null) escopoContatosOk = false // provável 403 — para de insistir neste lote
+              const rc = await fetchContatoNome(integ, cid)
+              if (rc.negado) escopoContatosOk = false // 403 real — escopo faltando
+              nomesCache[cid] = rc.nome
             }
             nome = nomesCache[cid]
           }
@@ -104,7 +105,7 @@ export async function POST(request) {
           processados++
         } catch { erros++ }
       }))
-      await pausa(300) // respeito ao rate limit do Bling
+      await pausa(500) // respeito ao rate limit do Bling
     }
 
     const { count: restantes } = await FILTRO(

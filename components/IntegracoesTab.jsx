@@ -170,6 +170,14 @@ export default function IntegracoesTab({ empresas, showToast }) {
 
             {integ?.conectado && (
               <>
+                {integ.authorize_url && (
+                  <a href={integ.authorize_url}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--fs-brand)', fontWeight: 700, textDecoration: 'none', marginBottom: 12 }}>
+                    <SvgIcon name="plug" size={12} color="currentColor" />
+                    Reconectar ao Bling (necessário após alterar permissões/escopos do app)
+                  </a>
+                )}
+
                 {/* Módulos — apenas os liberados pela administração */}
                 <div style={{ display: 'flex', gap: 18, marginBottom: 14, flexWrap: 'wrap' }}>
                   {[['dre', 'DRE (lançamentos)', liberacao.dre, integ.modulo_dre_ativo],

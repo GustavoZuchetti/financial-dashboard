@@ -17,6 +17,11 @@ export async function GET(request) {
     integracoes: (integs || []).map(i => ({
       id: i.id, empresa_id: i.empresa_id, provedor: i.provedor,
       credenciais_ok: !!(i.client_id && i.client_secret),
+      // Prévia para o usuário conferir O QUE está salvo (sem expor o valor)
+      client_id_preview: i.client_id ? `${i.client_id.slice(0, 5)}…${i.client_id.slice(-4)} (${i.client_id.length} caracteres)` : null,
+      // Client ID do Bling é um código alfanumérico longo — '@' ou tamanho
+      // curto indicam autofill do navegador (e-mail/senha do login do site)
+      credencial_suspeita: !!(i.client_id && (/@/.test(i.client_id) || i.client_id.length < 20)),
       conectado: !!i.refresh_token,
       token_expira_em: i.token_expira_em,
       modulo_dre_ativo: i.modulo_dre_ativo,

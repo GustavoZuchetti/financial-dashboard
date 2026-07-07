@@ -145,12 +145,14 @@ export default function IntegracoesTab({ empresas, showToast }) {
               <div>
                 <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 5 }}>Client ID</label>
                 <input value={f.client_id ?? ''} onChange={e => setForm(fm => ({ ...fm, [emp.id]: { ...f, client_id: e.target.value } }))}
+                  name="bling_client_id" autoComplete="off" spellCheck={false}
                   placeholder={integ?.credenciais_ok ? '•••••• (configurado)' : 'Client ID do app Bling'}
                   style={{ width: '100%', background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, color: 'var(--fs-text-1)', fontSize: 13, padding: '9px 12px', outline: 'none' }} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 5 }}>Client Secret</label>
                 <input type="password" value={f.client_secret ?? ''} onChange={e => setForm(fm => ({ ...fm, [emp.id]: { ...f, client_secret: e.target.value } }))}
+                  name="bling_client_secret" autoComplete="new-password" spellCheck={false}
                   placeholder={integ?.credenciais_ok ? '•••••• (configurado)' : 'Client Secret do app Bling'}
                   style={{ width: '100%', background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, color: 'var(--fs-text-1)', fontSize: 13, padding: '9px 12px', outline: 'none' }} />
               </div>
@@ -159,6 +161,15 @@ export default function IntegracoesTab({ empresas, showToast }) {
                 Salvar
               </button>
             </div>
+
+            {integ?.client_id_preview && (
+              <div style={{ fontSize: 11.5, color: integ.credencial_suspeita ? 'var(--fs-danger)' : 'var(--fs-text-4)', marginTop: -6, marginBottom: 12 }}>
+                Client ID salvo no sistema: <b>{integ.client_id_preview}</b>
+                {integ.credencial_suspeita && (
+                  <span> — ⚠️ isto parece um e-mail/autofill do navegador, NÃO um Client ID do Bling. Cole o Client ID correto (código longo, na página do app em developer.bling.com.br) e salve novamente.</span>
+                )}
+              </div>
+            )}
 
             {integ?.credenciais_ok && !integ?.conectado && integ?.authorize_url && (
               <a href={integ.authorize_url}

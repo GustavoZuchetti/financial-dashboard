@@ -53,7 +53,7 @@ export default function IntegracoesTab({ empresas, showToast }) {
 
   const enriquecer = async (integ) => {
     setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: 'Enriquecendo títulos (nomes, categorias, competência, datas)...' } }))
-    let feitos = 0, erros = 0, guarda = 0, primeira = true, avisoEscopo = null
+    let feitos = 0, erros = 0, guarda = 0, primeira = true, avisoEscopo = null, ultimasAmostras = []
     try {
       while (guarda++ < 500) {
         const r = await authFetch('/api/integracoes/bling/enrich', {
@@ -64,11 +64,12 @@ export default function IntegracoesTab({ empresas, showToast }) {
         if (r.error) throw new Error(r.error)
         feitos += r.processados || 0; erros += r.erros || 0
         if (r.escopo_contatos && r.escopo_contatos !== 'ok') avisoEscopo = r.escopo_contatos
+        if (r.amostras_erro?.length) ultimasAmostras = r.amostras_erro
         if (r.sonda) throw new Error(`todas as consultas falharam — HTTP ${r.sonda.http} no detalhe do título: ${r.sonda.corpo}`)
         setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `Enriquecidos ${feitos} · restantes ${r.restantes}${erros ? ` · ${erros} erros` : ''}` } }))
         if (r.concluido) break
       }
-      const fim = `Enriquecimento concluído: ${feitos} títulos${erros ? ` · ${erros} erros` : ''}${avisoEscopo ? ` · ATENÇÃO: ${avisoEscopo}` : ''}`
+      const fim = `Enriquecimento concluído: ${feitos} títulos${erros ? ` · ${erros} erros${ultimasAmostras.length ? ` (ex.: HTTP ${ultimasAmostras[0].http} em ${ultimasAmostras[0].doc})` : ''}` : ''}${avisoEscopo ? ` · ATENÇÃO: ${avisoEscopo}` : ''}`
       setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log: fim } }))
       showToast?.(avisoEscopo ? 'Concluído com aviso de escopo — veja o card' : `Enriquecimento concluído: ${feitos} títulos`, avisoEscopo ? 'error' : 'success')
     } catch (e) {

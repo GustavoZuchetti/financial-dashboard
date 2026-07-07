@@ -7,7 +7,8 @@ import { getAuthProfile, ensureToken, fetchDetalhe, fetchCategoriasMap, fetchCon
 // body: { integracao_id, setup?: boolean }
 // Processa LOTE pequeno por chamada (timeout Vercel 10s); a UI itera até
 // restantes = 0. O filtro de "precisa enriquecer" torna o job retomável.
-const LOTE = 12
+const LOTE = 45          // máximo buscado por chamada
+const ORCAMENTO_MS = 7500 // processa até estourar o orçamento (timeout Vercel 10s)
 
 export async function POST(request) {
   const auth = await getAuthProfile(request)
@@ -21,21 +22,22 @@ export async function POST(request) {
     .select('*').eq('id', integracao_id).eq('organization_id', profile.organization_id).single()
   if (!integ) return NextResponse.json({ error: 'Integração não encontrada' }, { status: 404 })
 
-  // Setup (1ª chamada): garante as colunas de competência via Management API
+  // Setup (1ª chamada): garante colunas de competência e o cache de contatos
   if (setup && process.env.SUPABASE_ACCESS_TOKEN) {
     await fetch('https://api.supabase.com/v1/projects/wbrjdehmauaincgtcjrk/database/query', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ query:
         'alter table public.fluxo_caixa add column if not exists competencia date;' +
-        'alter table public.lancamentos add column if not exists competencia date;' }),
+        'alter table public.lancamentos add column if not exists competencia date;' +
+        "alter table public.integracoes add column if not exists contatos_cache jsonb not null default '{}'::jsonb;" }),
     }).catch(() => null)
   }
 
   const FILTRO = (q) => q
     .eq('empresa_id', integ.empresa_id)
     .like('doc_ref', 'bling:%')
-    .or('descricao.like.Contato %,categoria.eq.Sem categoria,competencia.is.null,and(status.eq.pago,data_liquidacao.is.null)')
+    .or('descricao.like.Contato *,categoria.eq.Sem categoria,competencia.is.null,and(status.eq.pago,data_liquidacao.is.null)')
 
   try {
     integ = await ensureToken(admin, integ)
@@ -49,17 +51,27 @@ export async function POST(request) {
     }
 
     const categoriasMap = await fetchCategoriasMap(integ)
-    const nomesCache = {}
+    // Cache PERSISTENTE de nomes (sobrevive entre chamadas — grande ganho de
+    // velocidade: fornecedores recorrentes só são consultados uma vez)
+    const nomesCache = { ...(integ.contatos_cache || {}) }
     let escopoContatosOk = true
     let processados = 0, erros = 0
+    const amostrasErro = []
+    const inicio = Date.now()
 
     for (const grupo of chunk(rows, 3)) {
+      if (Date.now() - inicio > ORCAMENTO_MS) break // orçamento de tempo
       await Promise.all(grupo.map(async (row) => {
         try {
           const [, tipoRef, blingId] = row.doc_ref.split(':')
           const recurso = tipoRef === 'entrada' ? 'contas/receber' : 'contas/pagar'
-          const det = await fetchDetalhe(integ, recurso, blingId)
-          if (!det) { erros++; return }
+          const probe = await blingGet(integ, `${recurso}/${blingId}`)
+          const det = probe.ok ? (probe.body?.data || null) : null
+          if (!det) {
+            erros++
+            if (amostrasErro.length < 3) amostrasErro.push({ doc: row.doc_ref, http: probe.status, corpo: JSON.stringify(probe.body || '').slice(0, 120) })
+            return
+          }
 
           const upd = {}
 
@@ -117,12 +129,16 @@ export async function POST(request) {
       sonda = { http: probe.status, corpo: JSON.stringify(probe.body || '').slice(0, 180) }
     }
 
+    // Persiste o cache de nomes para as próximas chamadas
+    await admin.from('integracoes').update({ contatos_cache: nomesCache, updated_at: new Date().toISOString() }).eq('id', integ.id)
+
     const { count: restantes } = await FILTRO(
       admin.from('fluxo_caixa').select('id', { count: 'exact', head: true })
     )
 
     return NextResponse.json({
       sonda,
+      amostras_erro: amostrasErro,
       processados, erros,
       restantes: restantes ?? 0,
       concluido: (restantes ?? 0) === 0,

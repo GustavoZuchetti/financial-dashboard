@@ -69,5 +69,12 @@ export async function POST(request) {
   const { error } = await admin.from('integracoes')
     .upsert(payload, { onConflict: 'organization_id,empresa_id,provedor' })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+
+  // Prova de gravação: relê e devolve a prévia do que ficou no banco
+  const { data: salvo } = await admin.from('integracoes')
+    .select('client_id').eq('organization_id', profile.organization_id)
+    .eq('empresa_id', empresa_id).eq('provedor', 'bling').single()
+  const preview = salvo?.client_id
+    ? `${salvo.client_id.slice(0, 5)}…${salvo.client_id.slice(-4)} (${salvo.client_id.length} caracteres)` : null
+  return NextResponse.json({ ok: true, client_id_salvo: preview })
 }

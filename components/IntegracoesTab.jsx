@@ -46,7 +46,7 @@ export default function IntegracoesTab({ empresas, showToast }) {
     })
     setSalvando(false)
     if (r.error) { showToast?.(r.error, 'error'); return }
-    showToast?.('Integração atualizada', 'success')
+    showToast?.(r.client_id_salvo ? `Salvo — Client ID no banco: ${r.client_id_salvo}` : 'Integração atualizada', 'success')
     setForm(fm => ({ ...fm, [empresaId]: {} }))
     carregar()
   }
@@ -64,6 +64,7 @@ export default function IntegracoesTab({ empresas, showToast }) {
         if (r.error) throw new Error(r.error)
         feitos += r.processados || 0; erros += r.erros || 0
         if (r.escopo_contatos && r.escopo_contatos !== 'ok') avisoEscopo = r.escopo_contatos
+        if (r.sonda) throw new Error(`todas as consultas falharam — HTTP ${r.sonda.http} no detalhe do título: ${r.sonda.corpo}`)
         setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `Enriquecidos ${feitos} · restantes ${r.restantes}${erros ? ` · ${erros} erros` : ''}` } }))
         if (r.concluido) break
       }

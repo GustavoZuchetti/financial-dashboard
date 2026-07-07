@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAuthProfile, ensureToken, fetchDetalhe, fetchCategoriasMap, fetchContatoNome, fetchBorderoData, chunk, pausa } from '@/lib/bling-server'
+import { getAuthProfile, ensureToken, fetchDetalhe, fetchCategoriasMap, fetchContatoNome, fetchBorderoData, chunk, pausa, blingGet } from '@/lib/bling-server'
 
 // POST /api/integracoes/bling/enrich — enriquecimento retomável dos títulos
 // sincronizados: nome do contato, categoria, competência, data de liquidação
@@ -108,11 +108,21 @@ export async function POST(request) {
       await pausa(500) // respeito ao rate limit do Bling
     }
 
+    // Sonda: se tudo falhou, capturar o HTTP real de UMA consulta de detalhe
+    let sonda = null
+    if (processados === 0 && erros > 0 && rows[0]) {
+      const [, tRef, bId] = rows[0].doc_ref.split(':')
+      const rc = tRef === 'entrada' ? 'contas/receber' : 'contas/pagar'
+      const probe = await blingGet(integ, `${rc}/${bId}`)
+      sonda = { http: probe.status, corpo: JSON.stringify(probe.body || '').slice(0, 180) }
+    }
+
     const { count: restantes } = await FILTRO(
       admin.from('fluxo_caixa').select('id', { count: 'exact', head: true })
     )
 
     return NextResponse.json({
+      sonda,
       processados, erros,
       restantes: restantes ?? 0,
       concluido: (restantes ?? 0) === 0,

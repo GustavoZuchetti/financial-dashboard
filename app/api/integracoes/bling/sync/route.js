@@ -14,7 +14,7 @@ export async function POST(request) {
   const auth = await getAuthProfile(request)
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
   const { admin, profile } = auth
-  if (!['admin', 'super_admin'].includes(profile.role))
+  if (!['org_admin', 'super_admin'].includes(profile.role))
     return NextResponse.json({ error: 'Apenas administradores podem sincronizar' }, { status: 403 })
 
   const { integracao_id, modulo = 'fluxo', fase = 0, pagina = 1, diag = false, limpar_origem_arquivo = false } = await request.json()

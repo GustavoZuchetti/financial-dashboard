@@ -234,7 +234,7 @@ export default function ConfiguracoesPage() {
     { v: 'empresas',    l: 'Empresas',          icon: 'building'   },
     { v: 'usuarios',    l: 'Usuários',          icon: 'users'      },
     { v: 'identidade',  l: 'Identidade Visual', icon: 'paintBrush' },
-    ...(['admin','super_admin'].includes(myRole) ? [{ v: 'integracoes', l: 'Integrações (API)', icon: 'plug' }] : []),
+    ...(['org_admin','super_admin'].includes(myRole) ? [{ v: 'integracoes', l: 'Integrações (API)', icon: 'plug' }] : []),
   ]
 
   return (
@@ -467,7 +467,7 @@ export default function ConfiguracoesPage() {
       )}
 
       {/* ─── Tab: Identidade Visual ───────────────────────────── */}
-      {tab === 'integracoes' && ['admin','super_admin'].includes(myRole) && (
+      {tab === 'integracoes' && ['org_admin','super_admin'].includes(myRole) && (
         <IntegracoesTab empresas={empresas} showToast={toast} />
       )}
 

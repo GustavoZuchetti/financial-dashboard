@@ -377,15 +377,20 @@ export default function ImportacaoPage() {
   // a importação por arquivo da entidade correspondente
   useEffect(() => {
     if (!empresaId) return
+    let vivo = true
     ;(async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        const r = await fetch('/api/integracoes', { headers: { 'Authorization': `Bearer ${session?.access_token}` } })
+        if (!session?.access_token) return
+        const r = await fetch('/api/integracoes', { headers: { 'Authorization': `Bearer ${session.access_token}` } })
         const j = await r.json()
+        // Consolida entre TODAS as integrações da entidade selecionada — se
+        // qualquer uma tem o módulo via API ativo, o arquivo é bloqueado
         const integ = (j.integracoes || []).find(i => i.empresa_id === empresaId)
-        setApiAtivo({ dre: !!integ?.modulo_dre_ativo, fluxo: !!integ?.modulo_fluxo_ativo })
-      } catch { setApiAtivo({ dre: false, fluxo: false }) }
+        if (vivo) setApiAtivo({ dre: !!integ?.modulo_dre_ativo, fluxo: !!integ?.modulo_fluxo_ativo })
+      } catch { if (vivo) setApiAtivo({ dre: false, fluxo: false }) }
     })()
+    return () => { vivo = false }
   }, [empresaId])
   const [planoContas,    setPlanoContas]    = useState([])
   const [mappingsDre,    setMappingsDre]    = useState([])

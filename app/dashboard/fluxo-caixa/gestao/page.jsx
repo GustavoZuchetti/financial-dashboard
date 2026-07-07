@@ -172,6 +172,8 @@ export default function GestaoFluxoCaixaPage() {
   // Totais globais (sem filtro de período)
   const [totalGlobalE,    setTotalGlobalE]    = useState(0)
   const [totalGlobalS,    setTotalGlobalS]    = useState(0)
+  const [totalPeriodo,    setTotalPeriodo]    = useState(0)  // registros no período (todos, não só a página)
+  const [saldoAnterior,   setSaldoAnterior]   = useState(0)  // saldo de partida (antes do período)
 
   // Modal edição
   const [editItem,     setEditItem]     = useState(null)   // registro sendo editado
@@ -235,22 +237,48 @@ export default function GestaoFluxoCaixaPage() {
       setSelected(new Set())
 
       // Totais globais — paginação completa para passar do limite de 1000 do Supabase
-      let gEntradas = 0, gSaidas = 0, gPage = 0, gDone = false
+      // Totais do PERÍODO (todos os registros filtrados, não só a página) —
+      // acompanham período, tipo, situação e busca
+      const hojeP = new Date().toISOString().split('T')[0]
+      let gEntradas = 0, gSaidas = 0, gCount = 0, gPage = 0, gDone = false
       while (!gDone) {
-        let qGlobal = supabase.from('fluxo_caixa').select('tipo,valor')
+        let qP = supabase.from('fluxo_caixa').select('tipo,valor,descricao,categoria')
+          .gte('data', startDate).lte('data', endDate)
           .range(gPage * 1000, (gPage + 1) * 1000 - 1)
-        qGlobal = isConsol ? qGlobal.in('empresa_id', empIds) : qGlobal.eq('empresa_id', empIds[0])
-        const { data: gBatch = [] } = await qGlobal
-        if (!gBatch || gBatch.length === 0) break
-        gBatch.forEach(r => {
+        qP = isConsol ? qP.in('empresa_id', empIds) : qP.eq('empresa_id', empIds[0])
+        if (tipoFiltro !== 'todos') qP = qP.eq('tipo', tipoFiltro)
+        if (statusFiltro === 'abertos')  qP = qP.in('status', ['aberto','parcial'])
+        if (statusFiltro === 'vencidos') qP = qP.in('status', ['aberto','parcial']).lt('data', hojeP)
+        if (statusFiltro === 'pagos')    qP = qP.eq('status', 'pago')
+        const { data: pBatch = [] } = await qP
+        if (!pBatch || pBatch.length === 0) break
+        const termo = busca.trim().toLowerCase()
+        pBatch.forEach(r => {
+          if (termo && !((r.descricao||'').toLowerCase().includes(termo) || (r.categoria||'').toLowerCase().includes(termo))) return
+          gCount++
           if (r.tipo === 'entrada') gEntradas += Number(r.valor)
           else gSaidas += Number(r.valor)
         })
-        if (gBatch.length < 1000) gDone = true
+        if (pBatch.length < 1000) gDone = true
         gPage++
       }
       setTotalGlobalE(gEntradas)
       setTotalGlobalS(gSaidas)
+      setTotalPeriodo(gCount)
+
+      // Saldo de PARTIDA do período: saldo inicial + movimentos anteriores
+      let base = 0, aPage = 0, aDone = false
+      while (!aDone) {
+        let qA = supabase.from('fluxo_caixa').select('tipo,valor').lt('data', startDate)
+          .range(aPage * 1000, (aPage + 1) * 1000 - 1)
+        qA = isConsol ? qA.in('empresa_id', empIds) : qA.eq('empresa_id', empIds[0])
+        const { data: aBatch = [] } = await qA
+        if (!aBatch || aBatch.length === 0) break
+        aBatch.forEach(r => { base += (r.tipo === 'entrada' ? Number(r.valor) : -Number(r.valor)) })
+        if (aBatch.length < 1000) aDone = true
+        aPage++
+      }
+      setSaldoAnterior(base)
 
       // Saldo inicial configurado
       const { data: cfg } = await supabase.from('empresa_config')
@@ -260,7 +288,7 @@ export default function GestaoFluxoCaixaPage() {
 
     } catch(e) { console.error('GestaoFluxo:', e); showToast('Erro ao carregar dados', 'error') }
     finally { setLoading(false) }
-  }, [empresaId, isConsol, startDate, endDate, tipoFiltro, statusFiltro, page])
+  }, [empresaId, isConsol, startDate, endDate, tipoFiltro, statusFiltro, busca, page])
 
   useEffect(() => { if (empresaId !== null) load() }, [load, empresaId])
 
@@ -479,8 +507,8 @@ export default function GestaoFluxoCaixaPage() {
   // ─── Totais da página ────────────────────────────────────────────────────────
   const totalEntradas = filtrados.filter(r=>r.tipo==='entrada').reduce((a,c)=>a+Number(c.valor),0)
   const totalSaidas   = filtrados.filter(r=>r.tipo==='saida').reduce((a,c)=>a+Number(c.valor),0)
-  // Saldo corrente = saldo inicial + todas entradas - todas saídas (sem filtro de período)
-  const saldoCorrente = saldoInicialDB + totalGlobalE - totalGlobalS
+  // Saldo do período = saldo de partida (inicial + anterior) + movimento filtrado
+  const saldoCorrente = saldoInicialDB + saldoAnterior + totalGlobalE - totalGlobalS
 
   // ─── Saldo acumulado dia a dia (extrato bancário) ───────────────────────────
   const extratoComSaldo = (() => {
@@ -743,9 +771,9 @@ export default function GestaoFluxoCaixaPage() {
       <div style={{ display:'flex', gap:10, marginBottom:10, flexWrap:'wrap' }}>
         {[
           { label:'Total de registros', value: String(total),                     color:'var(--fs-text-1)' },
-          { label:'Entradas (página)',  value: fC(totalEntradas),                  color:'#22c55e' },
-          { label:'Saídas (página)',    value: fC(totalSaidas),                    color:'#ef4444' },
-          { label:'Saldo (página)',     value: fC(totalEntradas - totalSaidas),    color: totalEntradas >= totalSaidas ? '#22c55e' : '#ef4444' },
+          { label:'Entradas (período)', value: fC(totalGlobalE),                   color:'#22c55e' },
+          { label:'Saídas (período)',   value: fC(totalGlobalS),                   color:'#ef4444' },
+          { label:'Saldo (período)',    value: fC(totalGlobalE - totalGlobalS),    color: totalGlobalE >= totalGlobalS ? '#22c55e' : '#ef4444' },
         ].map(k => (
           <div key={k.label} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'10px 16px', flex:1, minWidth:140 }}>
             <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>{k.label}</div>
@@ -759,14 +787,14 @@ export default function GestaoFluxoCaixaPage() {
         {/* Saldo corrente real */}
         <div style={{ background: saldoCorrente >= 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border:`1px solid ${saldoCorrente>=0?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)'}`, borderRadius:10, padding:'12px 18px', flex:2 }}>
           <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>
-            <span style={{display:'flex',alignItems:'center',gap:7}}><SvgIcon name="wallet" size={14} color="var(--fs-brand)" />Saldo Corrente (todas as movimentações)</span>
+            <span style={{display:'flex',alignItems:'center',gap:7}}><SvgIcon name="wallet" size={14} color="var(--fs-brand)" />Saldo do Período (acumulado)</span>
           </div>
           <div style={{ display:'flex', alignItems:'baseline', gap:12 }}>
             <div style={{ fontSize:24, fontWeight:800, color: saldoCorrente >= 0 ? '#22c55e' : '#ef4444' }}>
               {fCFull(saldoCorrente)}
             </div>
             <div style={{ fontSize:11, color:'var(--fs-text-4)' }}>
-              Saldo inicial: {fC(saldoInicialDB)} + Entradas: {fC(totalGlobalE)} − Saídas: {fC(totalGlobalS)}
+              Saldo até o início do período: {fC(saldoInicialDB + saldoAnterior)} + Entradas: {fC(totalGlobalE)} − Saídas: {fC(totalGlobalS)}
             </div>
           </div>
         </div>

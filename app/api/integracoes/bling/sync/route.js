@@ -48,7 +48,7 @@ export async function POST(request) {
     const { recurso, tipoFluxo } = FASES[fase] || FASES[0]
     // DRE precisa do DETALHE de cada título (a listagem não traz categoria) →
     // páginas menores para caber no timeout de 10s da Vercel
-    const LIMITE = 25  // ambos buscam detalhe agora → páginas menores p/ timeout
+    const LIMITE = 50  // muitos títulos são pulados (já completos) → página maior
     const itens = await fetchContas(integ, recurso, pagina, LIMITE)
 
     // Substituição opcional (1ª chamada): remove registros de origem ARQUIVO
@@ -81,8 +81,27 @@ export async function POST(request) {
     // resolve nome de categoria (mapa 1x) e de contato (cache persistente)
     const categoriasMap = await fetchCategoriasMap(integ)
     const nomesContato = { ...(integ.contatos_cache || {}) }
+
+    // OTIMIZAÇÃO: não re-detalhar títulos já COMPLETOS no banco (nome ok,
+    // categoria resolvida, competência preenchida). Só busca detalhe do que
+    // falta → revarreduras seguintes ficam quase instantâneas
+    const docRefs = itens.map(i => `bling:${tipoFluxo}:${i.id}`)
+    const { data: existentes } = await admin.from('fluxo_caixa')
+      .select('doc_ref,descricao,categoria,competencia,status,data_liquidacao')
+      .in('doc_ref', docRefs)
+    const completo = {}
+    ;(existentes || []).forEach(e => {
+      const id = e.doc_ref.split(':').pop()
+      const descOk = e.descricao && !/^Contato \d+$/.test(e.descricao) && e.descricao !== 'Sem descrição' && e.descricao !== 'Título Bling'
+      const catOk  = e.categoria && e.categoria !== 'Sem categoria'
+      const compOk = !!e.competencia
+      const liqOk  = e.status !== 'pago' || !!e.data_liquidacao
+      completo[id] = descOk && catOk && compOk && liqOk
+    })
+    const aDetalhar = itens.filter(i => !completo[i.id])
+
     const detalhes = {}
-    for (const grupo of chunk(itens.map(i => i.id).filter(Boolean), 8)) {
+    for (const grupo of chunk(aDetalhar.map(i => i.id).filter(Boolean), 10)) {
       const ds = await Promise.all(grupo.map(id => fetchDetalhe(integ, recurso, id)))
       grupo.forEach((id, ix) => { if (ds[ix]) detalhes[id] = ds[ix] })
     }
@@ -97,6 +116,8 @@ export async function POST(request) {
 
     const registros = [], pendencias = []
     for (const item of itens) {
+      // Já completo e sem novo detalhe → não reescreve (economia de escrita)
+      if (completo[item?.id] && !detalhes[item?.id]) continue
       const det = detalhes[item?.id] || {}
       const base = { ...item, ...det }
       const cid = base?.contato?.id

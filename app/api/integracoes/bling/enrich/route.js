@@ -86,7 +86,8 @@ export async function POST(request) {
             }
             nome = nomesCache[cid]
           }
-          const descRica = nome || det?.historico || null
+          const descRica = (typeof nome === 'string' && nome.trim()) ? nome.trim()
+                             : (typeof det?.historico === 'string' && det.historico.trim() ? det.historico.trim() : null)
           if (descRica) upd.descricao = descRica
 
           // Categoria (id → nome do cadastro)

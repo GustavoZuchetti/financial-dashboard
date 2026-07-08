@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAuthProfile, ensureToken, fetchContas, mapConta, fetchDetalhe, fetchCategoriasMap, fetchContatoNome, chunk } from '@/lib/bling-server'
+import { getAuthProfile, ensureToken, fetchContas, mapConta, fetchDetalhe, fetchCategoriasMap, fetchContatoNome, fetchBorderoData, chunk } from '@/lib/bling-server'
 
 // POST /api/integracoes/bling/sync
 // body: { integracao_id, modulo: 'fluxo'|'dre', fase?: 0|1, pagina?: number, diag?: boolean }
@@ -33,10 +33,22 @@ export async function POST(request) {
 
   try {
     integ = await ensureToken(admin, integ)
+
+    // Setup idempotente das colunas na largada (fase 0, pág 1)
+    if (fase === 0 && pagina === 1 && !diag && process.env.SUPABASE_ACCESS_TOKEN) {
+      await fetch('https://api.supabase.com/v1/projects/wbrjdehmauaincgtcjrk/database/query', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query:
+          'alter table public.fluxo_caixa add column if not exists competencia date;' +
+          'alter table public.lancamentos add column if not exists competencia date;' +
+          "alter table public.integracoes add column if not exists contatos_cache jsonb not null default '{}'::jsonb;" }),
+      }).catch(() => null)
+    }
     const { recurso, tipoFluxo } = FASES[fase] || FASES[0]
     // DRE precisa do DETALHE de cada título (a listagem não traz categoria) →
     // páginas menores para caber no timeout de 10s da Vercel
-    const LIMITE = modulo === 'dre' ? 25 : 100
+    const LIMITE = 25  // ambos buscam detalhe agora → páginas menores p/ timeout
     const itens = await fetchContas(integ, recurso, pagina, LIMITE)
 
     // Substituição opcional (1ª chamada): remove registros de origem ARQUIVO
@@ -54,7 +66,7 @@ export async function POST(request) {
       })
     }
 
-    // Pré-carrega De-Para de categorias (necessário para o módulo DRE)
+    // De-Para de categorias (módulo DRE)
     let mappings = null, contas = null
     if (modulo === 'dre') {
       const [m, c] = await Promise.all([
@@ -64,43 +76,55 @@ export async function POST(request) {
       mappings = m.data || []; contas = c.data || []
     }
 
-    // Enriquecimento 1: nomes de contatos ausentes (contas a pagar vem sem nome)
+    // DADOS COMPLETOS NA PRÓPRIA SYNC (sem depender de enriquecimento manual):
+    // busca o DETALHE de cada título → categoria.id, competencia, saldo, borderô;
+    // resolve nome de categoria (mapa 1x) e de contato (cache persistente)
+    const categoriasMap = await fetchCategoriasMap(integ)
+    const nomesContato = { ...(integ.contatos_cache || {}) }
+    const detalhes = {}
+    for (const grupo of chunk(itens.map(i => i.id).filter(Boolean), 8)) {
+      const ds = await Promise.all(grupo.map(id => fetchDetalhe(integ, recurso, id)))
+      grupo.forEach((id, ix) => { if (ds[ix]) detalhes[id] = ds[ix] })
+    }
+    // Nomes de contato ausentes (só os que não estão no cache)
     const idsSemNome = [...new Set(itens
-      .filter(i => !i?.contato?.nome && i?.contato?.id != null)
-      .map(i => i.contato.id))].slice(0, 25)
-    const nomesContato = {}
+      .map(i => detalhes[i?.id]?.contato?.id ?? i?.contato?.id)
+      .filter(id => id != null && !nomesContato[id]))].slice(0, 30)
     for (const grupo of chunk(idsSemNome, 5)) {
       const nomes = await Promise.all(grupo.map(id => fetchContatoNome(integ, id)))
-      grupo.forEach((id, ix) => { if (nomes[ix]) nomesContato[id] = nomes[ix] })
-    }
-
-    // Enriquecimento 2 (módulo DRE): detalhe de cada título → categoria + histórico
-    let categoriasMap = {}
-    let detalhes = {}
-    if (modulo === 'dre') {
-      categoriasMap = await fetchCategoriasMap(integ)
-      for (const grupo of chunk(itens.map(i => i.id).filter(Boolean), 8)) {
-        const ds = await Promise.all(grupo.map(id => fetchDetalhe(integ, recurso, id)))
-        grupo.forEach((id, ix) => { if (ds[ix]) detalhes[id] = ds[ix] })
-      }
+      grupo.forEach((id, ix) => { const nm = nomes[ix]?.nome; if (nm) nomesContato[id] = nm })
     }
 
     const registros = [], pendencias = []
     for (const item of itens) {
-      const base = modulo === 'dre' ? { ...item, ...(detalhes[item?.id] || {}) } : item
-      if (base?.contato?.id != null && !base?.contato?.nome && nomesContato[base.contato.id]) {
-        base.contato = { ...base.contato, nome: nomesContato[base.contato.id] }
+      const det = detalhes[item?.id] || {}
+      const base = { ...item, ...det }
+      const cid = base?.contato?.id
+      if (cid != null && !base?.contato?.nome && nomesContato[cid]) {
+        base.contato = { ...base.contato, nome: nomesContato[cid] }
       }
       const { registro, faltantes } = mapConta(base, { tipoFluxo, empresaId: integ.empresa_id })
-      // Categoria por ID resolvida pelo mapa (detalhe traz categoria.id, não o nome)
+      // Categoria por ID (detalhe traz categoria.id, não o nome)
       const catId = base?.categoria?.id
       if (catId != null && categoriasMap[catId]) registro.categoria = categoriasMap[catId]
+      // Competência
+      if (base?.competencia && base.competencia !== '0000-00-00') registro.competencia = base.competencia
+      // Parcial preciso via saldo
+      const sld = Number(base?.saldo)
+      if (Number.isFinite(sld) && sld > 0 && sld < registro.valor) {
+        registro.status = 'parcial'; registro.valor_liquidado = Number((registro.valor - sld).toFixed(2))
+      }
+      // Data de liquidação via borderô (só p/ pagos)
+      if (registro.status === 'pago' && Array.isArray(base?.borderos) && base.borderos.length) {
+        const dt = await fetchBorderoData(integ, base.borderos[base.borderos.length - 1])
+        if (dt && dt !== '0000-00-00') registro.data_liquidacao = dt
+      }
       if (faltantes.length || !registro.doc_ref || !registro.data) {
         pendencias.push({ motivo: `campos ausentes: ${faltantes.join(',') || 'data'}`, id: registro.doc_ref })
         continue
       }
       if (modulo === 'fluxo') {
-        registros.push(registro)
+        registros.push(registro)  // já vem completo: nome, categoria, competência, liquidação
       } else {
         // DRE: tipo derivado do De-Para de categorias (mesma regra da importação por arquivo)
         const regra = mappings.find(mp => (mp.categoria_origem || '').trim().toLowerCase() === registro.categoria.trim().toLowerCase())
@@ -118,6 +142,9 @@ export async function POST(request) {
         })
       }
     }
+
+    // Persiste o cache de nomes para as próximas páginas/execuções
+    await admin.from('integracoes').update({ contatos_cache: nomesContato }).eq('id', integ.id)
 
     let gravados = 0
     if (registros.length) {

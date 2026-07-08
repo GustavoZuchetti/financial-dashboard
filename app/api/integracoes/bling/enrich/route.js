@@ -57,6 +57,11 @@ export async function POST(request) {
     let escopoContatosOk = true
     let processados = 0, erros = 0
     const amostrasErro = []
+    const motivos = {}  // { classe: contagem }
+    const registraErro = (classe, doc, extra) => {
+      motivos[classe] = (motivos[classe] || 0) + 1
+      if (amostrasErro.length < 5) amostrasErro.push({ classe, doc, ...extra })
+    }
     const inicio = Date.now()
 
     for (const grupo of chunk(rows, 6)) {
@@ -69,7 +74,7 @@ export async function POST(request) {
           const det = probe.ok ? (probe.body?.data || null) : null
           if (!det) {
             erros++
-            if (amostrasErro.length < 3) amostrasErro.push({ doc: row.doc_ref, http: probe.status, corpo: JSON.stringify(probe.body || '').slice(0, 120) })
+            registraErro(`detalhe_http_${probe.status}`, row.doc_ref, { corpo: JSON.stringify(probe.body || '').slice(0, 120) })
             return
           }
 
@@ -113,10 +118,10 @@ export async function POST(request) {
 
           if (Object.keys(upd).length) {
             const { error } = await admin.from('fluxo_caixa').update(upd).eq('id', row.id)
-            if (error) { erros++; return }
+            if (error) { erros++; registraErro('update_db', row.doc_ref, { msg: error.message.slice(0, 120) }); return }
           }
           processados++
-        } catch { erros++ }
+        } catch (e) { erros++; registraErro('excecao', row.doc_ref, { msg: String(e.message || e).slice(0, 120) }) }
       }))
       await pausa(250) // respeito ao rate limit do Bling
     }
@@ -139,6 +144,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       sonda,
+      motivos_erro: motivos,
       amostras_erro: amostrasErro,
       processados, erros,
       restantes: restantes ?? 0,

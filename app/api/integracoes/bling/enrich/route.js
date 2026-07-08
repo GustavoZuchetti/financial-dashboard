@@ -7,8 +7,8 @@ import { getAuthProfile, ensureToken, fetchDetalhe, fetchCategoriasMap, fetchCon
 // body: { integracao_id, setup?: boolean }
 // Processa LOTE pequeno por chamada (timeout Vercel 10s); a UI itera até
 // restantes = 0. O filtro de "precisa enriquecer" torna o job retomável.
-const LOTE = 45          // máximo buscado por chamada
-const ORCAMENTO_MS = 7500 // processa até estourar o orçamento (timeout Vercel 10s)
+const LOTE = 80           // máximo buscado por chamada
+const ORCAMENTO_MS = 8000 // processa até estourar o orçamento (timeout Vercel 10s)
 
 export async function POST(request) {
   const auth = await getAuthProfile(request)
@@ -59,7 +59,7 @@ export async function POST(request) {
     const amostrasErro = []
     const inicio = Date.now()
 
-    for (const grupo of chunk(rows, 3)) {
+    for (const grupo of chunk(rows, 6)) {
       if (Date.now() - inicio > ORCAMENTO_MS) break // orçamento de tempo
       await Promise.all(grupo.map(async (row) => {
         try {
@@ -118,7 +118,7 @@ export async function POST(request) {
           processados++
         } catch { erros++ }
       }))
-      await pausa(500) // respeito ao rate limit do Bling
+      await pausa(250) // respeito ao rate limit do Bling
     }
 
     // Sonda: se tudo falhou, capturar o HTTP real de UMA consulta de detalhe

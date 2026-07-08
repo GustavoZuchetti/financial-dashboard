@@ -4,7 +4,7 @@ import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine
+  CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, Cell
 } from 'recharts'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -435,9 +435,9 @@ export default function CicloFinanceiroPage() {
                     <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={v=>v+'d'} width={38} />
                     <Tooltip content={<TT />} cursor={false} />
                     <ReferenceLine y={0} stroke="var(--fs-border)" strokeWidth={2} />
-                    <Bar dataKey="cicloCF" radius={[4,4,0,0]} name="Ciclo Financeiro">
+                    <Bar dataKey="cicloCF" radius={[4,4,0,0]} name="Ciclo Financeiro" isAnimationActive={false}>
                       {historico.map((entry, i) => (
-                        <rect key={i} fill={entry.cicloCF <= 0 ? '#22c55e' : '#ef4444'} />
+                        <Cell key={i} fill={entry.cicloCF <= 0 ? 'var(--fs-success)' : 'var(--fs-danger)'} />
                       ))}
                     </Bar>
                   </BarChart>

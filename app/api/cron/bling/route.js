@@ -25,19 +25,8 @@ export async function GET(request) {
 
   const admin = getAdmin()
 
-  // Colunas dedicadas do cron (isoladas de ultimo_resultado, que a sync manual
-  // e o enriquecimento também escrevem — evita sobrescrita mútua do cursor)
-  if (process.env.SUPABASE_ACCESS_TOKEN) {
-    await fetch('https://api.supabase.com/v1/projects/wbrjdehmauaincgtcjrk/database/query', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query:
-        "alter table public.integracoes add column if not exists cron_cursor jsonb;" +
-        "alter table public.integracoes add column if not exists cron_resultado jsonb;" +
-        "alter table public.integracoes add column if not exists ultima_sync_cron timestamptz;" }),
-    }).catch(() => null)
-  }
-
+  // (Colunas dedicadas do cron já criadas pela migração 20260710 — não é
+  // preciso recriá-las a cada execução.)
   const { data: integs } = await admin.from('integracoes')
     .select('*').eq('modulo_fluxo_ativo', true).not('refresh_token', 'is', null)
 

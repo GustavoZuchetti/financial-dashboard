@@ -24,6 +24,20 @@ export async function GET(request) {
   if (!ehCronVercel && !bearerOk) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const admin = getAdmin()
+
+  // Colunas dedicadas do cron (isoladas de ultimo_resultado, que a sync manual
+  // e o enriquecimento também escrevem — evita sobrescrita mútua do cursor)
+  if (process.env.SUPABASE_ACCESS_TOKEN) {
+    await fetch('https://api.supabase.com/v1/projects/wbrjdehmauaincgtcjrk/database/query', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query:
+        "alter table public.integracoes add column if not exists cron_cursor jsonb;" +
+        "alter table public.integracoes add column if not exists cron_resultado jsonb;" +
+        "alter table public.integracoes add column if not exists ultima_sync_cron timestamptz;" }),
+    }).catch(() => null)
+  }
+
   const { data: integs } = await admin.from('integracoes')
     .select('*').eq('modulo_fluxo_ativo', true).not('refresh_token', 'is', null)
 
@@ -34,7 +48,7 @@ export async function GET(request) {
     const r = { integracao: raw.id, paginas: 0, gravados: 0 }
     try {
       const integ = await ensureToken(admin, raw)
-      let { fase = 0, pagina = 1 } = raw.ultimo_resultado?.cron_cursor || {}
+      let { fase = 0, pagina = 1 } = raw.cron_cursor || {}
       const categoriasMap = await fetchCategoriasMap(integ)
       const nomesContato = { ...(integ.contatos_cache || {}) }
 

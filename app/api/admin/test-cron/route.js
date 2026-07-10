@@ -16,10 +16,10 @@ export async function GET(request) {
   const diag = { integracoes_elegiveis: (integs || []).length, relatorio: [] }
   const inicio = Date.now()
   for (const raw of integs || []) {
-    const r = { id: raw.id, empresa_id: raw.empresa_id, paginas: 0, gravados: 0, cursor_inicial: raw.ultimo_resultado?.cron_cursor || null }
+    const r = { id: raw.id, empresa_id: raw.empresa_id, paginas: 0, gravados: 0, cursor_inicial: raw.cron_cursor || null }
     try {
       const integ = await ensureToken(admin, raw)
-      let { fase = 0, pagina = 1 } = raw.ultimo_resultado?.cron_cursor || {}
+      let { fase = 0, pagina = 1 } = raw.cron_cursor || {}
       const categoriasMap = await fetchCategoriasMap(integ)
       const nomesContato = { ...(integ.contatos_cache || {}) }
       while (Date.now() - inicio < 7000) {
@@ -75,8 +75,9 @@ export async function GET(request) {
       }
       await admin.from('integracoes').update({
         contatos_cache: nomesContato,
-        ultima_sync: new Date().toISOString(),
-        ultimo_resultado: { ...(raw.ultimo_resultado || {}), cron: r, cron_cursor: { fase, pagina } },
+        ultima_sync_cron: new Date().toISOString(),
+        cron_cursor: { fase, pagina },
+        cron_resultado: r,
       }).eq('id', integ.id)
       r.cursor_final = { fase, pagina }
     } catch (e) { r.erro = String(e.message || e) }

@@ -14,10 +14,14 @@ const FASES = [
 ]
 
 export async function GET(request) {
+  // A Vercel injeta o header 'x-vercel-cron: 1' nas execuções agendadas e não
+  // permite que requisições externas o forjem — é a autenticação oficial.
+  // Mantemos também Bearer CRON_SECRET para disparo manual/externo opcional.
+  const ehCronVercel = request.headers.get('x-vercel-cron') === '1'
   const auth = request.headers.get('authorization') || ''
-  const key = new URL(request.url).searchParams.get('key')
-  const ok = (process.env.CRON_SECRET && (auth === `Bearer ${process.env.CRON_SECRET}` || key === process.env.CRON_SECRET))
-  if (!ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const key  = new URL(request.url).searchParams.get('key')
+  const bearerOk = process.env.CRON_SECRET && (auth === `Bearer ${process.env.CRON_SECRET}` || key === process.env.CRON_SECRET)
+  if (!ehCronVercel && !bearerOk) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const admin = getAdmin()
   const { data: integs } = await admin.from('integracoes')

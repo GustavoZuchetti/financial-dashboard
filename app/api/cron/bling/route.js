@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAdmin, ensureToken, fetchContas, mapConta, pausa } from '@/lib/bling-server'
+import { getAdmin, ensureToken, fetchCategoriasMap, processarPaginaFluxo, pausa } from '@/lib/bling-server'
 
 // ─── Cron diário: sincroniza o fluxo (listagem) em segundo plano ─────────────
 // A Vercel chama esta rota no agendamento do vercel.json, autenticando com
@@ -35,27 +35,22 @@ export async function GET(request) {
     try {
       const integ = await ensureToken(admin, raw)
       let { fase = 0, pagina = 1 } = raw.ultimo_resultado?.cron_cursor || {}
+      const categoriasMap = await fetchCategoriasMap(integ)
+      const nomesContato = { ...(integ.contatos_cache || {}) }
 
       while (Date.now() - inicio < 7500) {
         const { recurso, tipoFluxo } = FASES[fase] || FASES[0]
-        const itens = await fetchContas(integ, recurso, pagina, 100)
-        const registros = itens
-          .map(i => mapConta(i, { tipoFluxo, empresaId: integ.empresa_id }))
-          .filter(m => !m.faltantes.length && m.registro.doc_ref && m.registro.data)
-          .map(m => m.registro)
-        if (registros.length) {
-          const { error } = await admin.from('fluxo_caixa').upsert(registros, { onConflict: 'doc_ref' })
-          if (!error) r.gravados += registros.length
-        }
+        const res = await processarPaginaFluxo(admin, integ, recurso, tipoFluxo, pagina, 50, categoriasMap, nomesContato)
+        r.gravados += res.gravados
         r.paginas++
-        // avanço do cursor (reinicia do zero ao completar a varredura)
-        if (itens.length >= 100) pagina++
+        if (res.paginaCheia) pagina++
         else if (fase + 1 < FASES.length) { fase++; pagina = 1 }
         else { fase = 0; pagina = 1; r.varredura_completa = true; break }
         await pausa(250)
       }
 
       await admin.from('integracoes').update({
+        contatos_cache: nomesContato,
         ultima_sync: new Date().toISOString(),
         ultimo_resultado: { ...(raw.ultimo_resultado || {}), cron: r, cron_cursor: { fase, pagina } },
         updated_at: new Date().toISOString(),

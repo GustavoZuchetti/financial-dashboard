@@ -75,6 +75,7 @@ export async function GET(request) {
       }
       await admin.from('integracoes').update({
         contatos_cache: nomesContato,
+        ultima_sync: new Date().toISOString(),      // visível na UI ("Última sincronização")
         ultima_sync_cron: new Date().toISOString(),
         cron_cursor: { fase, pagina },
         cron_resultado: r,

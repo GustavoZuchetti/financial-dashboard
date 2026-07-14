@@ -174,6 +174,7 @@ export default function GestaoFluxoCaixaPage() {
   const [totalGlobalS,    setTotalGlobalS]    = useState(0)
   const [totalPeriodo,    setTotalPeriodo]    = useState(0)  // registros no período (todos, não só a página)
   const [saldoAnterior,   setSaldoAnterior]   = useState(0)  // saldo de partida (antes do período)
+  const [indicadores,     setIndicadores]     = useState({ recebido:0, aReceber:0, atrasoReceber:0, pago:0, aPagar:0, atrasoPagar:0 })
 
   // Modal edição
   const [editItem,     setEditItem]     = useState(null)   // registro sendo editado
@@ -241,8 +242,9 @@ export default function GestaoFluxoCaixaPage() {
       // acompanham período, tipo, situação e busca
       const hojeP = new Date().toISOString().split('T')[0]
       let gEntradas = 0, gSaidas = 0, gCount = 0, gPage = 0, gDone = false
+      const ind = { recebido:0, aReceber:0, atrasoReceber:0, pago:0, aPagar:0, atrasoPagar:0 }
       while (!gDone) {
-        let qP = supabase.from('fluxo_caixa').select('tipo,valor,descricao,categoria')
+        let qP = supabase.from('fluxo_caixa').select('tipo,valor,descricao,categoria,status,data,valor_liquidado')
           .gte('data', startDate).lte('data', endDate)
           .range(gPage * 1000, (gPage + 1) * 1000 - 1)
         qP = isConsol ? qP.in('empresa_id', empIds) : qP.eq('empresa_id', empIds[0])
@@ -256,8 +258,21 @@ export default function GestaoFluxoCaixaPage() {
         pBatch.forEach(r => {
           if (termo && !((r.descricao||'').toLowerCase().includes(termo) || (r.categoria||'').toLowerCase().includes(termo))) return
           gCount++
-          if (r.tipo === 'entrada') gEntradas += Number(r.valor)
-          else gSaidas += Number(r.valor)
+          const v = Number(r.valor) || 0
+          const liq = Number(r.valor_liquidado) || 0
+          const st = r.status || 'aberto'
+          const vencido = ['aberto','parcial'].includes(st) && r.data < hojeP
+          if (r.tipo === 'entrada') {
+            gEntradas += v
+            if (st === 'pago') ind.recebido += v
+            else if (st === 'parcial') { ind.recebido += liq; ind.aReceber += (v - liq); if (vencido) ind.atrasoReceber += (v - liq) }
+            else if (st === 'aberto') { ind.aReceber += v; if (vencido) ind.atrasoReceber += v }
+          } else {
+            gSaidas += v
+            if (st === 'pago') ind.pago += v
+            else if (st === 'parcial') { ind.pago += liq; ind.aPagar += (v - liq); if (vencido) ind.atrasoPagar += (v - liq) }
+            else if (st === 'aberto') { ind.aPagar += v; if (vencido) ind.atrasoPagar += v }
+          }
         })
         if (pBatch.length < 1000) gDone = true
         gPage++
@@ -265,6 +280,7 @@ export default function GestaoFluxoCaixaPage() {
       setTotalGlobalE(gEntradas)
       setTotalGlobalS(gSaidas)
       setTotalPeriodo(gCount)
+      setIndicadores(ind)
 
       // Saldo de PARTIDA do período: saldo inicial + movimentos anteriores
       let base = 0, aPage = 0, aDone = false
@@ -507,8 +523,6 @@ export default function GestaoFluxoCaixaPage() {
   // ─── Totais da página ────────────────────────────────────────────────────────
   const totalEntradas = filtrados.filter(r=>r.tipo==='entrada').reduce((a,c)=>a+Number(c.valor),0)
   const totalSaidas   = filtrados.filter(r=>r.tipo==='saida').reduce((a,c)=>a+Number(c.valor),0)
-  // Saldo do período = saldo de partida (inicial + anterior) + movimento filtrado
-  const saldoCorrente = saldoInicialDB + saldoAnterior + totalGlobalE - totalGlobalS
 
   // ─── Saldo acumulado dia a dia (extrato bancário) ───────────────────────────
   const extratoComSaldo = (() => {
@@ -784,18 +798,25 @@ export default function GestaoFluxoCaixaPage() {
 
       {/* ── Saldo Corrente + Saldo Inicial ────────────────────────────────────── */}
       <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap' }}>
-        {/* Saldo corrente real */}
-        <div style={{ background: saldoCorrente >= 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border:`1px solid ${saldoCorrente>=0?'rgba(34,197,94,0.25)':'rgba(239,68,68,0.25)'}`, borderRadius:10, padding:'12px 18px', flex:2 }}>
-          <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>
-            <span style={{display:'flex',alignItems:'center',gap:7}}><SvgIcon name="wallet" size={14} color="var(--fs-brand)" />Saldo do Período (acumulado)</span>
+        {/* Indicadores decisórios do período (por status de liquidação) */}
+        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 18px', flex:2, minWidth:420 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:10 }}>
+            <span style={{display:'flex',alignItems:'center',gap:7}}><SvgIcon name="wallet" size={14} color="var(--fs-brand)" />Indicadores do Período</span>
           </div>
-          <div style={{ display:'flex', alignItems:'baseline', gap:12 }}>
-            <div style={{ fontSize:24, fontWeight:800, color: saldoCorrente >= 0 ? '#22c55e' : '#ef4444' }}>
-              {fCFull(saldoCorrente)}
-            </div>
-            <div style={{ fontSize:11, color:'var(--fs-text-4)' }}>
-              Saldo até o início do período: {fC(saldoInicialDB + saldoAnterior)} + Entradas: {fC(totalGlobalE)} − Saídas: {fC(totalGlobalS)}
-            </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(120px, 1fr))', gap:'10px 18px' }}>
+            {[
+              ['Recebido',           indicadores.recebido,      'var(--fs-success)'],
+              ['A Receber',          indicadores.aReceber,      'var(--fs-text-2)'],
+              ['Atraso (Receber)',   indicadores.atrasoReceber, indicadores.atrasoReceber > 0 ? 'var(--fs-danger)' : 'var(--fs-text-4)'],
+              ['Pago',               indicadores.pago,          'var(--fs-success)'],
+              ['A Pagar',            indicadores.aPagar,        'var(--fs-text-2)'],
+              ['Atraso (Pagar)',     indicadores.atrasoPagar,   indicadores.atrasoPagar > 0 ? 'var(--fs-danger)' : 'var(--fs-text-4)'],
+            ].map(([rot, val, cor]) => (
+              <div key={rot}>
+                <div style={{ fontSize:9.5, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:2 }}>{rot}</div>
+                <div style={{ fontSize:15, fontWeight:800, color:cor }} className="fs-num">{fC(val)}</div>
+              </div>
+            ))}
           </div>
         </div>
 

@@ -73,13 +73,18 @@ export async function GET(request) {
         else { fase = 0; pagina = 1; r.varredura_completa = true; break }
         await pausa(250)
       }
-      await admin.from('integracoes').update({
+      const { error: errUpd } = await admin.from('integracoes').update({
         contatos_cache: nomesContato,
         ultima_sync: new Date().toISOString(),      // visível na UI ("Última sincronização")
         ultima_sync_cron: new Date().toISOString(),
         cron_cursor: { fase, pagina },
         cron_resultado: r,
       }).eq('id', integ.id)
+      r.erro_gravacao = errUpd?.message || null
+      // Releitura: o que REALMENTE ficou no banco após o update
+      const { data: relido, error: errSel } = await admin.from('integracoes')
+        .select('cron_cursor').eq('id', integ.id).single()
+      r.cursor_relido_do_banco = errSel ? ('ERRO: ' + errSel.message) : (relido?.cron_cursor ?? null)
       r.cursor_final = { fase, pagina }
     } catch (e) { r.erro = String(e.message || e) }
     diag.relatorio.push(r)

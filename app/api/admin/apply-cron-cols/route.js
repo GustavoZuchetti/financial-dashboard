@@ -16,6 +16,9 @@ export async function GET(request) {
     "alter table public.integracoes add column if not exists cron_cursor jsonb;" +
     "alter table public.integracoes add column if not exists cron_resultado jsonb;" +
     "alter table public.integracoes add column if not exists ultima_sync_cron timestamptz;")
+  // PostgREST cacheia o schema — sem o reload, UPDATEs em colunas novas
+  // falham com 'column not found in schema cache' (silenciosamente no nosso caso)
+  out.reload_schema = await run("NOTIFY pgrst, 'reload schema';")
   out.conferencia = await run(
     "select column_name from information_schema.columns where table_name='integracoes' and column_name in ('cron_cursor','cron_resultado','ultima_sync_cron')")
   return Response.json(out)

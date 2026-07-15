@@ -153,7 +153,8 @@ export default function GestaoFluxoCaixaPage() {
   const [total,      setTotal]      = useState(0)
 
   // Filtros
-  const [startDate,  setStartDate]  = useState(`${curYear - 2}-01-01`)
+  // Padrão: últimos 30 dias — o seletor nasce dizendo o que a tela mostra
+  const [startDate,  setStartDate]  = useState(() => new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0])
   const [endDate,    setEndDate]    = useState(today)
   const [tipoFiltro, setTipoFiltro] = useState('todos')
   const [statusFiltro, setStatusFiltro] = useState('todos') // todos|abertos|vencidos|pagos

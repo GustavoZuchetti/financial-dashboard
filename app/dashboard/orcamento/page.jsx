@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts'
-import { supabase } from '@/lib/supabase'
+import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import { KpiCardsSkeleton, TableSkeleton } from '@/components/Skeleton'
 
@@ -146,9 +146,15 @@ export default function OrcamentoPage() {
   const [savingOrc, setSavingOrc]   = useState(false)
   const [orcMsg, setOrcMsg]         = useState(null)
 
+  const [empIds, setEmpIds] = useState([])
+  const isConsol = empIds.length > 1
   useEffect(() => {
-    const savedId = localStorage.getItem('empresa_id')
-    if (savedId) setEmpresaId(savedId)
+    // Resolve a seleção global (inclusive 'todas' → todas as entidades da org)
+    ;(async () => {
+      const ids = await getSelectedEntidadeIds()
+      setEmpIds(ids || [])
+      setEmpresaId(ids?.[0] || null)   // dispara o fetch existente
+    })()
   }, [])
 
   useEffect(() => {
@@ -162,8 +168,8 @@ export default function OrcamentoPage() {
           const startDate = `${ano}-${String(mes).padStart(2, '0')}-01`
           const endDate = new Date(ano, mes, 0).toISOString().split('T')[0]
           const [{ data: lanc }, { data: orc }] = await Promise.all([
-            supabase.from('lancamentos').select('*').eq('empresa_id', empresaId).gte('data', startDate).lte('data', endDate),
-            supabase.from('orcamentos').select('*').eq('empresa_id', empresaId).eq('ano', ano).eq('mes', mes)
+            supabase.from('lancamentos').select('*').in('empresa_id', empIds).gte('data', startDate).lte('data', endDate),
+            supabase.from('orcamentos').select('*').in('empresa_id', empIds).eq('ano', ano).eq('mes', mes)
           ])
           setRealizado(lanc || [])
           setOrcado(orc || [])
@@ -173,8 +179,8 @@ export default function OrcamentoPage() {
           const endDate = new Date(ano, mes, 0).toISOString().split('T')[0]
           const mesesRange = Array.from({ length: mes }, (_, i) => i + 1)
           const [{ data: lanc }, { data: orc }] = await Promise.all([
-            supabase.from('lancamentos').select('*').eq('empresa_id', empresaId).gte('data', startDate).lte('data', endDate),
-            supabase.from('orcamentos').select('*').eq('empresa_id', empresaId).eq('ano', ano).in('mes', mesesRange)
+            supabase.from('lancamentos').select('*').in('empresa_id', empIds).gte('data', startDate).lte('data', endDate),
+            supabase.from('orcamentos').select('*').in('empresa_id', empIds).eq('ano', ano).in('mes', mesesRange)
           ])
           setRealizado(lanc || [])
           setOrcado(orc || [])
@@ -187,7 +193,7 @@ export default function OrcamentoPage() {
     }
 
     fetchData()
-  }, [empresaId, mes, ano, viewMode])
+  }, [empresaId, empIds, mes, ano, viewMode])
 
   // ─── Consolidação por categoria e tipo ────────────────────────────────────────
   const buildRows = (tipo) => {
@@ -227,8 +233,8 @@ export default function OrcamentoPage() {
   const cancelEditMode = () => { setEditMode(false); setOrcEdits({}) }
 
   const saveOrcamento = async () => {
-    if (!empresaId || empresaId === 'todas') {
-      setOrcMsg({ t: 'error', m: 'Selecione uma empresa específica para editar o orçamento.' }); return
+    if (!empresaId || isConsol) {
+      setOrcMsg({ t: 'error', m: 'Metas são definidas por entidade — selecione uma empresa específica no seletor global para editar.' }); return
     }
     setSavingOrc(true)
     try {
@@ -251,7 +257,7 @@ export default function OrcamentoPage() {
       const startDate = `${ano}-${String(mes).padStart(2,'0')}-01`
       const endDate   = new Date(ano, mes, 0).toISOString().split('T')[0]
       const { data: orc } = await supabase.from('orcamentos').select('*')
-        .eq('empresa_id', empresaId).eq('ano', ano).eq('mes', mes)
+        .in('empresa_id', empIds).eq('ano', ano).eq('mes', mes)
       setOrcado(orc || [])
     } finally { setSavingOrc(false) }
   }

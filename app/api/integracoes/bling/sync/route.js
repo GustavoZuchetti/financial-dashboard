@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAuthProfile, ensureToken, fetchContas, mapConta, fetchDetalhe, fetchCategoriasMap, fetchContatoNome, fetchBorderoData, chunk } from '@/lib/bling-server'
+import { getAuthProfile, ensureToken, fetchContas, fetchCategoriasMap, montarRegistrosFluxo } from '@/lib/bling-server'
 
 // POST /api/integracoes/bling/sync
 // body: { integracao_id, modulo: 'fluxo'|'dre', fase?: 0|1, pagina?: number, diag?: boolean }
@@ -76,80 +76,19 @@ export async function POST(request) {
       mappings = m.data || []; contas = c.data || []
     }
 
-    // DADOS COMPLETOS NA PRÓPRIA SYNC (sem depender de enriquecimento manual):
-    // busca o DETALHE de cada título → categoria.id, competencia, saldo, borderô;
-    // resolve nome de categoria (mapa 1x) e de contato (cache persistente)
+    // DADOS COMPLETOS via núcleo compartilhado (mesma lógica do cron) —
+    // elimina a duplicação que causou divergências de critério
     const categoriasMap = await fetchCategoriasMap(integ)
     const nomesContato = { ...(integ.contatos_cache || {}) }
-
-    // OTIMIZAÇÃO: não re-detalhar títulos já COMPLETOS no banco (nome ok,
-    // categoria resolvida, competência preenchida). Só busca detalhe do que
-    // falta → revarreduras seguintes ficam quase instantâneas
-    const docRefs = itens.map(i => `bling:${tipoFluxo}:${i.id}`)
-    const { data: existentes } = await admin.from('fluxo_caixa')
-      .select('doc_ref,descricao,categoria,competencia,status,data,data_liquidacao')
-      .in('doc_ref', docRefs)
-    const hojeSync = new Date().toISOString().split('T')[0]
-    const completo = {}
-    ;(existentes || []).forEach(e => {
-      const id = e.doc_ref.split(':').pop()
-      const descOk = e.descricao && !/^Contato \d+$/.test(e.descricao) && e.descricao !== 'Sem descrição' && e.descricao !== 'Título Bling'
-      const dadosOk = descOk && e.categoria && e.categoria !== 'Sem categoria' && !!e.competencia
-      const pagoOk  = e.status !== 'pago' || !!e.data_liquidacao
-      // aberto/parcial já vencido PODE ter sido pago no Bling → reconferir
-      const statusPodeMudar = ['aberto','parcial'].includes(e.status) && e.data <= hojeSync
-      completo[id] = dadosOk && pagoOk && !statusPodeMudar
-    })
-    const aDetalhar = itens.filter(i => !completo[i.id])
-
-    const detalhes = {}
-    for (const grupo of chunk(aDetalhar.map(i => i.id).filter(Boolean), 10)) {
-      const ds = await Promise.all(grupo.map(id => fetchDetalhe(integ, recurso, id)))
-      grupo.forEach((id, ix) => { if (ds[ix]) detalhes[id] = ds[ix] })
-    }
-    // Nomes de contato ausentes (só os que não estão no cache)
-    const idsSemNome = [...new Set(itens
-      .map(i => detalhes[i?.id]?.contato?.id ?? i?.contato?.id)
-      .filter(id => id != null && !nomesContato[id]))].slice(0, 30)
-    for (const grupo of chunk(idsSemNome, 5)) {
-      const nomes = await Promise.all(grupo.map(id => fetchContatoNome(integ, id)))
-      grupo.forEach((id, ix) => { const nm = nomes[ix]?.nome; if (nm) nomesContato[id] = nm })
-    }
+    const { registros: regsFluxo } = await montarRegistrosFluxo(
+      admin, integ, recurso, tipoFluxo, pagina, LIMITE, categoriasMap, nomesContato, itens)
 
     const registros = [], pendencias = []
-    for (const item of itens) {
-      // Já completo e sem novo detalhe → não reescreve (economia de escrita)
-      if (completo[item?.id] && !detalhes[item?.id]) continue
-      const det = detalhes[item?.id] || {}
-      const base = { ...item, ...det }
-      const cid = base?.contato?.id
-      if (cid != null && !base?.contato?.nome && nomesContato[cid]) {
-        base.contato = { ...base.contato, nome: nomesContato[cid] }
-      }
-      const { registro, faltantes } = mapConta(base, { tipoFluxo, empresaId: integ.empresa_id })
-      // Categoria por ID (detalhe traz categoria.id, não o nome)
-      const catId = base?.categoria?.id
-      if (catId != null && categoriasMap[catId]) registro.categoria = categoriasMap[catId]
-      // Competência
-      if (base?.competencia && base.competencia !== '0000-00-00') registro.competencia = base.competencia
-      // Parcial preciso via saldo
-      const sld = Number(base?.saldo)
-      if (Number.isFinite(sld) && sld > 0 && sld < registro.valor) {
-        registro.status = 'parcial'; registro.valor_liquidado = Number((registro.valor - sld).toFixed(2))
-      }
-      // Data de liquidação via borderô (só p/ pagos)
-      if (registro.status === 'pago' && Array.isArray(base?.borderos) && base.borderos.length) {
-        const dt = await fetchBorderoData(integ, base.borderos[base.borderos.length - 1])
-        if (dt && dt !== '0000-00-00') registro.data_liquidacao = dt
-      }
-      if (faltantes.length || !registro.doc_ref || !registro.data) {
-        pendencias.push({ motivo: `campos ausentes: ${faltantes.join(',') || 'data'}`, id: registro.doc_ref })
-        continue
-      }
-      if (modulo === 'fluxo') {
-        registros.push(registro)  // já vem completo: nome, categoria, competência, liquidação
-      } else {
-        // DRE: tipo derivado do De-Para de categorias (mesma regra da importação por arquivo)
+    if (modulo === 'fluxo') {
+      registros.push(...regsFluxo)   // já vêm completos
+    } else {
+      // DRE: reaproveita os registros de fluxo e aplica o De-Para de categorias
+      for (const registro of regsFluxo) {
         const regra = mappings.find(mp => (mp.categoria_origem || '').trim().toLowerCase() === registro.categoria.trim().toLowerCase())
         const contaVinc = regra?.conta_id ? contas.find(ct => ct.id === regra.conta_id) : null
         const tipo = contaVinc?.tipo || regra?.tipo_destino

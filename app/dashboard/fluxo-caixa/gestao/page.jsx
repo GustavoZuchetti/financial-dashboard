@@ -570,19 +570,22 @@ export default function GestaoFluxoCaixaPage() {
       porDia[dExib].push(r)
     })
 
-    // Saldo do dia: saldo inicial + histórico efetivo anterior + efeitos do período
+    // Saldo acumulado calculado em ordem CRONOLÓGICA (asc) — único jeito de o
+    // acumulado fazer sentido — e depois EXIBIDO em ordem decrescente (mais
+    // recente no topo), coerente com a paginação por data efetiva desc.
     let saldoAcum = saldoInicialDB + saldoAnterior
-    const resultado = []
-    Object.keys(porDia).sort().forEach(data => {
+    const porData = {}
+    Object.keys(porDia).sort().forEach(data => {   // asc: calcula o saldo do dia
       const lancamentos = porDia[data]
       lancamentos.forEach(r => {
-        // Contribuição EFETIVA neste dia (parcial: só a parte com efeito na data)
         efeitosCaixa(r).filter(e => e.data === data).forEach(e => {
           saldoAcum += r.tipo === 'entrada' ? e.valor : -e.valor
         })
       })
-      resultado.push({ data, lancamentos, saldoDia: consultandoVencidos ? null : saldoAcum })
+      porData[data] = { data, lancamentos, saldoDia: consultandoVencidos ? null : saldoAcum }
     })
+    // Exibe do mais recente para o mais antigo
+    const resultado = Object.keys(porData).sort().reverse().map(d => porData[d])
     return resultado
   })()
 

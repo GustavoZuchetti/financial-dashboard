@@ -313,11 +313,15 @@ export default function GestaoFluxoCaixaPage() {
       }
       setSaldoAnterior(base)
 
-      // Saldo inicial configurado
-      const { data: cfg } = await supabase.from('empresa_config')
-        .select('valor').eq('empresa_id', empIds[0]).eq('chave', 'saldo_inicial').single()
-      setSaldoInicialDB(Number(cfg?.valor || 0))
-      setSaldoInicial(cfg?.valor || '')
+      // Saldo inicial: soma das entidades selecionadas (consolidado soma todas)
+      const { data: cfgs } = await supabase.from('empresa_config')
+        .select('empresa_id,valor').in('empresa_id', empIds).eq('chave', 'saldo_inicial')
+      const somaSaldo = (cfgs || []).reduce((a, c) => a + (Number(c.valor) || 0), 0)
+      setSaldoInicialDB(somaSaldo)
+      // No campo editável: no modo 1 entidade mostra o valor dela; no consolidado
+      // fica vazio (edição bloqueada — ver handleSaveSaldo)
+      const daEntidade = (cfgs || []).find(c => c.empresa_id === empIds[0])
+      setSaldoInicial(!isConsol && daEntidade ? daEntidade.valor : '')
 
     } catch(e) { console.error('GestaoFluxo:', e); showToast('Erro ao carregar dados', 'error') }
     finally { setLoading(false) }
@@ -477,10 +481,17 @@ export default function GestaoFluxoCaixaPage() {
 
   // ─── Salvar saldo inicial ───────────────────────────────────────────────────
   const handleSaveSaldo = async () => {
+    if (isConsol) {
+      showToast('O saldo inicial é por entidade — selecione uma empresa específica para editar.', 'error')
+      return
+    }
+    const alvo = empresaId
+    if (!alvo) { showToast('Nenhuma entidade selecionada.', 'error'); return }
     const val = parseFloat(String(saldoInicial).replace(',', '.')) || 0
-    await supabase.from('empresa_config')
-      .upsert({ empresa_id: empresaId, chave: 'saldo_inicial', valor: String(val), updated_at: new Date().toISOString() },
+    const { error } = await supabase.from('empresa_config')
+      .upsert({ empresa_id: alvo, chave: 'saldo_inicial', valor: String(val), updated_at: new Date().toISOString() },
               { onConflict: 'empresa_id,chave' })
+    if (error) { showToast('Erro ao salvar saldo inicial: ' + error.message, 'error'); return }
     setSaldoInicialDB(val)
     setEditSaldo(false)
     showToast('Saldo inicial salvo com sucesso!', 'success')
@@ -880,9 +891,13 @@ export default function GestaoFluxoCaixaPage() {
           ) : (
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)' }}>{fC(saldoInicialDB) || 'R$ 0'}</div>
-              <button onClick={()=>setEditSaldo(true)} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
-                Editar
-              </button>
+              {isConsol ? (
+                <span title="Selecione uma entidade específica para editar" style={{ fontSize:10.5, color:'var(--fs-text-4)' }}>soma das entidades</span>
+              ) : (
+                <button onClick={()=>setEditSaldo(true)} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
+                  Editar
+                </button>
+              )}
             </div>
           )}
         </div>

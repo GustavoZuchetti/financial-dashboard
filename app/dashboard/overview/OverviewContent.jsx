@@ -4,6 +4,7 @@ import EmptyState from '@/components/EmptyState'
 import SvgIcon from '@/components/SvgIcon'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE } from '@/lib/dre-calc'
+import { efeitosCaixa } from '@/lib/fluxo-status'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import {
   ComposedChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -331,10 +332,12 @@ export default function OverviewPage() {
           .gte('data', dr.start).lte('data', dr.end)),
         fetchAll(buildQ('lancamentos', 'tipo,valor,data')
           .gte('data', dr.prevStart).lte('data', dr.prevEnd)),
-        fetchAll(buildQ('fluxo_caixa', 'id,tipo,valor,data,descricao')
-          .gte('data', dr.start).lte('data', dr.end).order('data')),
+        fetchAll(buildQ('fluxo_caixa', 'id,tipo,valor,data,descricao,status,valor_liquidado,data_liquidacao')
+          .or(`and(data.gte.${dr.start},data.lte.${dr.end}),and(data_liquidacao.gte.${dr.start},data_liquidacao.lte.${dr.end})`)
+          .order('data')),
         // Movimentos ANTERIORES ao período — compõem o saldo de partida
-        fetchAll(buildQ('fluxo_caixa', 'tipo,valor').lt('data', dr.start)),
+        fetchAll(buildQ('fluxo_caixa', 'tipo,valor,data,status,valor_liquidado,data_liquidacao')
+          .or(`data.lt.${dr.start},data_liquidacao.lt.${dr.start}`)),
         fetchAll(supabase.from('plano_contas').select('id,nome,tipo,codigo')
           .eq('empresa_id', isConsol ? empIds[0] : empresaId)),
         // Saldo inicial configurado (soma das entidades selecionadas)
@@ -345,9 +348,11 @@ export default function OverviewPage() {
 
       const ENTRADA_TIPOS = ['entrada','fluxo_entrada','receita','receita_financeira']
       const saldoInicial = (cfgRows || []).reduce((a, r) => a + (Number(r.valor) || 0), 0)
+      // CAIXA EFETIVO: só efeitos (liquidações/vencimentos válidos) < início
       const netAnterior  = (fcAnterior || []).reduce((a, f) => {
-        const v = Math.abs(Number(f.valor) || 0)
-        return a + (ENTRADA_TIPOS.includes(f.tipo) ? v : -v)
+        let s0 = 0
+        efeitosCaixa(f).forEach(e => { if (e.data < dr.start) s0 += e.valor })
+        return a + (ENTRADA_TIPOS.includes(f.tipo) ? s0 : -s0)
       }, 0)
       const saldoBase = saldoInicial + netAnterior
 
@@ -383,13 +388,17 @@ export default function OverviewPage() {
       setMonthly(monthData)
 
       // ── Fluxo de Caixa ────────────────────────────────────────────────────
+      // CAIXA EFETIVO: liquidado na data efetiva; a vencer pelo vencimento;
+      // vencidos não liquidados fora
       const fcByMonth = {}
       ;(fcAll||[]).forEach(f => {
-        const m = new Date(f.data+'T00:00:00').getMonth()
-        if (!fcByMonth[m]) fcByMonth[m] = { entradas:0, saidas:0 }
-        const v = Math.abs(Number(f.valor)||0)
-        if (ENTRADA_TIPOS.includes(f.tipo)) fcByMonth[m].entradas += v
-        else fcByMonth[m].saidas += v
+        efeitosCaixa(f).forEach(e => {
+          if (e.data < dr.start || e.data > dr.end) return
+          const m = new Date(e.data+'T00:00:00').getMonth()
+          if (!fcByMonth[m]) fcByMonth[m] = { entradas:0, saidas:0 }
+          if (ENTRADA_TIPOS.includes(f.tipo)) fcByMonth[m].entradas += e.valor
+          else fcByMonth[m].saidas += e.valor
+        })
       })
       // Saldo acumulado REAL: parte do saldo inicial + histórico anterior e
       // preserva valores negativos — truncar em zero mascara ruptura de caixa

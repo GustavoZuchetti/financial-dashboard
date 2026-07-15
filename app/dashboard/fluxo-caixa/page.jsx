@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef, useId } from 'react'
 import EmptyState from '@/components/EmptyState'
 import SvgIcon from '@/components/SvgIcon'
+import { efeitosCaixa } from '@/lib/fluxo-status'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 import {
   ComposedChart, BarChart, Bar, Line, AreaChart, Area,
@@ -151,6 +152,8 @@ export default function FluxoCaixaPage() {
   const [vencidos,     setVencidos]     = useState({ e:0, s:0, aE:0, aS:0 })    // todos os registros do período
   const [saldoBase,    setSaldoBase]    = useState(0)  // saldo inicial + histórico anterior ao período
   const [rawPrev,      setRawPrev]      = useState([])    // período anterior (para % variação)
+  const [efeitos,      setEfeitos]      = useState([])    // CAIXA EFETIVO: efeitos no período
+  const [efeitosPrev,  setEfeitosPrev]  = useState([])    // efeitos no período anterior
   const [lancRecentes, setLancRecentes] = useState([])    // lançamentos da tabela
 
   useEffect(() => {
@@ -187,13 +190,19 @@ export default function FluxoCaixaPage() {
       }
 
       // fetchAll: paginação completa — Supabase limita 1000 por request
-      const fetchAll = async (cols, gte, lte) => {
+      const fetchAll = async (cols, gte, lte, byEffect = false) => {
         let all = [], pg = 0
         while (true) {
           let q = supabase.from('fluxo_caixa').select(cols).range(pg*1000, (pg+1)*1000-1)
           q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
-          if (gte) q = q.gte('data', gte)
-          if (lte) q = q.lte('data', lte)
+          if (byEffect && gte && lte) {
+            // CAIXA EFETIVO: captura títulos com vencimento na janela OU
+            // liquidação na janela (ex.: venceu antes, foi pago dentro)
+            q = q.or(`and(data.gte.${gte},data.lte.${lte}),and(data_liquidacao.gte.${gte},data_liquidacao.lte.${lte})`)
+          } else {
+            if (gte) q = q.gte('data', gte)
+            if (lte) q = q.lte('data', lte)
+          }
           const { data: batch = [] } = await q
           if (!batch || batch.length === 0) break
           all = all.concat(batch)
@@ -203,24 +212,34 @@ export default function FluxoCaixaPage() {
         return all
       }
 
+      // Expande registros em efeitos de caixa dentro de uma janela
+      const expandirEfeitos = (rows, ini, fim) => (rows || []).flatMap(r =>
+        efeitosCaixa(r).filter(e => e.data >= ini && e.data <= fim)
+          .map(e => ({ tipo: r.tipo, data: e.data, valor: e.valor })))
+
       const [fc, fcPrev, fcAll, cfgRes] = await Promise.all([
-        fetchAll('id,tipo,valor,data,descricao,categoria', debStart, debEnd),
-        fetchAll('tipo,valor', prevStartStr, prevEndStr),
-        fetchAll('tipo,valor,data,status', '2020-01-01', null),
+        fetchAll('id,tipo,valor,data,descricao,categoria,status,valor_liquidado,data_liquidacao', debStart, debEnd, true),
+        fetchAll('tipo,valor,data,status,valor_liquidado,data_liquidacao', prevStartStr, prevEndStr, true),
+        fetchAll('tipo,valor,data,status,valor_liquidado,data_liquidacao', '2020-01-01', null),
         supabase.from('empresa_config').select('valor').eq('chave', 'saldo_inicial')
           .in('empresa_id', empIds),
       ])
 
       setRaw(fc || [])
       setRawPrev(fcPrev || [])
+      setEfeitos(expandirEfeitos(fc, debStart, debEnd))
+      setEfeitosPrev(expandirEfeitos(fcPrev, prevStartStr, prevEndStr))
 
       // Saldo de partida do acumulado: saldo inicial configurado + movimentos
       // anteriores ao período (fcAll já cobre o histórico completo)
       const saldoIni = (cfgRes.data || []).reduce((a, r) => a + (Number(r.valor) || 0), 0)
       const ENTR = ['entrada','fluxo_entrada','receita','receita_financeira']
-      const netAnt = (fcAll || []).filter(f => f.data < debStart).reduce((a, f) => {
-        const v = Math.abs(Number(f.valor) || 0)
-        return a + (ENTR.includes(f.tipo) ? v : -v)
+      // CAIXA EFETIVO: histórico anterior = efeitos (liquidações/vencimentos)
+      // com data efetiva antes do início do período
+      const netAnt = (fcAll || []).reduce((a, f) => {
+        let s0 = 0
+        efeitosCaixa(f).forEach(e => { if (e.data < debStart) s0 += e.valor })
+        return a + (ENTR.includes(f.tipo) ? s0 : -s0)
       }, 0)
       setSaldoBase(saldoIni + netAnt)
 
@@ -249,13 +268,15 @@ export default function FluxoCaixaPage() {
   const entradaTipos = ['entrada','fluxo_entrada','receita','receita_financeira']
   const saidaTipos   = ['saida','fluxo_saida','despesa','custo','despesa_financeira']
 
-  const totalEntradas = raw.filter(d=>entradaTipos.includes(d.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
-  const totalSaidas   = raw.filter(d=>saidaTipos.includes(d.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
+  // CAIXA EFETIVO: totais do período pelos efeitos (liquidado na data efetiva,
+  // a vencer pelo vencimento; vencidos não liquidados fora)
+  const totalEntradas = efeitos.filter(d=>entradaTipos.includes(d.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
+  const totalSaidas   = efeitos.filter(d=>saidaTipos.includes(d.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
   const saldo         = totalEntradas - totalSaidas
   const margem        = totalEntradas > 0 ? (saldo / totalEntradas) * 100 : 0
 
-  const prevEntradas  = rawPrev.filter(d=>entradaTipos.includes(d.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
-  const prevSaidas    = rawPrev.filter(d=>saidaTipos.includes(d.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
+  const prevEntradas  = efeitosPrev.filter(d=>entradaTipos.includes(d.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
+  const prevSaidas    = efeitosPrev.filter(d=>saidaTipos.includes(d.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
   const prevSaldo     = prevEntradas - prevSaidas
   const prevMargem    = prevEntradas > 0 ? ((prevEntradas - prevSaidas) / prevEntradas) * 100 : 0
 
@@ -286,7 +307,7 @@ export default function FluxoCaixaPage() {
   }
 
   const chartMap = {}
-  raw.forEach(f => {
+  efeitos.forEach(f => {
     const k = getSortKey(f.data)
     if (!chartMap[k]) chartMap[k] = { entradas:0, saidas:0 }
     const v = Math.abs(Number(f.valor)||0)
@@ -313,12 +334,12 @@ export default function FluxoCaixaPage() {
   // Sparklines — evolução mensal de cada KPI
   // Granularidade adaptativa: com ≤2 meses de dados, uma sparkline mensal
   // vira um segmento reto de 2 pontos — nesse caso, agrupamos por DIA
-  const mesesComDado = new Set(raw.map(f => (f.data || '').slice(0, 7)))
+  const mesesComDado = new Set(efeitos.map(f => (f.data || '').slice(0, 7)))
   const sparkKeyFn = mesesComDado.size <= 2
     ? (f) => (f.data || '').slice(0, 10)   // diária
     : (f) => (f.data || '').slice(0, 7)    // mensal (YYYY-MM, sem misturar anos)
   const sparkBy = {}
-  raw.forEach(f => {
+  efeitos.forEach(f => {
     const k = sparkKeyFn(f)
     if (!sparkBy[k]) sparkBy[k] = { e:0, s:0 }
     const v = Math.abs(Number(f.valor)||0)

@@ -169,6 +169,8 @@ export default function GestaoFluxoCaixaPage() {
   const [saldoInicial,    setSaldoInicial]    = useState('')
   const [saldoInicialDB,  setSaldoInicialDB]  = useState(0)
   const [editSaldo,       setEditSaldo]       = useState(false)
+  const [entidadesInfo,   setEntidadesInfo]   = useState([]) // [{id, nome, saldo}]
+  const [editEntidadeId,  setEditEntidadeId]  = useState(null) // qual entidade está sendo editada
 
   // Totais globais (sem filtro de período)
   const [totalGlobalE,    setTotalGlobalE]    = useState(0)
@@ -318,6 +320,10 @@ export default function GestaoFluxoCaixaPage() {
         .select('empresa_id,valor').in('empresa_id', empIds).eq('chave', 'saldo_inicial')
       const somaSaldo = (cfgs || []).reduce((a, c) => a + (Number(c.valor) || 0), 0)
       setSaldoInicialDB(somaSaldo)
+      // Nomes + saldo por entidade (para o seletor de edição no consolidado)
+      const { data: empsInfo } = await supabase.from('empresas').select('id,nome').in('id', empIds)
+      const saldoDe = (id) => Number((cfgs || []).find(c => c.empresa_id === id)?.valor || 0)
+      setEntidadesInfo((empsInfo || []).map(e => ({ id: e.id, nome: e.nome, saldo: saldoDe(e.id) })))
       // No campo editável: no modo 1 entidade mostra o valor dela; no consolidado
       // fica vazio (edição bloqueada — ver handleSaveSaldo)
       const daEntidade = (cfgs || []).find(c => c.empresa_id === empIds[0])
@@ -480,21 +486,34 @@ export default function GestaoFluxoCaixaPage() {
   }
 
   // ─── Salvar saldo inicial ───────────────────────────────────────────────────
+  const abrirEditSaldo = () => {
+    // Entidade padrão a editar: no consolidado, a primeira; senão, a única
+    const alvo = isConsol ? (editEntidadeId || empIds[0]) : empresaId
+    setEditEntidadeId(alvo)
+    const atual = entidadesInfo.find(e => e.id === alvo)
+    setSaldoInicial(atual && atual.saldo ? String(atual.saldo) : '')
+    setEditSaldo(true)
+  }
+  const trocarEntidadeEdit = (id) => {
+    setEditEntidadeId(id)
+    const atual = entidadesInfo.find(e => e.id === id)
+    setSaldoInicial(atual && atual.saldo ? String(atual.saldo) : '')
+  }
   const handleSaveSaldo = async () => {
-    if (isConsol) {
-      showToast('O saldo inicial é por entidade — selecione uma empresa específica para editar.', 'error')
-      return
-    }
-    const alvo = empresaId
-    if (!alvo) { showToast('Nenhuma entidade selecionada.', 'error'); return }
+    const alvo = isConsol ? editEntidadeId : empresaId
+    if (!alvo) { showToast('Selecione a entidade para editar o saldo inicial.', 'error'); return }
     const val = parseFloat(String(saldoInicial).replace(',', '.')) || 0
     const { error } = await supabase.from('empresa_config')
       .upsert({ empresa_id: alvo, chave: 'saldo_inicial', valor: String(val), updated_at: new Date().toISOString() },
               { onConflict: 'empresa_id,chave' })
     if (error) { showToast('Erro ao salvar saldo inicial: ' + error.message, 'error'); return }
-    setSaldoInicialDB(val)
+    // Atualiza o mapa local e recomputa a soma exibida
+    const novos = entidadesInfo.map(e => e.id === alvo ? { ...e, saldo: val } : e)
+    setEntidadesInfo(novos)
+    setSaldoInicialDB(novos.reduce((a, e) => a + (Number(e.saldo) || 0), 0))
     setEditSaldo(false)
-    showToast('Saldo inicial salvo com sucesso!', 'success')
+    const nome = novos.find(e => e.id === alvo)?.nome || ''
+    showToast(`Saldo inicial de ${nome} salvo com sucesso!`, 'success')
   }
 
   // ─── Inserir novo lançamento manual ──────────────────────────────────────────
@@ -876,28 +895,39 @@ export default function GestaoFluxoCaixaPage() {
             <span style={{display:'flex',alignItems:'center',gap:7}}><SvgIcon name="bank" size={14} color="var(--fs-brand)" />Saldo Inicial</span>
           </div>
           {editSaldo ? (
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <input
-                value={saldoInicial}
-                onChange={e=>setSaldoInicial(e.target.value)}
-                placeholder="Ex: 50000,00"
-                style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:7, color:'var(--fs-text-1)', padding:'6px 10px', fontSize:13, outline:'none', flex:1 }}
-                onKeyDown={e => e.key === 'Enter' && handleSaveSaldo()}
-                autoFocus
-              />
-              <button onClick={handleSaveSaldo} style={{ background:'#3b82f6', border:'none', color:'#fff', borderRadius:7, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>Salvar</button>
-              <button onClick={()=>setEditSaldo(false)} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:7, padding:'6px 10px', fontSize:12, cursor:'pointer' }}>✕</button>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {/* No consolidado: escolher QUAL entidade editar */}
+              {isConsol && (
+                <select
+                  value={editEntidadeId || ''}
+                  onChange={e => trocarEntidadeEdit(e.target.value)}
+                  style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:7, color:'var(--fs-text-1)', padding:'6px 10px', fontSize:12.5, outline:'none' }}
+                >
+                  {entidadesInfo.map(e => (
+                    <option key={e.id} value={e.id}>{e.nome} — atual: {fC(e.saldo)}</option>
+                  ))}
+                </select>
+              )}
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <input
+                  value={saldoInicial}
+                  onChange={e=>setSaldoInicial(e.target.value)}
+                  placeholder="Ex: 50000,00"
+                  style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:7, color:'var(--fs-text-1)', padding:'6px 10px', fontSize:13, outline:'none', flex:1 }}
+                  onKeyDown={e => e.key === 'Enter' && handleSaveSaldo()}
+                  autoFocus
+                />
+                <button onClick={handleSaveSaldo} style={{ background:'#3b82f6', border:'none', color:'#fff', borderRadius:7, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>Salvar</button>
+                <button onClick={()=>setEditSaldo(false)} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:7, padding:'6px 10px', fontSize:12, cursor:'pointer' }}>✕</button>
+              </div>
             </div>
           ) : (
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)' }}>{fC(saldoInicialDB) || 'R$ 0'}</div>
-              {isConsol ? (
-                <span title="Selecione uma entidade específica para editar" style={{ fontSize:10.5, color:'var(--fs-text-4)' }}>soma das entidades</span>
-              ) : (
-                <button onClick={()=>setEditSaldo(true)} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
-                  Editar
-                </button>
-              )}
+              <button onClick={abrirEditSaldo} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
+                Editar
+              </button>
+              {isConsol && <span style={{ fontSize:10.5, color:'var(--fs-text-4)' }}>(soma das entidades)</span>}
             </div>
           )}
         </div>

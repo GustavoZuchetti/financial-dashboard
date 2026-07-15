@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import EmptyState from '@/components/EmptyState'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
-import { getStatusInfo } from '@/lib/fluxo-status'
+import { getStatusInfo, efeitosCaixa, dataEfetiva } from '@/lib/fluxo-status'
 import { useOrg } from '@/lib/org-context'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 
@@ -283,15 +283,23 @@ export default function GestaoFluxoCaixaPage() {
       setTotalPeriodo(gCount)
       setIndicadores(ind)
 
-      // Saldo de PARTIDA do período: saldo inicial + movimentos anteriores
+      // Saldo de PARTIDA do período em CAIXA EFETIVO: efeitos (liquidações e
+      // vencimentos futuros — na prática só liquidações) anteriores ao início.
+      // Busca por venc OU liquidação antes do início e filtra pelos efeitos.
       let base = 0, aPage = 0, aDone = false
       while (!aDone) {
-        let qA = supabase.from('fluxo_caixa').select('tipo,valor').lt('data', startDate)
+        let qA = supabase.from('fluxo_caixa')
+          .select('tipo,valor,data,status,valor_liquidado,data_liquidacao')
+          .or(`data.lt.${startDate},data_liquidacao.lt.${startDate}`)
           .range(aPage * 1000, (aPage + 1) * 1000 - 1)
         qA = isConsol ? qA.in('empresa_id', empIds) : qA.eq('empresa_id', empIds[0])
         const { data: aBatch = [] } = await qA
         if (!aBatch || aBatch.length === 0) break
-        aBatch.forEach(r => { base += (r.tipo === 'entrada' ? Number(r.valor) : -Number(r.valor)) })
+        aBatch.forEach(r => {
+          efeitosCaixa(r).filter(e => e.data < startDate).forEach(e => {
+            base += r.tipo === 'entrada' ? e.valor : -e.valor
+          })
+        })
         if (aBatch.length < 1000) aDone = true
         aPage++
       }
@@ -364,7 +372,7 @@ export default function GestaoFluxoCaixaPage() {
       let rows = [], pg = 0, done = false
       while (!done) {
         let q = supabase.from('fluxo_caixa')
-          .select('data,descricao,categoria,tipo,valor,status,data_liquidacao')
+          .select('data,descricao,categoria,tipo,valor,status,data_liquidacao,valor_liquidado')
           .gte('data', startDate).lte('data', endDate)
           .order('data', { ascending: true })
           .order('created_at', { ascending: true })
@@ -403,25 +411,38 @@ export default function GestaoFluxoCaixaPage() {
       ]
 
       // Aba 2 — Extrato com saldo acumulado (partindo do saldo inicial)
-      const extratoAoa = [['Data', 'Descrição', 'Categoria', 'Tipo', 'Situação', 'Dias em Atraso', 'Entrada (R$)', 'Saída (R$)', 'Saldo Acumulado (R$)']]
-      let acum = Number(saldoInicialDB) || 0
+      // ═══ CAIXA EFETIVO no export (mesma semântica da tela) ═══
+      // Liquidado → data efetiva; a vencer → vencimento; vencido → só aparece
+      // sob o filtro "Vencidos", sem compor o saldo acumulado
+      const consultandoVencidosX = statusFiltro === 'vencidos'
+      const linhas = []
       rows.forEach(r => {
-        const v = Number(r.valor)
-        acum += r.tipo === 'entrada' ? v : -v
+        const dEf = dataEfetiva(r)
+        if (!dEf && !consultandoVencidosX) return   // vencido/cancelado: fora
+        const efeitoTotal = efeitosCaixa(r).reduce((a, e) => a + e.valor, 0)
+        linhas.push({ r, dExib: dEf || r.data, efeitoTotal, foraDoCaixa: !dEf })
+      })
+      linhas.sort((a, b) => a.dExib > b.dExib ? 1 : a.dExib < b.dExib ? -1 : 0)
+
+      const extratoAoa = [['Data Efetiva', 'Vencimento', 'Descrição', 'Categoria', 'Tipo', 'Situação', 'Dias em Atraso', 'Entrada (R$)', 'Saída (R$)', 'Saldo Acumulado (R$)']]
+      let acum = (Number(saldoInicialDB) || 0) + (Number(saldoAnterior) || 0)
+      linhas.forEach(({ r, dExib, efeitoTotal, foraDoCaixa }) => {
+        if (!foraDoCaixa) acum += r.tipo === 'entrada' ? efeitoTotal : -efeitoTotal
         const stX = getStatusInfo(r)
+        const v = Number(r.valor)
         extratoAoa.push([
-          r.data || '', r.descricao || '', r.categoria || '',
+          dExib || '', r.data || '', r.descricao || '', r.categoria || '',
           r.tipo === 'entrada' ? 'Entrada' : 'Saída',
           stX.label, stX.diasVencido || '',
           r.tipo === 'entrada' ? Number(v.toFixed(2)) : '',
           r.tipo === 'saida'   ? Number(v.toFixed(2)) : '',
-          Number(acum.toFixed(2)),
+          foraDoCaixa ? '' : Number(acum.toFixed(2)),
         ])
       })
 
       downloadWorkbook([
         { name: 'Resumo',  aoa: resumoAoa,  colWidths: [32, 22], currencyCols: [1] },
-        { name: 'Extrato', aoa: extratoAoa, colWidths: [12, 46, 24, 10, 20, 12, 16, 16, 20], currencyCols: [6, 7, 8] },
+        { name: 'Extrato', aoa: extratoAoa, colWidths: [13, 13, 46, 24, 10, 20, 12, 16, 16, 20], currencyCols: [7, 8, 9] },
       ], exportFilename('Fluxo_Caixa_Gestao', startDate, endDate))
       showToast(`${rows.length} registros exportados para Excel`, 'success')
     } catch (e) {
@@ -527,26 +548,32 @@ export default function GestaoFluxoCaixaPage() {
 
   // ─── Saldo acumulado dia a dia (extrato bancário) ───────────────────────────
   const extratoComSaldo = (() => {
-    // Ordenar todos os filtrados por data ASC para calcular saldo acumulado
-    const ordenados = [...filtrados].sort((a,b) => a.data > b.data ? 1 : a.data < b.data ? -1 : 0)
-    
-    // Agrupar por dia
+    // ═══ CAIXA EFETIVO ═══
+    // Liquidados → data efetiva de pagamento/recebimento; a vencer → vencimento
+    // (caixa futuro); VENCIDOS não liquidados → fora do fluxo (só aparecem sob
+    // o filtro "Vencidos", agrupados por vencimento, sem afetar saldos)
+    const consultandoVencidos = statusFiltro === 'vencidos'
     const porDia = {}
-    ordenados.forEach(r => {
-      if (!porDia[r.data]) porDia[r.data] = []
-      porDia[r.data].push(r)
+    filtrados.forEach(r => {
+      const dEf = dataEfetiva(r)
+      const dExib = dEf || (consultandoVencidos ? r.data : null)
+      if (!dExib) return // vencido/cancelado: fora do extrato
+      if (!porDia[dExib]) porDia[dExib] = []
+      porDia[dExib].push(r)
     })
 
-    // Calcular saldo acumulado partindo do saldo inicial
-    let saldoAcum = saldoInicialDB
+    // Saldo do dia: saldo inicial + histórico efetivo anterior + efeitos do período
+    let saldoAcum = saldoInicialDB + saldoAnterior
     const resultado = []
-    
     Object.keys(porDia).sort().forEach(data => {
       const lancamentos = porDia[data]
       lancamentos.forEach(r => {
-        saldoAcum += r.tipo === 'entrada' ? Number(r.valor) : -Number(r.valor)
+        // Contribuição EFETIVA neste dia (parcial: só a parte com efeito na data)
+        efeitosCaixa(r).filter(e => e.data === data).forEach(e => {
+          saldoAcum += r.tipo === 'entrada' ? e.valor : -e.valor
+        })
       })
-      resultado.push({ data, lancamentos, saldoDia: saldoAcum })
+      resultado.push({ data, lancamentos, saldoDia: consultandoVencidos ? null : saldoAcum })
     })
     return resultado
   })()
@@ -914,6 +941,11 @@ export default function GestaoFluxoCaixaPage() {
                   <div style={{ fontSize:12.5, color:'var(--fs-text-1)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:8 }}>
                     <span style={{ width:3, height:16, borderRadius:2, background: isEntrada ? 'var(--fs-success)' : 'var(--fs-danger)', flexShrink:0 }} />
                     {r.descricao || <span style={{ color:'var(--fs-text-4)', fontStyle:'italic' }}>sem descrição</span>}
+                    {r.data_liquidacao && r.data && r.data_liquidacao !== r.data && ['pago','parcial'].includes(r.status) && (
+                      <span title="Data de vencimento original do título" style={{ marginLeft:8, fontSize:10, color:'var(--fs-text-4)', fontWeight:500 }}>
+                        venc. {r.data.split('-').reverse().slice(0,2).join('/')}
+                      </span>
+                    )}
                   </div>
 
                   {/* Categoria */}
@@ -939,9 +971,13 @@ export default function GestaoFluxoCaixaPage() {
                   {/* Saldo do dia (só na última linha do grupo) */}
                   <div style={{ textAlign:'right', fontVariantNumeric:'tabular-nums' }}>
                     {isLast ? (
+                      saldoDia === null ? (
+                        <span title="Vencidos não compõem o saldo de caixa" style={{ fontSize:12, color:'var(--fs-text-4)' }}>—</span>
+                      ) : (
                       <span className="fs-num" style={{ fontSize:12.5, fontWeight:800, color: saldoDia >= 0 ? 'var(--fs-text-1)' : 'var(--fs-danger)', borderBottom:'2px solid ' + (saldoDia >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)'), paddingBottom:1 }}>
                         {fC(saldoDia)}
                       </span>
+                      )
                     ) : (
                       <span style={{ fontSize:11, color:'var(--fs-border)' }}>·</span>
                     )}

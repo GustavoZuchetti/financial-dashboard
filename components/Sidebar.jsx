@@ -42,6 +42,7 @@ const navItems = [
   { label: 'Orçamento',       href: '/dashboard/orcamento',       icon: 'orcamento' },
   { label: 'Fluxo de Caixa',  href: '/dashboard/fluxo-caixa',     icon: 'fluxo', children: [
     { label: 'Gestão',        href: '/dashboard/fluxo-caixa/gestao', adminOnly: true },
+    { label: 'Em Atraso',     href: '/dashboard/fluxo-caixa/atrasados' },
     { label: 'Visão Geral',   href: '/dashboard/fluxo-caixa' },
     { label: 'Análise',       href: '/dashboard/fluxo-caixa/analise' },
     { label: 'Comparativo',   href: '/dashboard/fluxo-caixa/comparativo' },

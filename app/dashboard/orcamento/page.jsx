@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
+import { efeitosCaixa } from '@/lib/fluxo-status'
 import { KpiCardsSkeleton, TableSkeleton } from '@/components/Skeleton'
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
@@ -133,6 +134,7 @@ const KPICard = ({ label, orcado, realizado, isExpense, color }) => {
 
 // ─── Página Principal ────────────────────────────────────────────────────────────
 export default function OrcamentoPage() {
+  const [modulo, setModulo] = useState('dre')   // dre | fluxo — orçamento duplo
   const [mes, setMes] = useState(new Date().getMonth() + 1)
   const [ano, setAno] = useState(ANO_ATUAL)
   const [viewMode, setViewMode] = useState('mensal') // 'mensal' | 'acumulado'
@@ -168,10 +170,19 @@ export default function OrcamentoPage() {
           const startDate = `${ano}-${String(mes).padStart(2, '0')}-01`
           const endDate = new Date(ano, mes, 0).toISOString().split('T')[0]
           const [{ data: lanc }, { data: orc }] = await Promise.all([
-            supabase.from('lancamentos').select('*').in('empresa_id', empIds).gte('data', startDate).lte('data', endDate),
-            supabase.from('orcamentos').select('*').in('empresa_id', empIds).eq('ano', ano).eq('mes', mes)
+            modulo === 'dre'
+              ? supabase.from('lancamentos').select('*').in('empresa_id', empIds).gte('data', startDate).lte('data', endDate)
+              : supabase.from('fluxo_caixa')
+                  .select('tipo,categoria,valor,data,status,valor_liquidado,data_liquidacao')
+                  .in('empresa_id', empIds)
+                  .or(`and(data.gte.${startDate},data.lte.${endDate}),and(data_liquidacao.gte.${startDate},data_liquidacao.lte.${endDate})`),
+            supabase.from('orcamentos').select('*').in('empresa_id', empIds).eq('ano', ano).eq('mes', mes).eq('modulo', modulo)
           ])
-          setRealizado(lanc || [])
+          const normalizar = (rows) => modulo === 'dre' ? (rows || []) :
+            (rows || []).flatMap(r => efeitosCaixa(r)
+              .filter(e => e.data >= startDate && e.data <= endDate)
+              .map(e => ({ tipo: r.tipo, categoria: r.categoria, valor: e.valor, data: e.data })))
+          setRealizado(normalizar(lanc))
           setOrcado(orc || [])
         } else {
           // Acumulado anual (Jan até mês selecionado)
@@ -179,10 +190,19 @@ export default function OrcamentoPage() {
           const endDate = new Date(ano, mes, 0).toISOString().split('T')[0]
           const mesesRange = Array.from({ length: mes }, (_, i) => i + 1)
           const [{ data: lanc }, { data: orc }] = await Promise.all([
-            supabase.from('lancamentos').select('*').in('empresa_id', empIds).gte('data', startDate).lte('data', endDate),
-            supabase.from('orcamentos').select('*').in('empresa_id', empIds).eq('ano', ano).in('mes', mesesRange)
+            modulo === 'dre'
+              ? supabase.from('lancamentos').select('*').in('empresa_id', empIds).gte('data', startDate).lte('data', endDate)
+              : supabase.from('fluxo_caixa')
+                  .select('tipo,categoria,valor,data,status,valor_liquidado,data_liquidacao')
+                  .in('empresa_id', empIds)
+                  .or(`and(data.gte.${startDate},data.lte.${endDate}),and(data_liquidacao.gte.${startDate},data_liquidacao.lte.${endDate})`),
+            supabase.from('orcamentos').select('*').in('empresa_id', empIds).eq('ano', ano).in('mes', mesesRange).eq('modulo', modulo)
           ])
-          setRealizado(lanc || [])
+          const normalizar = (rows) => modulo === 'dre' ? (rows || []) :
+            (rows || []).flatMap(r => efeitosCaixa(r)
+              .filter(e => e.data >= startDate && e.data <= endDate)
+              .map(e => ({ tipo: r.tipo, categoria: r.categoria, valor: e.valor, data: e.data })))
+          setRealizado(normalizar(lanc))
           setOrcado(orc || [])
         }
       } catch (err) {
@@ -193,7 +213,7 @@ export default function OrcamentoPage() {
     }
 
     fetchData()
-  }, [empresaId, empIds, mes, ano, viewMode])
+  }, [empresaId, empIds, mes, ano, viewMode, modulo])
 
   // ─── Consolidação por categoria e tipo ────────────────────────────────────────
   const buildRows = (tipo) => {
@@ -212,6 +232,11 @@ export default function OrcamentoPage() {
   const receitaRows  = buildRows('receita')
   const custoRows    = buildRows('custo')
   const despesaRows  = buildRows('despesa')
+  // Módulo Fluxo: grupos por tipo de movimento
+  const entradaRows  = buildRows('entrada')
+  const saidaRows    = buildRows('saida')
+  const totEnt = { r: entradaRows.reduce((a,c)=>a+c.realizado,0), o: entradaRows.reduce((a,c)=>a+c.orcado,0) }
+  const totSai = { r: saidaRows.reduce((a,c)=>a+c.realizado,0),   o: saidaRows.reduce((a,c)=>a+c.orcado,0)   }
 
   const totRec  = { r: receitaRows.reduce((a, c) => a + c.realizado, 0),  o: receitaRows.reduce((a, c) => a + c.orcado, 0)  }
   const totCus  = { r: custoRows.reduce((a, c) => a + c.realizado, 0),    o: custoRows.reduce((a, c) => a + c.orcado, 0)    }
@@ -221,10 +246,13 @@ export default function OrcamentoPage() {
   const startEditMode = () => {
     // pré-preencher com valores atuais
     const initial = {}
-    ;[...receitaRows.map(r => ({...r, tipo:'receita'})),
-      ...custoRows.map(r => ({...r, tipo:'custo'})),
-      ...despesaRows.map(r => ({...r, tipo:'despesa'}))
-    ].forEach(row => { initial[`${row.tipo}|${row.categoria}`] = row.orcado })
+    const linhasEdit = modulo === 'dre'
+      ? [...receitaRows.map(r => ({...r, tipo:'receita'})),
+         ...custoRows.map(r => ({...r, tipo:'custo'})),
+         ...despesaRows.map(r => ({...r, tipo:'despesa'}))]
+      : [...entradaRows.map(r => ({...r, tipo:'entrada'})),
+         ...saidaRows.map(r => ({...r, tipo:'saida'}))]
+    linhasEdit.forEach(row => { initial[`${row.tipo}|${row.categoria}`] = row.orcado })
     setOrcEdits(initial)
     setEditMode(true)
     setOrcMsg(null)
@@ -244,11 +272,11 @@ export default function OrcamentoPage() {
           const idx = key.indexOf('|')
           const tipo      = key.substring(0, idx)
           const categoria = key.substring(idx + 1)
-          return { empresa_id: empresaId, ano, mes, categoria, tipo, valor_orcado: parseFloat(String(val).replace(',', '.')) || 0 }
+          return { empresa_id: empresaId, ano, mes, categoria, tipo, modulo, valor_orcado: parseFloat(String(val).replace(',', '.')) || 0 }
         })
       if (upsertRows.length > 0) {
         const { error } = await supabase.from('orcamentos')
-          .upsert(upsertRows, { onConflict: 'empresa_id,ano,mes,categoria,tipo' })
+          .upsert(upsertRows, { onConflict: 'empresa_id,ano,mes,categoria,tipo,modulo' })
         if (error) { setOrcMsg({ t: 'error', m: 'Erro ao salvar: ' + error.message }); return }
       }
       setOrcMsg({ t: 'ok', m: `✓ Orçamento de ${MESES[mes-1]}/${ano} salvo com sucesso.` })
@@ -257,7 +285,7 @@ export default function OrcamentoPage() {
       const startDate = `${ano}-${String(mes).padStart(2,'0')}-01`
       const endDate   = new Date(ano, mes, 0).toISOString().split('T')[0]
       const { data: orc } = await supabase.from('orcamentos').select('*')
-        .in('empresa_id', empIds).eq('ano', ano).eq('mes', mes)
+        .in('empresa_id', empIds).eq('ano', ano).eq('mes', mes).eq('modulo', modulo)
       setOrcado(orc || [])
     } finally { setSavingOrc(false) }
   }
@@ -316,6 +344,17 @@ export default function OrcamentoPage() {
 
       {/* Filtros */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Alternador de módulo: orçamento duplo DRE / Fluxo de Caixa */}
+        <div style={{ display: 'flex', background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '8px', overflow: 'hidden' }}>
+          {[['dre','DRE'],['fluxo','Fluxo de Caixa']].map(([val, rot]) => (
+            <button key={val} onClick={() => { setModulo(val); setEditMode(false); setOrcEdits({}) }}
+              style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
+                background: modulo === val ? 'var(--fs-brand, #1d4ed8)' : 'transparent',
+                color: modulo === val ? '#fff' : 'var(--fs-text-4)', transition: 'all 0.2s' }}>
+              {rot}
+            </button>
+          ))}
+        </div>
         <select style={S.select} value={mes} onChange={e => setMes(+e.target.value)}>
           {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
         </select>
@@ -350,9 +389,15 @@ export default function OrcamentoPage() {
         <>
           {/* KPIs */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-            <KPICard label="Receita Bruta"  orcado={totRec.o}   realizado={totRec.r}   isExpense={false} color="#3b82f6" />
-            <KPICard label="Custos Totais"  orcado={totCus.o}   realizado={totCus.r}   isExpense={true}  color="#ef4444" />
-            <KPICard label="Despesas Totais" orcado={totDesp.o} realizado={totDesp.r}  isExpense={true}  color="#f59e0b" />
+            {modulo === 'dre' ? (<>
+              <KPICard label="Receita Bruta"  orcado={totRec.o}   realizado={totRec.r}   isExpense={false} color="#3b82f6" />
+              <KPICard label="Custos Totais"  orcado={totCus.o}   realizado={totCus.r}   isExpense={true}  color="#ef4444" />
+              <KPICard label="Despesas Totais" orcado={totDesp.o} realizado={totDesp.r}  isExpense={true}  color="#f59e0b" />
+            </>) : (<>
+              <KPICard label="Entradas"          orcado={totEnt.o}          realizado={totEnt.r}          isExpense={false} color="#10b981" />
+              <KPICard label="Saídas"            orcado={totSai.o}          realizado={totSai.r}          isExpense={true}  color="#ef4444" />
+              <KPICard label="Geração de Caixa"  orcado={totEnt.o - totSai.o} realizado={totEnt.r - totSai.r} isExpense={false} color="#3b82f6" />
+            </>)}
             <KPICard label="EBITDA"          orcado={ebitdaO}   realizado={ebitdaR}    isExpense={false} color="#10b981" />
           </div>
 
@@ -379,6 +424,22 @@ export default function OrcamentoPage() {
                 </thead>
                 <tbody>
                   {/* RECEITAS */}
+                  {modulo === 'fluxo' ? (<>
+                  {/* ═══ ORÇAMENTO DE FLUXO — regime de caixa efetivo ═══ */}
+                  <DRERow label="Entradas" isGroupHeader />
+                  {entradaRows.length === 0
+                    ? <DRERow label="— sem movimentos/metas no período —" orcado={0} realizado={0} isExpense={false} indent />
+                    : entradaRows.map((r, i) => <DRERow key={'e'+i} label={r.categoria} orcado={r.orcado} realizado={r.realizado} isExpense={false} indent
+                        editMode={editMode} editValue={orcEdits[`entrada|${r.categoria}`]} onEdit={(v) => setOrcEdits(prev => ({ ...prev, [`entrada|${r.categoria}`]: v }))} />)}
+                  <DRERow label="(=) Total Entradas" orcado={totEnt.o} realizado={totEnt.r} isExpense={false} isSubtotal />
+                  <DRERow label="Saídas" isGroupHeader />
+                  {saidaRows.length === 0
+                    ? <DRERow label="— sem movimentos/metas no período —" orcado={0} realizado={0} isExpense={true} indent />
+                    : saidaRows.map((r, i) => <DRERow key={'s'+i} label={r.categoria} orcado={r.orcado} realizado={r.realizado} isExpense={true} indent
+                        editMode={editMode} editValue={orcEdits[`saida|${r.categoria}`]} onEdit={(v) => setOrcEdits(prev => ({ ...prev, [`saida|${r.categoria}`]: v }))} />)}
+                  <DRERow label="(–) Total Saídas" orcado={totSai.o} realizado={totSai.r} isExpense={true} isSubtotal />
+                  <DRERow label="(=) Geração de Caixa" orcado={totEnt.o - totSai.o} realizado={totEnt.r - totSai.r} isExpense={false} isTotal />
+                  </>) : (<>
                   <DRERow label="Receitas" isGroupHeader />
                   {receitaRows.length === 0
                     ? <tr><td colSpan={6} style={{ ...S.tdLeft, color: 'var(--fs-text-4)', padding: '10px 28px', fontStyle: 'italic' }}>Sem lançamentos de receita neste período</td></tr>
@@ -413,6 +474,7 @@ export default function OrcamentoPage() {
 
                   {/* EBITDA */}
                   <DRERow label="(=) EBITDA" orcado={ebitdaO} realizado={ebitdaR} isExpense={false} isTotal />
+                  </>)}
                 </tbody>
               </table>
             </div>
@@ -449,8 +511,8 @@ export default function OrcamentoPage() {
           {/* Legenda F/D */}
           <div style={{ background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '8px', padding: '12px 16px', fontSize: '12px', color: 'var(--fs-text-4)', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
             <span><strong style={{ color: 'var(--fs-text-4)' }}>Lógica F/D aplicada:</strong></span>
-            <span>Receita: Realizado {'>'} Orçado = <strong style={{ color: '#10b981' }}>Favorável</strong></span>
-            <span>Custo/Despesa: Realizado {'<'} Orçado = <strong style={{ color: '#10b981' }}>Favorável</strong></span>
+            <span>{modulo === 'dre' ? 'Receita' : 'Entradas'}: Realizado {'>'} Orçado = <strong style={{ color: '#10b981' }}>Favorável</strong></span>
+            <span>{modulo === 'dre' ? 'Custo/Despesa' : 'Saídas'}: Realizado {'<'} Orçado = <strong style={{ color: '#10b981' }}>Favorável</strong></span>
             <span>Resultado oposto em qualquer linha = Desfavorável</span>
           </div>
         </>

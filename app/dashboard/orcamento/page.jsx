@@ -398,13 +398,13 @@ export default function OrcamentoPage() {
               <KPICard label="Saídas"            orcado={totSai.o}          realizado={totSai.r}          isExpense={true}  color="#ef4444" />
               <KPICard label="Geração de Caixa"  orcado={totEnt.o - totSai.o} realizado={totEnt.r - totSai.r} isExpense={false} color="#3b82f6" />
             </>)}
-            <KPICard label="EBITDA"          orcado={ebitdaO}   realizado={ebitdaR}    isExpense={false} color="#10b981" />
+            {modulo === 'dre' && (<KPICard label="EBITDA"          orcado={ebitdaO}   realizado={ebitdaR}    isExpense={false} color="#10b981" />)}
           </div>
 
           {/* Tabela DRE Estruturada */}
           <div style={S.card}>
             <div style={{ ...S.cardTitle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>DRE — Budget vs. Realizado · {periodoLabel}</span>
+              <span>{modulo === 'dre' ? 'DRE' : 'Fluxo de Caixa'} — Budget vs. Realizado · {periodoLabel}</span>
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center', fontSize: '12px' }}>
                 <span style={{ color: '#10b981' }}>✓ F = Favorável ao resultado</span>
                 <span style={{ color: '#ef4444' }}>✗ D = Desfavorável ao resultado</span>

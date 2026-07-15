@@ -87,16 +87,18 @@ export async function POST(request) {
     // falta → revarreduras seguintes ficam quase instantâneas
     const docRefs = itens.map(i => `bling:${tipoFluxo}:${i.id}`)
     const { data: existentes } = await admin.from('fluxo_caixa')
-      .select('doc_ref,descricao,categoria,competencia,status,data_liquidacao')
+      .select('doc_ref,descricao,categoria,competencia,status,data,data_liquidacao')
       .in('doc_ref', docRefs)
+    const hojeSync = new Date().toISOString().split('T')[0]
     const completo = {}
     ;(existentes || []).forEach(e => {
       const id = e.doc_ref.split(':').pop()
       const descOk = e.descricao && !/^Contato \d+$/.test(e.descricao) && e.descricao !== 'Sem descrição' && e.descricao !== 'Título Bling'
-      const catOk  = e.categoria && e.categoria !== 'Sem categoria'
-      const compOk = !!e.competencia
-      const liqOk  = e.status !== 'pago' || !!e.data_liquidacao
-      completo[id] = descOk && catOk && compOk && liqOk
+      const dadosOk = descOk && e.categoria && e.categoria !== 'Sem categoria' && !!e.competencia
+      const pagoOk  = e.status !== 'pago' || !!e.data_liquidacao
+      // aberto/parcial já vencido PODE ter sido pago no Bling → reconferir
+      const statusPodeMudar = ['aberto','parcial'].includes(e.status) && e.data <= hojeSync
+      completo[id] = dadosOk && pagoOk && !statusPodeMudar
     })
     const aDetalhar = itens.filter(i => !completo[i.id])
 

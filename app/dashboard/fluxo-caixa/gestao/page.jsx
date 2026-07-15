@@ -215,49 +215,59 @@ export default function GestaoFluxoCaixaPage() {
       }
       if (!empIds.length) { setLoading(false); return }
 
-      let q = supabase
-        .from('fluxo_caixa')
-        .select('id,data,descricao,tipo,valor,categoria,created_at,status,data_liquidacao,valor_liquidado', { count:'exact' })
-        .gte('data', startDate)
-        .lte('data', endDate)
-        .order('data', { ascending: false })
-        .order('created_at', { ascending: false })
-
-      q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
-
-      if (tipoFiltro !== 'todos') q = q.eq('tipo', tipoFiltro)
+      // ═══ CAIXA EFETIVO: busca TODOS os registros do período (por vencimento
+      // OU liquidação na janela) e pagina em memória pela DATA EFETIVA — o eixo
+      // que a tela exibe. Isso elimina a desordem entre páginas (antes o banco
+      // paginava por vencimento e a tela reagrupava por data efetiva). ═══
       const hoje = new Date().toISOString().split('T')[0]
-      if (statusFiltro === 'abertos')  q = q.in('status', ['aberto','parcial'])
-      if (statusFiltro === 'vencidos') q = q.in('status', ['aberto','parcial']).lt('data', hoje)
-      if (statusFiltro === 'pagos')    q = q.eq('status', 'pago')
+      const hojeP = hoje
+      const termo = busca.trim().toLowerCase()
+      let todos = [], fPage = 0
+      while (true) {
+        let qF = supabase.from('fluxo_caixa')
+          .select('id,data,descricao,tipo,valor,categoria,created_at,status,data_liquidacao,valor_liquidado')
+          .or(`and(data.gte.${startDate},data.lte.${endDate}),and(data_liquidacao.gte.${startDate},data_liquidacao.lte.${endDate})`)
+          .range(fPage * 1000, (fPage + 1) * 1000 - 1)
+        qF = isConsol ? qF.in('empresa_id', empIds) : qF.eq('empresa_id', empIds[0])
+        if (tipoFiltro !== 'todos') qF = qF.eq('tipo', tipoFiltro)
+        if (statusFiltro === 'abertos')  qF = qF.in('status', ['aberto','parcial'])
+        if (statusFiltro === 'vencidos') qF = qF.in('status', ['aberto','parcial']).lt('data', hoje)
+        if (statusFiltro === 'pagos')    qF = qF.eq('status', 'pago')
+        const { data: fBatch = [], error: fErr } = await qF
+        if (fErr) throw fErr
+        if (!fBatch || fBatch.length === 0) break
+        todos = todos.concat(fBatch)
+        if (fBatch.length < 1000) break
+        fPage++
+      }
 
-      const { data, count, error } = await q.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
-      if (error) throw error
+      // Filtro de busca + recorte por data efetiva dentro do período
+      const consultandoVenc = statusFiltro === 'vencidos'
+      const visiveis = todos.filter(r => {
+        if (termo && !((r.descricao||'').toLowerCase().includes(termo) || (r.categoria||'').toLowerCase().includes(termo))) return false
+        const dEf = dataEfetiva(r)
+        const dExib = dEf || (consultandoVenc ? r.data : null)
+        return dExib && dExib >= startDate && dExib <= endDate
+      })
 
-      setRegistros(data || [])
-      setTotal(count || 0)
+      // Ordena pela DATA EFETIVA (desc) — mesma ordem em todas as páginas
+      const efOf = (r) => dataEfetiva(r) || r.data
+      visiveis.sort((a, b) => {
+        const da = efOf(a), db = efOf(b)
+        if (da !== db) return da > db ? -1 : 1
+        return (b.created_at || '') > (a.created_at || '') ? 1 : -1
+      })
+
+      // Paginação em memória
+      setTotal(visiveis.length)
+      setRegistros(visiveis.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE))
       setSelected(new Set())
 
-      // Totais globais — paginação completa para passar do limite de 1000 do Supabase
-      // Totais do PERÍODO (todos os registros filtrados, não só a página) —
-      // acompanham período, tipo, situação e busca
-      const hojeP = new Date().toISOString().split('T')[0]
-      let gEntradas = 0, gSaidas = 0, gCount = 0, gPage = 0, gDone = false
+      // Totais/indicadores do período (sobre o conjunto completo já carregado)
+      let gEntradas = 0, gSaidas = 0, gCount = 0
       const ind = { recebido:0, aReceber:0, atrasoReceber:0, pago:0, aPagar:0, atrasoPagar:0 }
-      while (!gDone) {
-        let qP = supabase.from('fluxo_caixa').select('tipo,valor,descricao,categoria,status,data,valor_liquidado')
-          .gte('data', startDate).lte('data', endDate)
-          .range(gPage * 1000, (gPage + 1) * 1000 - 1)
-        qP = isConsol ? qP.in('empresa_id', empIds) : qP.eq('empresa_id', empIds[0])
-        if (tipoFiltro !== 'todos') qP = qP.eq('tipo', tipoFiltro)
-        if (statusFiltro === 'abertos')  qP = qP.in('status', ['aberto','parcial'])
-        if (statusFiltro === 'vencidos') qP = qP.in('status', ['aberto','parcial']).lt('data', hojeP)
-        if (statusFiltro === 'pagos')    qP = qP.eq('status', 'pago')
-        const { data: pBatch = [] } = await qP
-        if (!pBatch || pBatch.length === 0) break
-        const termo = busca.trim().toLowerCase()
-        pBatch.forEach(r => {
-          if (termo && !((r.descricao||'').toLowerCase().includes(termo) || (r.categoria||'').toLowerCase().includes(termo))) return
+      {
+        visiveis.forEach(r => {
           gCount++
           const v = Number(r.valor) || 0
           const liq = Number(r.valor_liquidado) || 0
@@ -275,8 +285,6 @@ export default function GestaoFluxoCaixaPage() {
             else if (st === 'aberto') { ind.aPagar += v; if (vencido) ind.atrasoPagar += v }
           }
         })
-        if (pBatch.length < 1000) gDone = true
-        gPage++
       }
       setTotalGlobalE(gEntradas)
       setTotalGlobalS(gSaidas)

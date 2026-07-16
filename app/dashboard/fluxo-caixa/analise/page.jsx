@@ -25,7 +25,7 @@ const S = {
   skeleton:  { background: 'linear-gradient(90deg,var(--fs-surface) 25%,var(--fs-surface-2) 50%,var(--fs-surface) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 6 },
 }
 
-const PIE_COLORS = ['#3b82f6','#f59e0b','#10b981','#8b5cf6','#ef4444','#06b6d4','#f97316']
+const PIE_COLORS = ['var(--fs-brand)','var(--fs-warning)','var(--fs-success)','var(--fs-purple)','var(--fs-danger)','#06b6d4','#f97316']
 
 export default function FluxoCaixaAnalise() {
   const [startDate, setStartDate] = useState(() => {
@@ -224,7 +224,7 @@ export default function FluxoCaixaAnalise() {
             ].map((ind, i) => (
               <div key={i} style={{ background: 'var(--fs-surface-2)', borderRadius: 8, padding: '14px 16px', border: '1px solid var(--fs-border)' }}>
                 <div style={{ fontSize: 10, color: 'var(--fs-text-4)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 6 }}>{ind.label}</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: ind.ok ? '#3b82f6' : '#f59e0b', marginBottom: 3 }}>{ind.value}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: ind.ok ? 'var(--fs-brand)' : 'var(--fs-warning)', marginBottom: 3 }}>{ind.value}</div>
                 <div style={{ fontSize: 11, color: 'var(--fs-text-4)' }}>{ind.desc}</div>
               </div>
             ))}

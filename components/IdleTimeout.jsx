@@ -88,8 +88,8 @@ export default function IdleTimeout() {
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, padding:28, width:400, maxWidth:'90vw', textAlign:'center' }}>
-        <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.25)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 18px' }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(var(--fs-warning-rgb),0.1)', border:'1px solid rgba(var(--fs-warning-rgb),0.25)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 18px' }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--fs-warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
           </svg>
         </div>
@@ -104,7 +104,7 @@ export default function IdleTimeout() {
           <button onClick={() => window.__fsLogoutNow?.()} style={{ background:'transparent', border:'1px solid var(--fs-border)', borderRadius:8, padding:'9px 18px', fontSize:13, fontWeight:600, color:'var(--fs-text-2)', cursor:'pointer' }}>
             Sair agora
           </button>
-          <button onClick={() => window.__fsStayConnected?.()} style={{ background:'#1d4ed8', color:'#fff', border:'none', borderRadius:8, padding:'9px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+          <button onClick={() => window.__fsStayConnected?.()} style={{ background:'var(--fs-brand-dark)', color:'#fff', border:'none', borderRadius:8, padding:'9px 22px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
             Continuar conectado
           </button>
         </div>

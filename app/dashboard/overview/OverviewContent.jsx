@@ -13,7 +13,7 @@ import {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#14b8a6', '#f59e0b', '#ec4899', '#22c55e']
+const PIE_COLORS = ['var(--fs-brand)', 'var(--fs-purple)', '#14b8a6', 'var(--fs-warning)', '#ec4899', 'var(--fs-success)']
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 const fC = (v) => {
@@ -74,7 +74,7 @@ const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, i
         </div>
         {sparkData && sparkData.length > 1 && (
           <div style={{ width: hero ? 130 : 84, height: hero ? 54 : 40, flexShrink:0 }}>
-            <Spark data={sparkData} dataKey={sparkKey} color={sparkColor || '#3b82f6'} />
+            <Spark data={sparkData} dataKey={sparkKey} color={sparkColor || 'var(--fs-brand)'} />
           </div>
         )}
       </div>
@@ -111,11 +111,11 @@ const TT = ({ active, payload, label }) => {
 // ─── Botão de período rápido ──────────────────────────────────────────────────
 const QuickBtn = ({ label, active, onClick, color }) => {
   const c = color === 'blue'
-    ? { on:  { bg:'rgba(59,130,246,0.20)',  text:'#60a5fa',  border:'rgba(59,130,246,0.45)'  },
-        off: { bg:'rgba(59,130,246,0.06)',  text:'var(--fs-text-4)', border:'rgba(59,130,246,0.15)' } }
+    ? { on:  { bg:'rgba(var(--fs-brand-rgb),0.20)',  text:'var(--fs-brand-text)',  border:'rgba(var(--fs-brand-rgb),0.45)'  },
+        off: { bg:'rgba(var(--fs-brand-rgb),0.06)',  text:'var(--fs-text-4)', border:'rgba(var(--fs-brand-rgb),0.15)' } }
     : color === 'purple'
-    ? { on:  { bg:'rgba(139,92,246,0.20)', text:'#a78bfa',  border:'rgba(139,92,246,0.45)'  },
-        off: { bg:'rgba(139,92,246,0.06)', text:'var(--fs-text-4)', border:'rgba(139,92,246,0.15)' } }
+    ? { on:  { bg:'rgba(var(--fs-purple-rgb),0.20)', text:'var(--fs-purple)',  border:'rgba(var(--fs-purple-rgb),0.45)'  },
+        off: { bg:'rgba(var(--fs-purple-rgb),0.06)', text:'var(--fs-text-4)', border:'rgba(var(--fs-purple-rgb),0.15)' } }
     : { on:  { bg:'rgba(20,184,166,0.20)', text:'#2dd4bf',  border:'rgba(20,184,166,0.45)'  },
         off: { bg:'rgba(20,184,166,0.06)', text:'var(--fs-text-4)', border:'rgba(20,184,166,0.15)' } }
   const s = active ? c.on : c.off
@@ -197,9 +197,9 @@ const CustomPeriodPicker = ({ value, onChange, onClose }) => {
       <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:16 }}>
         {shortcuts.map((sh,i) => (
           <button key={i} onClick={() => { setStart(sh.s); setEnd(sh.e) }} style={{
-            background: start===sh.s && end===sh.e ? 'rgba(59,130,246,0.18)' : 'var(--fs-bg)',
-            border: start===sh.s && end===sh.e ? '1px solid rgba(59,130,246,0.4)' : '1px solid var(--fs-border)',
-            color: start===sh.s && end===sh.e ? '#60a5fa' : 'var(--fs-text-3)',
+            background: start===sh.s && end===sh.e ? 'rgba(var(--fs-brand-rgb),0.18)' : 'var(--fs-bg)',
+            border: start===sh.s && end===sh.e ? '1px solid rgba(var(--fs-brand-rgb),0.4)' : '1px solid var(--fs-border)',
+            color: start===sh.s && end===sh.e ? 'var(--fs-brand-text)' : 'var(--fs-text-3)',
             borderRadius:6, padding:'4px 9px', fontSize:11, cursor:'pointer', fontWeight:600,
             transition:'all 0.12s',
           }}>{sh.label}</button>
@@ -213,7 +213,7 @@ const CustomPeriodPicker = ({ value, onChange, onClose }) => {
           borderRadius:8, padding:'7px 16px', fontSize:12, fontWeight:600, cursor:'pointer',
         }}>Cancelar</button>
         <button onClick={apply} disabled={!start || !end || start > end} style={{
-          background: (!start || !end || start > end) ? 'rgba(59,130,246,0.3)' : '#3b82f6',
+          background: (!start || !end || start > end) ? 'rgba(var(--fs-brand-rgb),0.3)' : 'var(--fs-brand)',
           border:'none', color:'#fff', borderRadius:8, padding:'7px 16px',
           fontSize:12, fontWeight:700, cursor: (!start||!end||start>end) ? 'not-allowed' : 'pointer',
           transition:'background 0.15s',
@@ -474,7 +474,7 @@ export default function OverviewPage() {
     return () => clearTimeout(t)
   }, [load, empresaId, firstLoad])
 
-  const tipoColor = { receita:'#22c55e', custo:'#ef4444', despesa:'#f59e0b', deducao:'#f97316', receita_financeira:'#14b8a6', despesa_financeira:'#8b5cf6', investimento:'#64748b' }
+  const tipoColor = { receita:'var(--fs-success)', custo:'var(--fs-danger)', despesa:'var(--fs-warning)', deducao:'#f97316', receita_financeira:'#14b8a6', despesa_financeira:'var(--fs-purple)', investimento:'#64748b' }
   const dr = getRange()
 
   if (!empresaId) return (
@@ -539,10 +539,10 @@ export default function OverviewPage() {
         <>
           {/* ── KPIs principais ─────────────────────────────────────────────── */}
           <div style={{ display:'flex', gap:12, marginBottom:12, flexWrap:'wrap' }}>
-            <KCard hero label={`Receita Bruta · ${dr.subLabel}`} value={fC(kpis.rb)} pct={kpis.rbPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="receita" sparkColor="#22c55e" sub={kpis.rl !== kpis.rb ? `Rec. Líquida: ${fC(kpis.rl)}` : null} />
-            <KCard label="EBITDA"          value={fC(kpis.ebt)}                   pct={kpis.ebtPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="#3b82f6" />
-            <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`}     pct={kpis.margDiff} pctLabel="p.p. vs anterior"  sparkData={monthly} sparkKey="resLiq" sparkColor="#8b5cf6" />
-            <KCard label="Caixa Disponível" value={fC(kpis.caixa)} pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="#f59e0b" />
+            <KCard hero label={`Receita Bruta · ${dr.subLabel}`} value={fC(kpis.rb)} pct={kpis.rbPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="receita" sparkColor="var(--fs-success)" sub={kpis.rl !== kpis.rb ? `Rec. Líquida: ${fC(kpis.rl)}` : null} />
+            <KCard label="EBITDA"          value={fC(kpis.ebt)}                   pct={kpis.ebtPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="var(--fs-brand)" />
+            <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`}     pct={kpis.margDiff} pctLabel="p.p. vs anterior"  sparkData={monthly} sparkKey="resLiq" sparkColor="var(--fs-purple)" />
+            <KCard label="Caixa Disponível" value={fC(kpis.caixa)} pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
           </div>
 
           {/* ── KPIs secundários ────────────────────────────────────────────── */}
@@ -566,9 +566,9 @@ export default function OverviewPage() {
                     <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fC} width={62} />
                     <Tooltip content={<TT cursor={false} />} cursor={false} />
                     <Legend iconType="circle" wrapperStyle={{fontSize:11,paddingTop:8}} />
-                    <Bar dataKey="entradas" fill="#3b82f6" radius={[3,3,0,0]} name="Entradas" barSize={12} />
-                    <Bar dataKey="saidas"   fill="rgba(239,68,68,0.6)" radius={[3,3,0,0]} name="Saídas" barSize={12} />
-                    <Line type="monotone" dataKey="saldo" stroke="#8b5cf6" strokeWidth={2.5} dot={{r:3,fill:'#8b5cf6'}} name="Saldo" />
+                    <Bar dataKey="entradas" fill="var(--fs-brand)" radius={[3,3,0,0]} name="Entradas" barSize={12} />
+                    <Bar dataKey="saidas"   fill="rgba(var(--fs-danger-rgb),0.6)" radius={[3,3,0,0]} name="Saídas" barSize={12} />
+                    <Line type="monotone" dataKey="saldo" stroke="var(--fs-purple)" strokeWidth={2.5} dot={{r:3,fill:'var(--fs-purple)'}} name="Saldo" />
                   </ComposedChart>
                 </ResponsiveContainer>
               ) : <div style={{textAlign:'center',padding:40,color:'var(--fs-text-4)',fontSize:13}}>Sem dados de fluxo de caixa</div>}
@@ -621,8 +621,8 @@ export default function OverviewPage() {
                   <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fC} width={62} />
                   <Tooltip content={<TT cursor={false} />} cursor={false} />
                   <Legend iconType="circle" wrapperStyle={{fontSize:11,paddingTop:8}} />
-                  <Bar dataKey="receita" fill="#22c55e" name="Receita Bruta" radius={[3,3,0,0]} barSize={14} />
-                  <Bar dataKey="ebitda"  fill="#3b82f6" name="EBITDA"        radius={[3,3,0,0]} barSize={14} />
+                  <Bar dataKey="receita" fill="var(--fs-success)" name="Receita Bruta" radius={[3,3,0,0]} barSize={14} />
+                  <Bar dataKey="ebitda"  fill="var(--fs-brand)" name="EBITDA"        radius={[3,3,0,0]} barSize={14} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

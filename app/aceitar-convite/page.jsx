@@ -60,7 +60,7 @@ function AceitarConviteForm() {
       <div style={{ width:'100%', maxWidth:440, background:'#1a1f2e', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:40 }}>
 
         <div style={{ textAlign:'center', marginBottom:32 }}>
-          <div style={{ width:52,height:52,background:'linear-gradient(135deg,#1d4ed8,#3b82f6)',borderRadius:13,margin:'0 auto 14px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:800,color:'#fff' }}>FS</div>
+          <div style={{ width:52,height:52,background:'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))',borderRadius:13,margin:'0 auto 14px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:800,color:'#fff' }}>FS</div>
           <h1 style={{ fontSize:20,fontWeight:800,color:'#f1f5f9',margin:0 }}>Financial Dashboard</h1>
         </div>
 
@@ -84,7 +84,7 @@ function AceitarConviteForm() {
           <>
             <h2 style={{ color:'#f1f5f9', fontSize:18, fontWeight:700, marginBottom:4 }}>Criar sua conta</h2>
             <p style={{ color:'#64748b', fontSize:13, marginBottom:24 }}>
-              Você foi convidado como <strong style={{ color:'#60a5fa' }}>{invite.role === 'org_admin' ? 'Administrador' : 'Usuário'}</strong>
+              Você foi convidado como <strong style={{ color:'var(--fs-brand-text)' }}>{invite.role === 'org_admin' ? 'Administrador' : 'Usuário'}</strong>
             </p>
             <form onSubmit={handleSubmit}>
               <label style={{ display:'block', fontSize:11, color:'#94a3b8', fontWeight:700, textTransform:'uppercase', marginBottom:5 }}>E-mail</label>
@@ -99,9 +99,9 @@ function AceitarConviteForm() {
               <label style={{ display:'block', fontSize:11, color:'#94a3b8', fontWeight:700, textTransform:'uppercase', marginBottom:5 }}>Confirmar senha</label>
               <input style={inp} type="password" value={form.confirma} onChange={e=>setForm({...form,confirma:e.target.value})} placeholder="Repita a senha" required />
 
-              {msg && <div style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'9px 12px', color:'#fca5a5', fontSize:13, marginBottom:14 }}>⚠️ {msg}</div>}
+              {msg && <div style={{ background:'rgba(var(--fs-danger-rgb),0.1)', border:'1px solid rgba(var(--fs-danger-rgb),0.2)', borderRadius:8, padding:'9px 12px', color:'#fca5a5', fontSize:13, marginBottom:14 }}>⚠️ {msg}</div>}
 
-              <button type="submit" disabled={loading} style={{ width:'100%', background:loading?'#1e293b':'#3b82f6', color:loading?'#64748b':'#fff', border:'none', borderRadius:8, padding:'12px', fontSize:14, fontWeight:700, cursor:loading?'not-allowed':'pointer', marginTop:4 }}>
+              <button type="submit" disabled={loading} style={{ width:'100%', background:loading?'#1e293b':'var(--fs-brand)', color:loading?'#64748b':'#fff', border:'none', borderRadius:8, padding:'12px', fontSize:14, fontWeight:700, cursor:loading?'not-allowed':'pointer', marginTop:4 }}>
                 {loading ? 'Criando conta...' : '✓ Criar conta e acessar'}
               </button>
             </form>
@@ -113,7 +113,7 @@ function AceitarConviteForm() {
             
             <h2 style={{ color:'#f1f5f9', fontSize:20, marginBottom:8 }}>Conta criada!</h2>
             <p style={{ color:'#94a3b8', fontSize:14, marginBottom:24 }}>Sua conta foi criada com sucesso.</p>
-            <button onClick={() => router.push('/')} style={{ background:'#3b82f6', color:'#fff', border:'none', borderRadius:8, padding:'11px 28px', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+            <button onClick={() => router.push('/')} style={{ background:'var(--fs-brand)', color:'#fff', border:'none', borderRadius:8, padding:'11px 28px', fontSize:14, fontWeight:700, cursor:'pointer' }}>
               Ir para o Login
             </button>
           </div>

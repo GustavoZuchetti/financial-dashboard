@@ -2,15 +2,15 @@
 
 // ─── Item 7 — Badges semânticas por tipo de lançamento ─────────────────────────
 const BADGE_CONFIG = {
-  receita:  { label: '↑ Receita',   bg: 'rgba(59,130,246,0.15)',  color: '#93c5fd', border: 'rgba(59,130,246,0.3)'  },
-  custo:    { label: '↓ Custo',     bg: 'rgba(239,68,68,0.15)',   color: '#fca5a5', border: 'rgba(239,68,68,0.3)'   },
-  despesa:  { label: '↓ Despesa',   bg: 'rgba(245,158,11,0.15)',  color: '#fcd34d', border: 'rgba(245,158,11,0.3)'  },
-  entrada:  { label: '↑ Entrada',   bg: 'rgba(16,185,129,0.15)',  color: '#6ee7b7', border: 'rgba(16,185,129,0.3)'  },
-  saida:    { label: '↓ Saída',     bg: 'rgba(239,68,68,0.15)',   color: '#fca5a5', border: 'rgba(239,68,68,0.3)'   },
-  ativo:    { label: '◈ Ativo',     bg: 'rgba(139,92,246,0.15)',  color: '#c4b5fd', border: 'rgba(139,92,246,0.3)'  },
-  passivo:  { label: '◈ Passivo',   bg: 'rgba(245,158,11,0.15)',  color: '#fcd34d', border: 'rgba(245,158,11,0.3)'  },
-  favoravel:{ label: '✓ F',         bg: 'rgba(16,185,129,0.12)',  color: '#10b981', border: 'rgba(16,185,129,0.3)'  },
-  desfavor: { label: '✗ D',         bg: 'rgba(239,68,68,0.12)',   color: '#ef4444', border: 'rgba(239,68,68,0.3)'   },
+  receita:  { label: '↑ Receita',   bg: 'rgba(var(--fs-brand-rgb),0.15)',  color: 'var(--fs-brand-text)', border: 'rgba(var(--fs-brand-rgb),0.3)'  },
+  custo:    { label: '↓ Custo',     bg: 'rgba(var(--fs-danger-rgb),0.15)',   color: '#fca5a5', border: 'rgba(var(--fs-danger-rgb),0.3)'   },
+  despesa:  { label: '↓ Despesa',   bg: 'rgba(var(--fs-warning-rgb),0.15)',  color: '#fcd34d', border: 'rgba(var(--fs-warning-rgb),0.3)'  },
+  entrada:  { label: '↑ Entrada',   bg: 'rgba(var(--fs-success-rgb),0.15)',  color: '#6ee7b7', border: 'rgba(var(--fs-success-rgb),0.3)'  },
+  saida:    { label: '↓ Saída',     bg: 'rgba(var(--fs-danger-rgb),0.15)',   color: '#fca5a5', border: 'rgba(var(--fs-danger-rgb),0.3)'   },
+  ativo:    { label: '◈ Ativo',     bg: 'rgba(var(--fs-purple-rgb),0.15)',  color: '#c4b5fd', border: 'rgba(var(--fs-purple-rgb),0.3)'  },
+  passivo:  { label: '◈ Passivo',   bg: 'rgba(var(--fs-warning-rgb),0.15)',  color: '#fcd34d', border: 'rgba(var(--fs-warning-rgb),0.3)'  },
+  favoravel:{ label: '✓ F',         bg: 'rgba(var(--fs-success-rgb),0.12)',  color: 'var(--fs-success)', border: 'rgba(var(--fs-success-rgb),0.3)'  },
+  desfavor: { label: '✗ D',         bg: 'rgba(var(--fs-danger-rgb),0.12)',   color: 'var(--fs-danger)', border: 'rgba(var(--fs-danger-rgb),0.3)'   },
 }
 
 export default function TypeBadge({ type, size = 'sm', customLabel }) {

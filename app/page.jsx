@@ -135,14 +135,14 @@ export default function LoginPage() {
         }
         .inp-field::placeholder { color: rgba(148,163,184,0.5); }
         .inp-field:focus {
-          border-color: rgba(59,130,246,0.6);
-          background: rgba(59,130,246,0.05);
-          box-shadow: 0 0 0 3px rgba(59,130,246,0.12), inset 0 1px 0 rgba(255,255,255,0.05);
+          border-color: rgba(var(--fs-brand-rgb),0.6);
+          background: rgba(var(--fs-brand-rgb),0.05);
+          box-shadow: 0 0 0 3px rgba(var(--fs-brand-rgb),0.12), inset 0 1px 0 rgba(255,255,255,0.05);
         }
 
         .btn-primary {
           width: 100%;
-          background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+          background: linear-gradient(135deg, var(--fs-brand-dark) 0%, var(--fs-brand) 100%);
           color: #fff;
           border: none;
           border-radius: 10px;
@@ -167,7 +167,7 @@ export default function LoginPage() {
         .btn-primary:hover:not(:disabled)::before { opacity: 1; }
         .btn-primary:hover:not(:disabled) {
           transform: translateY(-1px);
-          box-shadow: 0 8px 28px rgba(59,130,246,0.4);
+          box-shadow: 0 8px 28px rgba(var(--fs-brand-rgb),0.4);
         }
         .btn-primary:active { transform: translateY(0); box-shadow: none; }
         .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
@@ -181,8 +181,8 @@ export default function LoginPage() {
           transition: border-color 0.2s, background 0.2s;
         }
         .stat-card:hover {
-          border-color: rgba(59,130,246,0.25);
-          background: rgba(59,130,246,0.05);
+          border-color: rgba(var(--fs-brand-rgb),0.25);
+          background: rgba(var(--fs-brand-rgb),0.05);
         }
 
         .feature-item {
@@ -200,18 +200,18 @@ export default function LoginPage() {
         .feature-dot {
           width: 5px; height: 5px;
           border-radius: 50%;
-          background: #3b82f6;
+          background: var(--fs-brand);
           flex-shrink: 0;
-          box-shadow: 0 0 6px rgba(59,130,246,0.6);
+          box-shadow: 0 0 6px rgba(var(--fs-brand-rgb),0.6);
         }
 
         .divider-line {
           width: 1px;
-          background: linear-gradient(to bottom, transparent 0%, rgba(59,130,246,0.15) 30%, rgba(59,130,246,0.15) 70%, transparent 100%);
+          background: linear-gradient(to bottom, transparent 0%, rgba(var(--fs-brand-rgb),0.15) 30%, rgba(var(--fs-brand-rgb),0.15) 70%, transparent 100%);
         }
 
         .shimmer-text {
-          background: linear-gradient(90deg, #60a5fa 0%, #a78bfa 40%, #60a5fa 80%);
+          background: linear-gradient(90deg, var(--fs-brand-text) 0%, var(--fs-purple) 40%, var(--fs-brand-text) 80%);
           background-size: 200% auto;
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
@@ -231,21 +231,21 @@ export default function LoginPage() {
       <div style={{ position:'absolute', inset:0, pointerEvents:'none', overflow:'hidden' }}>
         {/* Gradiente base */}
         <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 80% 60% at 20% 50%, rgba(29,78,216,0.12) 0%, transparent 60%)' }} />
-        <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 60% 80% at 80% 20%, rgba(139,92,246,0.07) 0%, transparent 55%)' }} />
-        <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 50% 50% at 75% 80%, rgba(16,185,129,0.04) 0%, transparent 50%)' }} />
+        <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 60% 80% at 80% 20%, rgba(var(--fs-purple-rgb),0.07) 0%, transparent 55%)' }} />
+        <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse 50% 50% at 75% 80%, rgba(var(--fs-success-rgb),0.04) 0%, transparent 50%)' }} />
 
         {/* Formas geométricas flutuantes */}
         <div style={{
           position:'absolute', top:'8%', left:'8%',
           width:320, height:320,
-          border:'1px solid rgba(59,130,246,0.08)',
+          border:'1px solid rgba(var(--fs-brand-rgb),0.08)',
           borderRadius:'40% 60% 55% 45% / 45% 35% 65% 55%',
           animation:'drift1 20s ease-in-out infinite',
         }} />
         <div style={{
           position:'absolute', bottom:'10%', right:'30%',
           width:200, height:200,
-          border:'1px solid rgba(139,92,246,0.07)',
+          border:'1px solid rgba(var(--fs-purple-rgb),0.07)',
           borderRadius:'55% 45% 40% 60% / 60% 50% 50% 40%',
           animation:'drift2 16s ease-in-out infinite',
         }} />
@@ -253,14 +253,14 @@ export default function LoginPage() {
         {/* Grid sutil */}
         <div style={{
           position:'absolute', inset:0,
-          backgroundImage:'linear-gradient(rgba(59,130,246,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.025) 1px,transparent 1px)',
+          backgroundImage:'linear-gradient(rgba(var(--fs-brand-rgb),0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--fs-brand-rgb),0.025) 1px,transparent 1px)',
           backgroundSize:'80px 80px',
         }} />
 
         {/* Linha horizontal decorativa */}
         <div style={{
           position:'absolute', top:'50%', left:0, right:0, height:1,
-          background:'linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.08) 25%, rgba(59,130,246,0.08) 75%, transparent 100%)',
+          background:'linear-gradient(90deg, transparent 0%, rgba(var(--fs-brand-rgb),0.08) 25%, rgba(var(--fs-brand-rgb),0.08) 75%, transparent 100%)',
         }} />
       </div>
 
@@ -282,12 +282,12 @@ export default function LoginPage() {
                 : <>
                     <div style={{
                       width:42, height:42,
-                      background:'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)',
+                      background:'linear-gradient(135deg, var(--fs-brand-dark) 0%, var(--fs-brand) 100%)',
                       borderRadius:12,
                       display:'flex', alignItems:'center', justifyContent:'center',
                       fontWeight:800, color:'#fff', fontSize:16,
                       letterSpacing:'-0.5px',
-                      boxShadow:'0 4px 16px rgba(59,130,246,0.35)',
+                      boxShadow:'0 4px 16px rgba(var(--fs-brand-rgb),0.35)',
                       fontFamily:"'DM Sans', sans-serif",
                     }}>FS</div>
                     <span style={{
@@ -303,7 +303,7 @@ export default function LoginPage() {
             <div style={{ marginBottom: 20 }}>
               <div style={{
                 fontSize:11, fontWeight:600,
-                color:'rgba(59,130,246,0.8)',
+                color:'rgba(var(--fs-brand-rgb),0.8)',
                 letterSpacing:'2px',
                 textTransform:'uppercase',
                 marginBottom:14,
@@ -361,7 +361,7 @@ export default function LoginPage() {
                 { label:'Atualização', value:'Tempo real', icon:'◉' },
               ].map(s => (
                 <div key={s.label} className="stat-card">
-                  <div style={{ fontSize:10, color:'rgba(59,130,246,0.7)', marginBottom:4, letterSpacing:'0.5px', fontFamily:"'DM Sans', sans-serif" }}>{s.icon} {s.label.toUpperCase()}</div>
+                  <div style={{ fontSize:10, color:'rgba(var(--fs-brand-rgb),0.7)', marginBottom:4, letterSpacing:'0.5px', fontFamily:"'DM Sans', sans-serif" }}>{s.icon} {s.label.toUpperCase()}</div>
                   <div style={{ fontSize:15, fontWeight:700, color:'rgba(241,245,249,0.9)', fontFamily:"'DM Sans', sans-serif" }}>{s.value}</div>
                 </div>
               ))}
@@ -416,7 +416,7 @@ export default function LoginPage() {
             {/* Erro */}
             {error && (
               <div style={{
-                background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.2)',
+                background:'rgba(var(--fs-danger-rgb),0.08)', border:'1px solid rgba(var(--fs-danger-rgb),0.2)',
                 borderRadius:10, padding:'11px 14px', color:'#fca5a5', fontSize:13, marginBottom:20,
                 display:'flex', alignItems:'center', gap:8, fontFamily:"'DM Sans', sans-serif",
               }}>
@@ -427,7 +427,7 @@ export default function LoginPage() {
             {/* ── Modo: link enviado ── */}
             {forgotSent ? (
               <div style={{ textAlign:'center', padding:'12px 0' }}>
-                <div style={{ width:52, height:52, background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.25)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 18px', fontSize:22, color:'#10b981' }}>✓</div>
+                <div style={{ width:52, height:52, background:'rgba(var(--fs-success-rgb),0.1)', border:'1px solid rgba(var(--fs-success-rgb),0.25)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 18px', fontSize:22, color:'var(--fs-success)' }}>✓</div>
 
                 {forgotLink ? (
                   /* Link gerado diretamente — exibir na tela */
@@ -439,7 +439,7 @@ export default function LoginPage() {
                       Clique no botão abaixo para redefinir sua senha agora:
                     </p>
                     <a href={forgotLink}
-                      style={{ display:'block', background:'linear-gradient(135deg,#1d4ed8,#3b82f6)', color:'#fff', borderRadius:10, padding:'13px 20px', fontSize:14, fontWeight:600, textDecoration:'none', marginBottom:16, fontFamily:"'DM Sans', sans-serif" }}>
+                      style={{ display:'block', background:'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))', color:'#fff', borderRadius:10, padding:'13px 20px', fontSize:14, fontWeight:600, textDecoration:'none', marginBottom:16, fontFamily:"'DM Sans', sans-serif" }}>
                       Redefinir minha senha →
                     </a>
                     <p style={{ fontSize:11, color:'rgba(148,163,184,0.4)', lineHeight:1.6, marginBottom:20, fontFamily:"'DM Sans', sans-serif" }}>
@@ -546,7 +546,7 @@ export default function LoginPage() {
                 fontFamily:"'DM Sans', sans-serif",
                 display:'flex', alignItems:'center', gap:5,
               }}>
-                <span style={{ width:5, height:5, borderRadius:'50%', background:'rgba(16,185,129,0.6)', display:'inline-block', boxShadow:'0 0 4px rgba(16,185,129,0.5)' }} />
+                <span style={{ width:5, height:5, borderRadius:'50%', background:'rgba(var(--fs-success-rgb),0.6)', display:'inline-block', boxShadow:'0 0 4px rgba(var(--fs-success-rgb),0.5)' }} />
                 Uso restrito e confidencial
               </span>
             </div>

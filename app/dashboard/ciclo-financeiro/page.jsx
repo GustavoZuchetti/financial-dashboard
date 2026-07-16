@@ -300,7 +300,7 @@ export default function CicloFinanceiroPage() {
           <button
             onClick={recalcular}
             disabled={recalcLoading}
-            style={{ background: recalcLoading ? 'rgba(59,130,246,0.4)' : '#3b82f6', border:'none', color:'#fff', borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, cursor: recalcLoading ? 'default' : 'pointer', whiteSpace:'nowrap' }}
+            style={{ background: recalcLoading ? 'rgba(var(--fs-brand-rgb),0.4)' : 'var(--fs-brand)', border:'none', color:'#fff', borderRadius:8, padding:'7px 14px', fontSize:12, fontWeight:700, cursor: recalcLoading ? 'default' : 'pointer', whiteSpace:'nowrap' }}
           >
             {recalcLoading ? 'Recalculando...' : <><SvgIcon name="refresh" size={13} color="currentColor" style={{marginRight:6}} />Recalcular</>}
           </button>
@@ -312,7 +312,7 @@ export default function CicloFinanceiroPage() {
 
       {/* Feedback do recalculo */}
       {recalcMsg && (
-        <div style={{ background: recalcMsg.startsWith('✓') ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border:`1px solid ${recalcMsg.startsWith('✓') ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, borderRadius:8, padding:'10px 16px', marginBottom:12, fontSize:13, fontWeight:600, color: recalcMsg.startsWith('✓') ? '#22c55e' : '#ef4444', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div style={{ background: recalcMsg.startsWith('✓') ? 'rgba(var(--fs-success-rgb),0.1)' : 'rgba(var(--fs-danger-rgb),0.1)', border:`1px solid ${recalcMsg.startsWith('✓') ? 'rgba(var(--fs-success-rgb),0.3)' : 'rgba(var(--fs-danger-rgb),0.3)'}`, borderRadius:8, padding:'10px 16px', marginBottom:12, fontSize:13, fontWeight:600, color: recalcMsg.startsWith('✓') ? 'var(--fs-success)' : 'var(--fs-danger)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           {recalcMsg}
           <button onClick={()=>setRecalcMsg(null)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'inherit', fontSize:16 }}>✕</button>
         </div>
@@ -320,7 +320,7 @@ export default function CicloFinanceiroPage() {
 
       {/* ── Aviso sem dados ─────────────────────────────────────────────────── */}
       {semDados && !loading && (
-        <div style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.25)', borderRadius:10, padding:'12px 18px', marginBottom:20, fontSize:13, color:'#f59e0b' }}>
+        <div style={{ background:'rgba(var(--fs-warning-rgb),0.08)', border:'1px solid rgba(var(--fs-warning-rgb),0.25)', borderRadius:10, padding:'12px 18px', marginBottom:20, fontSize:13, color:'var(--fs-warning)' }}>
           Nenhum dado de ciclo financeiro para <strong>{MESES_LABEL[mesSel-1]}/{anoSel}</strong>.
           Os dados são gerados automaticamente ao importar o Fluxo de Caixa em{' '}
           <strong>Importação → Fluxo de Caixa</strong>.
@@ -335,33 +335,33 @@ export default function CicloFinanceiroPage() {
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:12, marginBottom:20 }}>
             <KpiCard
               label="Prazo Médio de Recebimento" sigla="PMR"
-              valor={pmr} cor="#3b82f6"
+              valor={pmr} cor="var(--fs-brand)"
               descricao="Tempo médio entre emissão e recebimento"
               hint={pmr > 0 ? `${fC(fcMes?.entradas)} em ${fcMes?.cntE || 0} recebimentos` : null}
               aviso={pmr > 45 ? 'Elevado' : pmr > 0 ? 'Ok' : null}
             />
             <KpiCard
               label="Prazo Médio de Pagamento" sigla="PMP"
-              valor={pmp} cor="#22c55e"
+              valor={pmp} cor="var(--fs-success)"
               descricao="Tempo médio entre compra e pagamento"
               hint={pmp > 0 ? `${fC(fcMes?.saidas)} em ${fcMes?.cntS || 0} pagamentos` : null}
               aviso={pmp < 20 ? 'Curto' : pmp > 0 ? 'Ok' : null}
             />
             <KpiCard
               label="Prazo Médio de Estoque" sigla="PME"
-              valor={pme} cor="#8b5cf6"
+              valor={pme} cor="var(--fs-purple)"
               descricao="Dias médios de permanência em estoque"
               aviso={pme > 60 ? 'Alto' : pme > 0 ? 'Ok' : null}
             />
             <KpiCard
               label="Ciclo Operacional" sigla="CO = PMR + PME"
-              valor={co} cor="#f59e0b"
+              valor={co} cor="var(--fs-warning)"
               descricao="Tempo desde a compra até o recebimento"
               aviso={co > 90 ? 'Longo' : co > 0 ? 'Ok' : null}
             />
             <KpiCard
               label="Ciclo Financeiro" sigla="CF = CO − PMP"
-              valor={Math.abs(cf)} cor={cf <= 0 ? '#22c55e' : '#ef4444'}
+              valor={Math.abs(cf)} cor={cf <= 0 ? 'var(--fs-success)' : 'var(--fs-danger)'}
               descricao={cf <= 0 ? 'Caixa positivo: recebe antes de pagar' : 'Necessidade de capital de giro'}
               aviso={cf <= 0 ? 'Favorável' : 'Atenção'}
             />
@@ -375,15 +375,15 @@ export default function CicloFinanceiroPage() {
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
                 {[
-                  { label:'PMR', valor:pmr, cor:'#3b82f6' },
+                  { label:'PMR', valor:pmr, cor:'var(--fs-brand)' },
                   { op:'+' },
-                  { label:'PME', valor:pme, cor:'#8b5cf6' },
+                  { label:'PME', valor:pme, cor:'var(--fs-purple)' },
                   { op:'=' },
-                  { label:'C. Operacional', valor:co, cor:'#f59e0b' },
+                  { label:'C. Operacional', valor:co, cor:'var(--fs-warning)' },
                   { op:'−' },
-                  { label:'PMP', valor:pmp, cor:'#22c55e' },
+                  { label:'PMP', valor:pmp, cor:'var(--fs-success)' },
                   { op:'=' },
-                  { label:'C. Financeiro', valor:cf, cor: cf <= 0 ? '#22c55e' : '#ef4444' },
+                  { label:'C. Financeiro', valor:cf, cor: cf <= 0 ? 'var(--fs-success)' : 'var(--fs-danger)' },
                 ].map((item, i) => item.op ? (
                   <div key={i} style={{ fontSize:20, fontWeight:800, color:'var(--fs-text-4)' }}>{item.op}</div>
                 ) : (
@@ -411,9 +411,9 @@ export default function CicloFinanceiroPage() {
                     <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={v=>v+'d'} width={38} />
                     <Tooltip content={<TT />} cursor={false} />
                     <Legend iconType="circle" wrapperStyle={{fontSize:11,paddingTop:8}} />
-                    <Line type="monotone" dataKey="pmr" stroke="#3b82f6" strokeWidth={2.5} dot={{r:4}} name="PMR" connectNulls />
-                    <Line type="monotone" dataKey="pmp" stroke="#22c55e" strokeWidth={2.5} dot={{r:4}} name="PMP" connectNulls />
-                    <Line type="monotone" dataKey="pme" stroke="#8b5cf6" strokeWidth={2} dot={{r:3}} strokeDasharray="4 3" name="PME" connectNulls />
+                    <Line type="monotone" dataKey="pmr" stroke="var(--fs-brand)" strokeWidth={2.5} dot={{r:4}} name="PMR" connectNulls />
+                    <Line type="monotone" dataKey="pmp" stroke="var(--fs-success)" strokeWidth={2.5} dot={{r:4}} name="PMP" connectNulls />
+                    <Line type="monotone" dataKey="pme" stroke="var(--fs-purple)" strokeWidth={2} dot={{r:3}} strokeDasharray="4 3" name="PME" connectNulls />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
@@ -457,9 +457,9 @@ export default function CicloFinanceiroPage() {
               <div style={{ display:'flex', gap:20, flexWrap:'wrap' }}>
                 {[
                   { label:'Total de lançamentos', valor:String(fcMes.total),         cor:'var(--fs-text-1)', unit:'' },
-                  { label:'Entradas (recebimentos)',valor:fC(fcMes.entradas),         cor:'#22c55e',         unit:`${fcMes.cntE} registros` },
-                  { label:'Saídas (pagamentos)',    valor:fC(fcMes.saidas),            cor:'#ef4444',         unit:`${fcMes.cntS} registros` },
-                  { label:'Saldo do mês',           valor:fC(fcMes.entradas - fcMes.saidas), cor: fcMes.entradas >= fcMes.saidas ? '#22c55e' : '#ef4444', unit:'' },
+                  { label:'Entradas (recebimentos)',valor:fC(fcMes.entradas),         cor:'var(--fs-success)',         unit:`${fcMes.cntE} registros` },
+                  { label:'Saídas (pagamentos)',    valor:fC(fcMes.saidas),            cor:'var(--fs-danger)',         unit:`${fcMes.cntS} registros` },
+                  { label:'Saldo do mês',           valor:fC(fcMes.entradas - fcMes.saidas), cor: fcMes.entradas >= fcMes.saidas ? 'var(--fs-success)' : 'var(--fs-danger)', unit:'' },
                 ].map(({ label, valor, cor, unit }) => (
                   <div key={label} style={{ flex:1, minWidth:140 }}>
                     <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>{label}</div>

@@ -45,10 +45,10 @@ export function ToastProvider({ children }) {
 }
 
 const TOAST_STYLES = {
-  success: { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.35)', icon: '✓', color: '#10b981' },
-  error:   { bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.35)',  icon: '✕', color: '#ef4444' },
-  info:    { bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.35)', icon: 'ℹ', color: '#3b82f6' },
-  warning: { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.35)', icon: '⚠', color: '#f59e0b' },
+  success: { bg: 'rgba(var(--fs-success-rgb),0.12)', border: 'rgba(var(--fs-success-rgb),0.35)', icon: '✓', color: 'var(--fs-success)' },
+  error:   { bg: 'rgba(var(--fs-danger-rgb),0.12)',  border: 'rgba(var(--fs-danger-rgb),0.35)',  icon: '✕', color: 'var(--fs-danger)' },
+  info:    { bg: 'rgba(var(--fs-brand-rgb),0.12)', border: 'rgba(var(--fs-brand-rgb),0.35)', icon: 'ℹ', color: 'var(--fs-brand)' },
+  warning: { bg: 'rgba(var(--fs-warning-rgb),0.12)', border: 'rgba(var(--fs-warning-rgb),0.35)', icon: '⚠', color: 'var(--fs-warning)' },
 }
 
 function ToastContainer({ toasts, onRemove }) {

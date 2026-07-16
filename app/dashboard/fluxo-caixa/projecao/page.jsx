@@ -147,9 +147,9 @@ export default function FluxoProjecao() {
         {mediaE > 0 && (
           <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
             {[
-              { label:'Média Entradas/mês', val: mediaE, color:'#22c55e' },
-              { label:'Média Saídas/mês',   val: mediaS, color:'#ef4444' },
-              { label:'Média Saldo/mês',    val: mediaE - mediaS, color: mediaE >= mediaS ? '#3b82f6' : '#f59e0b' },
+              { label:'Média Entradas/mês', val: mediaE, color:'var(--fs-success)' },
+              { label:'Média Saídas/mês',   val: mediaS, color:'var(--fs-danger)' },
+              { label:'Média Saldo/mês',    val: mediaE - mediaS, color: mediaE >= mediaS ? 'var(--fs-brand)' : 'var(--fs-warning)' },
             ].map(({ label, val, color }) => (
               <div key={label} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 16px' }}>
                 <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:4 }}>{label}</div>
@@ -173,8 +173,8 @@ export default function FluxoProjecao() {
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:8 }}>
               <div style={{ fontSize:14, fontWeight:800, color:'var(--fs-text-1)' }}>Histórico + Projeção</div>
               <div style={{ display:'flex', gap:16, fontSize:11, color:'var(--fs-text-4)' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:5 }}><div style={{ width:24, height:3, background:'#3b82f6', borderRadius:2 }}/> Realizado</div>
-                <div style={{ display:'flex', alignItems:'center', gap:5 }}><div style={{ width:24, height:3, background:'#8b5cf6', borderRadius:2, borderTop:'2px dashed #8b5cf6' }}/> Projetado</div>
+                <div style={{ display:'flex', alignItems:'center', gap:5 }}><div style={{ width:24, height:3, background:'var(--fs-brand)', borderRadius:2 }}/> Realizado</div>
+                <div style={{ display:'flex', alignItems:'center', gap:5 }}><div style={{ width:24, height:3, background:'var(--fs-purple)', borderRadius:2, borderTop:'2px dashed var(--fs-purple)' }}/> Projetado</div>
               </div>
             </div>
             <ResponsiveContainer width="100%" height={260}>
@@ -183,11 +183,11 @@ export default function FluxoProjecao() {
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fC} width={72} />
                 <Tooltip content={<TT />} cursor={false} />
-                <Bar dataKey="entradas_real" fill="#22c55e"                    name="Entradas (real)"     barSize={14} radius={[3,3,0,0]} />
-                <Bar dataKey="saidas_real"   fill="rgba(239,68,68,0.7)"        name="Saídas (real)"       barSize={14} radius={[3,3,0,0]} />
-                <Bar dataKey="entradas_proj" fill="rgba(34,197,94,0.35)"       name="Entradas (proj)"     barSize={14} radius={[3,3,0,0]} />
-                <Bar dataKey="saidas_proj"   fill="rgba(239,68,68,0.25)"       name="Saídas (proj)"       barSize={14} radius={[3,3,0,0]} />
-                <Line type="monotone" dataKey="acumulado" stroke="#8b5cf6" strokeWidth={2} strokeDasharray="5 3" dot={{r:3}} name="Saldo acumulado (proj)" />
+                <Bar dataKey="entradas_real" fill="var(--fs-success)"                    name="Entradas (real)"     barSize={14} radius={[3,3,0,0]} />
+                <Bar dataKey="saidas_real"   fill="rgba(var(--fs-danger-rgb),0.7)"        name="Saídas (real)"       barSize={14} radius={[3,3,0,0]} />
+                <Bar dataKey="entradas_proj" fill="rgba(var(--fs-success-rgb),0.35)"       name="Entradas (proj)"     barSize={14} radius={[3,3,0,0]} />
+                <Bar dataKey="saidas_proj"   fill="rgba(var(--fs-danger-rgb),0.25)"       name="Saídas (proj)"       barSize={14} radius={[3,3,0,0]} />
+                <Line type="monotone" dataKey="acumulado" stroke="var(--fs-purple)" strokeWidth={2} strokeDasharray="5 3" dot={{r:3}} name="Saldo acumulado (proj)" />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -207,13 +207,13 @@ export default function FluxoProjecao() {
                 {projecoes.map((r,i) => (
                   <tr key={i} style={{ borderBottom:'1px solid var(--fs-border)' }}>
                     <td style={{ padding:'10px 12px', fontWeight:600, color:'var(--fs-text-1)', display:'flex', alignItems:'center', gap:6 }}>
-                      <span style={{ fontSize:9, background:'rgba(139,92,246,0.15)', color:'#a78bfa', border:'1px solid rgba(139,92,246,0.3)', padding:'1px 6px', borderRadius:4, fontWeight:700 }}>PROJ</span>
+                      <span style={{ fontSize:9, background:'rgba(var(--fs-purple-rgb),0.15)', color:'var(--fs-purple)', border:'1px solid rgba(var(--fs-purple-rgb),0.3)', padding:'1px 6px', borderRadius:4, fontWeight:700 }}>PROJ</span>
                       {r.name}
                     </td>
-                    <td style={{ padding:'10px 12px', textAlign:'right', color:'#22c55e', fontWeight:600 }}>{fC(r.entradas)}</td>
-                    <td style={{ padding:'10px 12px', textAlign:'right', color:'#ef4444', fontWeight:600 }}>{fC(r.saidas)}</td>
-                    <td style={{ padding:'10px 12px', textAlign:'right', fontWeight:700, color: r.saldo >= 0 ? '#22c55e' : '#ef4444' }}>{fC(r.saldo)}</td>
-                    <td style={{ padding:'10px 12px', textAlign:'right', fontWeight:800, color: r.acumulado >= 0 ? '#3b82f6' : '#ef4444' }}>{fC(r.acumulado)}</td>
+                    <td style={{ padding:'10px 12px', textAlign:'right', color:'var(--fs-success)', fontWeight:600 }}>{fC(r.entradas)}</td>
+                    <td style={{ padding:'10px 12px', textAlign:'right', color:'var(--fs-danger)', fontWeight:600 }}>{fC(r.saidas)}</td>
+                    <td style={{ padding:'10px 12px', textAlign:'right', fontWeight:700, color: r.saldo >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)' }}>{fC(r.saldo)}</td>
+                    <td style={{ padding:'10px 12px', textAlign:'right', fontWeight:800, color: r.acumulado >= 0 ? 'var(--fs-brand)' : 'var(--fs-danger)' }}>{fC(r.acumulado)}</td>
                   </tr>
                 ))}
               </tbody>

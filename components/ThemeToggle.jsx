@@ -56,8 +56,8 @@ export default function ThemeToggle({ collapsed = false }) {
     >
       <div style={{
         position: 'relative', width: 32, height: 18, borderRadius: 99,
-        background: isDark ? '#1e3a5f' : '#fbbf24',
-        border: `1px solid ${isDark ? '#2563eb' : '#f59e0b'}`,
+        background: isDark ? '#1e3a5f' : 'var(--fs-warning)',
+        border: `1px solid ${isDark ? 'var(--fs-brand-dark)' : 'var(--fs-warning)'}`,
         transition: 'all 0.3s', flexShrink: 0,
       }}>
         <div style={{

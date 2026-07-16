@@ -97,14 +97,14 @@ export default function DREAnalise() {
       {/* KPIs — mesmos valores da Visão Geral */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
         {[
-          { label:'Receita Bruta',    val:v.rb,   color:'#22c55e' },
+          { label:'Receita Bruta',    val:v.rb,   color:'var(--fs-success)' },
           { label:'EBITDA',           val:v.ebt,  color:'#14b8a6' },
-          { label:'Res. Líquido',     val:v.resL, color:'#8b5cf6' },
-          { label:'Resultado Final',  val:v.resF, color:'#3b82f6' },
+          { label:'Res. Líquido',     val:v.resL, color:'var(--fs-purple)' },
+          { label:'Resultado Final',  val:v.resF, color:'var(--fs-brand)' },
         ].map(k => (
           <div key={k.label} style={{ background:'var(--fs-surface)', border:`1px solid var(--fs-border)`, borderRadius:10, padding:'14px 16px', borderTop:`3px solid ${k.color}` }}>
             <div style={{ fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase', marginBottom:6 }}>{k.label}</div>
-            <div style={{ fontSize:18, fontWeight:800, color: k.val>=0 ? k.color : '#ef4444' }}>{fmtBRL(k.val)}</div>
+            <div style={{ fontSize:18, fontWeight:800, color: k.val>=0 ? k.color : 'var(--fs-danger)' }}>{fmtBRL(k.val)}</div>
             {v.rb > 0 && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:4 }}>{(k.val/v.rb*100).toFixed(1)}% da receita</div>}
           </div>
         ))}
@@ -122,10 +122,10 @@ export default function DREAnalise() {
               <ReferenceLine y={0} stroke="var(--fs-border-2)" strokeWidth={1} />
               <Tooltip {...tt} cursor={false} />
               <Legend iconType="circle" wrapperStyle={{fontSize:11}} />
-              <Line type="monotone" dataKey="receita"    stroke="#22c55e" strokeWidth={2} dot={false} name="Receita Bruta" />
+              <Line type="monotone" dataKey="receita"    stroke="var(--fs-success)" strokeWidth={2} dot={false} name="Receita Bruta" />
               <Line type="monotone" dataKey="ebitda"     stroke="#14b8a6" strokeWidth={2} dot={false} name="EBITDA" />
-              <Line type="monotone" dataKey="resLiquido" stroke="#8b5cf6" strokeWidth={2} dot={false} name="Res. Líquido" />
-              <Line type="monotone" dataKey="resFinal"   stroke="#3b82f6" strokeWidth={2.5} dot={{r:3}} name="Res. Final" />
+              <Line type="monotone" dataKey="resLiquido" stroke="var(--fs-purple)" strokeWidth={2} dot={false} name="Res. Líquido" />
+              <Line type="monotone" dataKey="resFinal"   stroke="var(--fs-brand)" strokeWidth={2.5} dot={{r:3}} name="Res. Final" />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -139,7 +139,7 @@ export default function DREAnalise() {
               <XAxis type="number" hide />
               <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} width={110} />
               <Tooltip {...tt} formatter={(v)=>fmtBRL(v)} />
-              <Bar dataKey="valor" fill="#22c55e" radius={[0,4,4,0]} barSize={16} name="Receita" />
+              <Bar dataKey="valor" fill="var(--fs-success)" radius={[0,4,4,0]} barSize={16} name="Receita" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -161,7 +161,7 @@ export default function DREAnalise() {
             <Tooltip {...tt} formatter={(v)=>`${v}%`} />
             <Legend iconType="circle" wrapperStyle={{fontSize:11}} />
             <Line type="monotone" dataKey="mEBITDA"  stroke="#14b8a6" strokeWidth={2} dot={{r:3}} name="Margem EBITDA" />
-            <Line type="monotone" dataKey="mLiquida" stroke="#8b5cf6" strokeWidth={2} dot={{r:3}} name="Margem Líquida" />
+            <Line type="monotone" dataKey="mLiquida" stroke="var(--fs-purple)" strokeWidth={2} dot={{r:3}} name="Margem Líquida" />
           </LineChart>
         </ResponsiveContainer>
       </div>

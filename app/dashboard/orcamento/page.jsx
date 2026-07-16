@@ -50,9 +50,9 @@ const FDBadge = ({ favorable, size = 'sm' }) => {
       padding: size === 'lg' ? '3px 10px' : '2px 7px',
       borderRadius: '4px',
       letterSpacing: '0.5px',
-      color: favorable ? '#10b981' : '#ef4444',
-      background: favorable ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
-      border: `1px solid ${favorable ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+      color: favorable ? 'var(--fs-success)' : 'var(--fs-danger)',
+      background: favorable ? 'rgba(var(--fs-success-rgb),0.12)' : 'rgba(var(--fs-danger-rgb),0.12)',
+      border: `1px solid ${favorable ? 'rgba(var(--fs-success-rgb),0.3)' : 'rgba(var(--fs-danger-rgb),0.3)'}`,
     }}>
       {favorable ? '✓ F' : '✗ D'}
     </span>
@@ -73,7 +73,7 @@ const DRERow = ({ label, orcado, realizado, isExpense, isSubtotal, isTotal, isGr
       value={editValue ?? ''}
       onChange={e => onEdit(editKey, e.target.value)}
       style={{
-        width: '130px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.4)',
+        width: '130px', background: 'rgba(var(--fs-brand-rgb),0.08)', border: '1px solid rgba(var(--fs-brand-rgb),0.4)',
         borderRadius: 6, color: 'var(--fs-text-1)', padding: '4px 8px', fontSize: 13,
         textAlign: 'right', outline: 'none',
       }}
@@ -96,10 +96,10 @@ const DRERow = ({ label, orcado, realizado, isExpense, isSubtotal, isTotal, isGr
       <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : 'var(--fs-text-1)', fontWeight: isTotal || isSubtotal ? 700 : 400 }}>
         {isGroupHeader ? '' : fmtFull(realizado)}
       </td>
-      <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : (fd ? (fd.favorable ? '#10b981' : '#ef4444') : '#6b7280') }}>
+      <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : (fd ? (fd.favorable ? 'var(--fs-success)' : 'var(--fs-danger)') : '#6b7280') }}>
         {isGroupHeader ? '' : (fd ? (fd.delta >= 0 ? '+' : '') + fmtFull(fd.delta) : '—')}
       </td>
-      <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : (fd ? (fd.favorable ? '#10b981' : '#ef4444') : '#6b7280') }}>
+      <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : (fd ? (fd.favorable ? 'var(--fs-success)' : 'var(--fs-danger)') : '#6b7280') }}>
         {isGroupHeader ? '' : (fd ? (fd.deltaPct >= 0 ? '+' : '') + fd.deltaPct.toFixed(1) + '%' : '—')}
       </td>
       <td style={{ ...S.td, textAlign: 'center' }}>
@@ -121,9 +121,9 @@ const KPICard = ({ label, orcado, realizado, isExpense, color }) => {
       <div style={{ fontSize: '12px', color: 'var(--fs-text-4)', marginBottom: '8px' }}>Orçado: {fmtFull(orcado)}</div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ flex: 1, height: '4px', background: 'var(--fs-surface-3)', borderRadius: '2px', marginRight: '10px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${Math.min(100, atingimento)}%`, background: fd?.favorable ? '#10b981' : '#ef4444', borderRadius: '2px', transition: 'width 0.5s ease' }} />
+          <div style={{ height: '100%', width: `${Math.min(100, atingimento)}%`, background: fd?.favorable ? 'var(--fs-success)' : 'var(--fs-danger)', borderRadius: '2px', transition: 'width 0.5s ease' }} />
         </div>
-        <span style={{ fontSize: '12px', color: fd?.favorable ? '#10b981' : '#ef4444', fontWeight: 700, whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: '12px', color: fd?.favorable ? 'var(--fs-success)' : 'var(--fs-danger)', fontWeight: 700, whiteSpace: 'nowrap' }}>
           {atingimento.toFixed(0)}%
         </span>
         <FDBadge favorable={fd?.favorable ?? null} />
@@ -324,7 +324,7 @@ export default function OrcamentoPage() {
               <button onClick={cancelEditMode} style={{ background: 'transparent', color: 'var(--fs-text-2)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display:'flex', alignItems:'center', gap:6 }}>
                 <SvgIcon name="close" size={13} /> Cancelar
               </button>
-              <button onClick={saveOrcamento} disabled={savingOrc} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: savingOrc ? 0.6 : 1, display:'flex', alignItems:'center', gap:7 }}>
+              <button onClick={saveOrcamento} disabled={savingOrc} style={{ background: 'var(--fs-success)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: savingOrc ? 0.6 : 1, display:'flex', alignItems:'center', gap:7 }}>
                 <SvgIcon name="save" size={14} color="#fff" /> {savingOrc ? 'Salvando...' : 'Salvar Orçamento'}
               </button>
             </>
@@ -337,7 +337,7 @@ export default function OrcamentoPage() {
       </div>
 
       {orcMsg && (
-        <div style={{ background: orcMsg.t === 'ok' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${orcMsg.t === 'ok' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`, borderRadius: 8, padding: '10px 16px', color: orcMsg.t === 'ok' ? '#10b981' : '#f87171', fontSize: 13, marginBottom: 16 }}>
+        <div style={{ background: orcMsg.t === 'ok' ? 'rgba(var(--fs-success-rgb),0.1)' : 'rgba(var(--fs-danger-rgb),0.1)', border: `1px solid ${orcMsg.t === 'ok' ? 'rgba(var(--fs-success-rgb),0.25)' : 'rgba(var(--fs-danger-rgb),0.25)'}`, borderRadius: 8, padding: '10px 16px', color: orcMsg.t === 'ok' ? 'var(--fs-success)' : 'var(--fs-danger)', fontSize: 13, marginBottom: 16 }}>
           {orcMsg.m}
         </div>
       )}
@@ -349,7 +349,7 @@ export default function OrcamentoPage() {
           {[['dre','DRE'],['fluxo','Fluxo de Caixa']].map(([val, rot]) => (
             <button key={val} onClick={() => { setModulo(val); setEditMode(false); setOrcEdits({}) }}
               style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
-                background: modulo === val ? 'var(--fs-brand, #1d4ed8)' : 'transparent',
+                background: modulo === val ? 'var(--fs-brand, var(--fs-brand-dark))' : 'transparent',
                 color: modulo === val ? '#fff' : 'var(--fs-text-4)', transition: 'all 0.2s' }}>
               {rot}
             </button>
@@ -370,7 +370,7 @@ export default function OrcamentoPage() {
               style={{
                 display:'flex', alignItems:'center', gap:6,
                 padding: '8px 16px', fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer',
-                background: viewMode === mode ? '#1d4ed8' : 'transparent',
+                background: viewMode === mode ? 'var(--fs-brand-dark)' : 'transparent',
                 color: viewMode === mode ? '#fff' : 'var(--fs-text-4)',
                 transition: 'all 0.2s'
               }}
@@ -390,15 +390,15 @@ export default function OrcamentoPage() {
           {/* KPIs */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             {modulo === 'dre' ? (<>
-              <KPICard label="Receita Bruta"  orcado={totRec.o}   realizado={totRec.r}   isExpense={false} color="#3b82f6" />
-              <KPICard label="Custos Totais"  orcado={totCus.o}   realizado={totCus.r}   isExpense={true}  color="#ef4444" />
-              <KPICard label="Despesas Totais" orcado={totDesp.o} realizado={totDesp.r}  isExpense={true}  color="#f59e0b" />
+              <KPICard label="Receita Bruta"  orcado={totRec.o}   realizado={totRec.r}   isExpense={false} color="var(--fs-brand)" />
+              <KPICard label="Custos Totais"  orcado={totCus.o}   realizado={totCus.r}   isExpense={true}  color="var(--fs-danger)" />
+              <KPICard label="Despesas Totais" orcado={totDesp.o} realizado={totDesp.r}  isExpense={true}  color="var(--fs-warning)" />
             </>) : (<>
-              <KPICard label="Entradas"          orcado={totEnt.o}          realizado={totEnt.r}          isExpense={false} color="#10b981" />
-              <KPICard label="Saídas"            orcado={totSai.o}          realizado={totSai.r}          isExpense={true}  color="#ef4444" />
-              <KPICard label="Geração de Caixa"  orcado={totEnt.o - totSai.o} realizado={totEnt.r - totSai.r} isExpense={false} color="#3b82f6" />
+              <KPICard label="Entradas"          orcado={totEnt.o}          realizado={totEnt.r}          isExpense={false} color="var(--fs-success)" />
+              <KPICard label="Saídas"            orcado={totSai.o}          realizado={totSai.r}          isExpense={true}  color="var(--fs-danger)" />
+              <KPICard label="Geração de Caixa"  orcado={totEnt.o - totSai.o} realizado={totEnt.r - totSai.r} isExpense={false} color="var(--fs-brand)" />
             </>)}
-            {modulo === 'dre' && (<KPICard label="EBITDA"          orcado={ebitdaO}   realizado={ebitdaR}    isExpense={false} color="#10b981" />)}
+            {modulo === 'dre' && (<KPICard label="EBITDA"          orcado={ebitdaO}   realizado={ebitdaR}    isExpense={false} color="var(--fs-success)" />)}
           </div>
 
           {/* Tabela DRE Estruturada */}
@@ -406,8 +406,8 @@ export default function OrcamentoPage() {
             <div style={{ ...S.cardTitle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>{modulo === 'dre' ? 'DRE' : 'Fluxo de Caixa'} — Budget vs. Realizado · {periodoLabel}</span>
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center', fontSize: '12px' }}>
-                <span style={{ color: '#10b981' }}>✓ F = Favorável ao resultado</span>
-                <span style={{ color: '#ef4444' }}>✗ D = Desfavorável ao resultado</span>
+                <span style={{ color: 'var(--fs-success)' }}>✓ F = Favorável ao resultado</span>
+                <span style={{ color: 'var(--fs-danger)' }}>✗ D = Desfavorável ao resultado</span>
               </div>
             </div>
             <div style={{ overflowX: 'auto' }}>
@@ -496,10 +496,10 @@ export default function OrcamentoPage() {
                       cursor={false}
                     />
                     <Legend formatter={(v) => v === 'orcado' ? 'Orçado' : 'Realizado'} />
-                    <Bar dataKey="orcado"    fill="#2563eb" opacity={0.6} radius={[3,3,0,0]} barSize={20} />
-                    <Bar dataKey="realizado" fill="#3b82f6" radius={[3,3,0,0]} barSize={20}>
+                    <Bar dataKey="orcado"    fill="var(--fs-brand-dark)" opacity={0.6} radius={[3,3,0,0]} barSize={20} />
+                    <Bar dataKey="realizado" fill="var(--fs-brand)" radius={[3,3,0,0]} barSize={20}>
                       {chartMeses.map((entry, i) => (
-                        <Cell key={i} fill={entry.realizado >= entry.orcado ? '#10b981' : '#3b82f6'} />
+                        <Cell key={i} fill={entry.realizado >= entry.orcado ? 'var(--fs-success)' : 'var(--fs-brand)'} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -511,8 +511,8 @@ export default function OrcamentoPage() {
           {/* Legenda F/D */}
           <div style={{ background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: '8px', padding: '12px 16px', fontSize: '12px', color: 'var(--fs-text-4)', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
             <span><strong style={{ color: 'var(--fs-text-4)' }}>Lógica F/D aplicada:</strong></span>
-            <span>{modulo === 'dre' ? 'Receita' : 'Entradas'}: Realizado {'>'} Orçado = <strong style={{ color: '#10b981' }}>Favorável</strong></span>
-            <span>{modulo === 'dre' ? 'Custo/Despesa' : 'Saídas'}: Realizado {'<'} Orçado = <strong style={{ color: '#10b981' }}>Favorável</strong></span>
+            <span>{modulo === 'dre' ? 'Receita' : 'Entradas'}: Realizado {'>'} Orçado = <strong style={{ color: 'var(--fs-success)' }}>Favorável</strong></span>
+            <span>{modulo === 'dre' ? 'Custo/Despesa' : 'Saídas'}: Realizado {'<'} Orçado = <strong style={{ color: 'var(--fs-success)' }}>Favorável</strong></span>
             <span>Resultado oposto em qualquer linha = Desfavorável</span>
           </div>
         </>

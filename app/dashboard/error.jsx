@@ -23,10 +23,10 @@ export default function DashboardError({ error, reset }) {
       }}>
         <div style={{
           width: 56, height: 56, borderRadius: '50%',
-          background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)',
+          background: 'rgba(var(--fs-danger-rgb),0.1)', border: '1px solid rgba(var(--fs-danger-rgb),0.25)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px',
         }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fs-danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
             <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
           </svg>
@@ -49,7 +49,7 @@ export default function DashboardError({ error, reset }) {
           </button>
           <button
             onClick={() => reset()}
-            style={{ background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+            style={{ background: 'var(--fs-brand-dark)', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
           >
             Tentar novamente
           </button>

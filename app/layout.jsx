@@ -1,5 +1,6 @@
-import '@fontsource-variable/inter'
-import '@fontsource-variable/sora'
+import '@fontsource-variable/manrope'
+import '@fontsource-variable/space-grotesk'
+import '@fontsource-variable/jetbrains-mono'
 import './globals.css'
 import { ToastProvider } from '@/components/Toast'
 import { OrgProvider } from '@/lib/org-context'

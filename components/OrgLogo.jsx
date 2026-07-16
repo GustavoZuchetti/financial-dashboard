@@ -62,11 +62,11 @@ export default function OrgLogo({ logoUrl, logoUrlLight, height = 44, maxWidth =
     <>
       <div style={{
         width: 34, height: 34,
-        background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
+        background: 'linear-gradient(135deg, var(--fs-brand-dark), var(--fs-brand))',
         borderRadius: 10,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontWeight: 800, color: '#fff', fontSize: 14,
-        boxShadow: '0 4px 12px rgba(59,130,246,0.35)',
+        boxShadow: '0 4px 12px rgba(var(--fs-brand-rgb),0.35)',
         flexShrink: 0,
       }}>FS</div>
       <div>

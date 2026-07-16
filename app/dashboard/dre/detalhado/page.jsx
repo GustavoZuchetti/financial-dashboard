@@ -67,7 +67,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
             <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>
               {clienteSel
                 ? <span style={{ cursor:'pointer', display:'flex', alignItems:'center', gap:6 }} onClick={() => setClienteSel(null)}>
-                    <span style={{ color:'#3b82f6', display:'inline-flex', alignItems:'center', gap:5 }}><SvgIcon name="arrowLeft" size={12} color="#3b82f6" />{item.nome}</span>
+                    <span style={{ color:'var(--fs-brand)', display:'inline-flex', alignItems:'center', gap:5 }}><SvgIcon name="arrowLeft" size={12} color="var(--fs-brand)" />{item.nome}</span>
                     <span style={{ color:'var(--fs-text-4)' }}>· {periodo}</span>
                   </span>
                 : `Detalhamento · ${periodo}`
@@ -77,7 +77,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
               <span style={{ textTransform:'uppercase' }}>{clienteSel || item.nome}</span>
             </div>
             <div style={{ display:'flex', gap:16, alignItems:'center', flexWrap:'wrap' }}>
-              <span style={{ fontSize:22, fontWeight:800, color:'#3b82f6' }}>{fmtBRL(clienteSel ? clienteAtual?.total || 0 : total)}</span>
+              <span style={{ fontSize:22, fontWeight:800, color:'var(--fs-brand)' }}>{fmtBRL(clienteSel ? clienteAtual?.total || 0 : total)}</span>
               {clientes && !clienteSel
                 ? <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>{clientes.length} conta{clientes.length !== 1 ? 's' : ''} · {lancamentos.length} lançamentos</span>
                 : <><span style={{ fontSize:12, color:'var(--fs-text-4)' }}>{lancAtual.length} lançamento{lancAtual.length !== 1 ? 's' : ''}</span>
@@ -100,15 +100,15 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
             clientes.map((cli, i) => (
               <div key={cli.nome}
                 style={{ display:'grid', gridTemplateColumns:'1fr 130px 80px', gap:12, padding:'13px 24px', borderBottom: i < clientes.length-1 ? '1px solid var(--fs-border)' : 'none', alignItems:'center', cursor:'pointer' }}
-                onMouseEnter={e => { e.currentTarget.style.background='rgba(59,130,246,0.05)'; e.currentTarget.querySelector('.cli-hint').style.opacity='1' }}
+                onMouseEnter={e => { e.currentTarget.style.background='rgba(var(--fs-brand-rgb),0.05)'; e.currentTarget.querySelector('.cli-hint').style.opacity='1' }}
                 onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.querySelector('.cli-hint').style.opacity='0' }}
                 onClick={() => setClienteSel(cli.nome)}
               >
                 <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
-                  <div style={{ width:7, height:7, borderRadius:'50%', background:'#3b82f6', flexShrink:0 }} />
+                  <div style={{ width:7, height:7, borderRadius:'50%', background:'var(--fs-brand)', flexShrink:0 }} />
                   <span style={{ fontSize:14, fontWeight:600, color:'var(--fs-text-1)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textTransform:'uppercase' }}>{cli.nome}</span>
                   <span style={{ fontSize:11, color:'var(--fs-text-4)', flexShrink:0 }}>{cli.count}×</span>
-                  <span className="cli-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'#3b82f6', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', padding:'2px 7px', borderRadius:4, whiteSpace:'nowrap', flexShrink:0 }}>ver<SvgIcon name="arrowRight" size={10} color="#3b82f6" style={{ marginLeft:4, verticalAlign:'-1px' }} /></span>
+                  <span className="cli-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'var(--fs-brand)', background:'rgba(var(--fs-brand-rgb),0.12)', border:'1px solid rgba(var(--fs-brand-rgb),0.25)', padding:'2px 7px', borderRadius:4, whiteSpace:'nowrap', flexShrink:0 }}>ver<SvgIcon name="arrowRight" size={10} color="var(--fs-brand)" style={{ marginLeft:4, verticalAlign:'-1px' }} /></span>
                 </div>
                 <div style={{ textAlign:'right', fontSize:14, fontWeight:700, color:'var(--fs-text-1)', fontVariantNumeric:'tabular-nums' }}>{fmtBRL(cli.total)}</div>
                 <div style={{ textAlign:'right', fontSize:11, color:'var(--fs-text-4)' }}>
@@ -125,7 +125,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
                     <span style={{ fontSize:12, fontWeight:800, color:'var(--fs-text-2)', letterSpacing:'0.3px' }}>{mes.label}</span>
                     <div style={{ display:'flex', gap:12, fontSize:12 }}>
                       <span style={{ color:'var(--fs-text-4)' }}>{mes.items.length} lançamento{mes.items.length !== 1 ? 's' : ''}</span>
-                      <span style={{ fontWeight:700, color:'#3b82f6' }}>{fmtBRL(mes.total)}</span>
+                      <span style={{ fontWeight:700, color:'var(--fs-brand)' }}>{fmtBRL(mes.total)}</span>
                     </div>
                   </div>
                   {mes.items.map((l, i) => (
@@ -149,7 +149,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
               : `${lancAtual.length} lançamento${lancAtual.length !== 1 ? 's' : ''}`}
           </span>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-            <span style={{ fontSize:14, fontWeight:800, color:'#3b82f6' }}>{fmtBRL(total)}</span>
+            <span style={{ fontSize:14, fontWeight:800, color:'var(--fs-brand)' }}>{fmtBRL(total)}</span>
             <button onClick={onClose} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, padding:'7px 18px', fontSize:13, fontWeight:600, cursor:'pointer', color:'var(--fs-text-2)' }}>Fechar</button>
           </div>
         </div>
@@ -572,7 +572,7 @@ export default function DREDetalhado() {
                   return (
                     <tr key={line.key} style={{ background:'var(--fs-surface-2)', borderTop:'2px solid var(--fs-border)', borderBottom:'2px solid var(--fs-border)' }}>
                       <td style={{ padding:'13px 16px', fontWeight:800, color:line.color, fontSize:14 }}>{line.label}</td>
-                      <td style={{ padding:'13px 16px', textAlign:'right', fontWeight:800, color: lineValue>=0 ? line.color : '#ef4444', fontSize:15 }}>{fmtBRL(lineValue)}</td>
+                      <td style={{ padding:'13px 16px', textAlign:'right', fontWeight:800, color: lineValue>=0 ? line.color : 'var(--fs-danger)', fontSize:15 }}>{fmtBRL(lineValue)}</td>
                       <td style={{ padding:'13px 16px', textAlign:'right', color:'var(--fs-text-4)', fontWeight:600 }}>{pct(lineValue)}</td>
                       <DeltaCell line={line} pad="13px 16px" />
                     </tr>
@@ -591,7 +591,7 @@ export default function DREDetalhado() {
                       <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:20, marginRight:6, verticalAlign:'-3px' }}>{hasData ? <SvgIcon name={isExpLine ? 'chevronDown' : 'chevronRight'} size={14} color={line.color} /> : null}</span>
                       {line.label}
                     </td>
-                    <td style={{ padding:'12px 16px', textAlign:'right', fontWeight:700, color: lineValue>=0 ? line.color : '#ef4444' }}>{fmtBRL(lineValue)}</td>
+                    <td style={{ padding:'12px 16px', textAlign:'right', fontWeight:700, color: lineValue>=0 ? line.color : 'var(--fs-danger)' }}>{fmtBRL(lineValue)}</td>
                     <td style={{ padding:'12px 16px', textAlign:'right', color:'var(--fs-text-4)' }}>{pct(lineValue)}</td>
                     <DeltaCell line={line} />
                   </tr>,
@@ -607,8 +607,8 @@ export default function DREDetalhado() {
                       <td style={{ padding:'11px 16px 11px 36px', display:'flex', alignItems:'center', gap:10 }}>
                         <span style={{ color:line.color, fontWeight:700, fontSize:13, textTransform:'uppercase' }}>{cat.nome}</span>
                         <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{cat.clientes.length} conta{cat.clientes.length !== 1 ? 's' : ''}</span>
-                        <span className="cat-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'#3b82f6', background:'rgba(59,130,246,0.12)', border:'1px solid rgba(59,130,246,0.25)', padding:'2px 8px', borderRadius:4, whiteSpace:'nowrap' }}>
-                          ver contas<SvgIcon name="arrowRight" size={10} color="#3b82f6" style={{ marginLeft:4, verticalAlign:'-1px' }} />
+                        <span className="cat-hint" style={{ opacity:0, transition:'opacity 0.15s', fontSize:10, fontWeight:700, color:'var(--fs-brand)', background:'rgba(var(--fs-brand-rgb),0.12)', border:'1px solid rgba(var(--fs-brand-rgb),0.25)', padding:'2px 8px', borderRadius:4, whiteSpace:'nowrap' }}>
+                          ver contas<SvgIcon name="arrowRight" size={10} color="var(--fs-brand)" style={{ marginLeft:4, verticalAlign:'-1px' }} />
                         </span>
                       </td>
                       <td style={{ padding:'11px 16px', textAlign:'right', fontWeight:700, color:'var(--fs-text-1)' }}>{fmtBRL(cat.total)}</td>

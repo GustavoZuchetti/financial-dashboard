@@ -140,7 +140,7 @@ export default function IntegracoesTab({ empresas, showToast }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
               <div style={{ fontWeight: 800, fontSize: 14 }}>{emp.nome}</div>
               {integ?.conectado
-                ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--fs-success)', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 20, padding: '3px 10px' }}>Bling conectado</span>
+                ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--fs-success)', background: 'rgba(var(--fs-success-rgb),0.1)', border: '1px solid rgba(var(--fs-success-rgb),0.3)', borderRadius: 20, padding: '3px 10px' }}>Bling conectado</span>
                 : <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--fs-text-4)', background: 'var(--fs-hover-2)', borderRadius: 20, padding: '3px 10px' }}>Não conectado</span>}
             </div>
 
@@ -177,7 +177,7 @@ export default function IntegracoesTab({ empresas, showToast }) {
 
             {integ?.credenciais_ok && !integ?.conectado && integ?.authorize_url && (
               <a href={integ.authorize_url}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#3b82f6', color: '#fff', borderRadius: 8, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, textDecoration: 'none', marginBottom: 14 }}>
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--fs-brand)', color: '#fff', borderRadius: 8, padding: '9px 16px', fontSize: 12.5, fontWeight: 700, textDecoration: 'none', marginBottom: 14 }}>
                 <SvgIcon name="plug" size={14} color="#fff" />
                 Conectar ao Bling (OAuth)
               </a>

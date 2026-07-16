@@ -151,7 +151,7 @@ export default function AtrasadosPage() {
       {/* Cards executivos */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:12 }}>
         {[
-          ['A Receber em Atraso', totReceber, aReceber.length, 'var(--fs-warning, #eab308)'],
+          ['A Receber em Atraso', totReceber, aReceber.length, 'var(--fs-warning, var(--fs-warning))'],
           ['A Pagar em Atraso',   totPagar,   aPagar.length,   'var(--fs-danger)'],
           ['Exposição Líquida',   totReceber - totPagar, null, (totReceber - totPagar) >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)'],
         ].map(([rot, val, qtd, cor]) => (
@@ -175,7 +175,7 @@ export default function AtrasadosPage() {
               <Tooltip formatter={(v, n) => [fCFull(v), n === 'receber' ? 'A Receber' : 'A Pagar']}
                 contentStyle={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, fontSize:12 }} />
               <Legend formatter={(v) => v === 'receber' ? 'A Receber' : 'A Pagar'} wrapperStyle={{ fontSize:12 }} />
-              <Bar dataKey="receber" name="receber" fill="var(--fs-warning, #eab308)" radius={[4,4,0,0]} isAnimationActive={false} />
+              <Bar dataKey="receber" name="receber" fill="var(--fs-warning, var(--fs-warning))" radius={[4,4,0,0]} isAnimationActive={false} />
               <Bar dataKey="pagar"   name="pagar"   fill="var(--fs-danger)" radius={[4,4,0,0]} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
@@ -220,15 +220,15 @@ export default function AtrasadosPage() {
           <div key={r.id} style={{ display:'grid', gridTemplateColumns: isConsol ? '90px 1fr 160px 110px 90px 110px 120px 80px' : '90px 1fr 180px 110px 90px 130px 80px', gap:10, padding:'9px 16px', borderBottom:'1px solid var(--fs-border)', alignItems:'center' }}>
             <div className="fs-num" style={{ fontSize:12, color:'var(--fs-text-3)' }}>{fData(r.data)}</div>
             <div style={{ fontSize:12.5, color:'var(--fs-text-1)', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-              <span style={{ display:'inline-block', width:3, height:14, borderRadius:2, background: r.tipo==='entrada' ? 'var(--fs-warning, #eab308)' : 'var(--fs-danger)', marginRight:8, verticalAlign:'-2px' }} />
+              <span style={{ display:'inline-block', width:3, height:14, borderRadius:2, background: r.tipo==='entrada' ? 'var(--fs-warning, var(--fs-warning))' : 'var(--fs-danger)', marginRight:8, verticalAlign:'-2px' }} />
               {r.descricao || <span style={{ color:'var(--fs-text-4)', fontStyle:'italic' }}>sem descrição</span>}
               {r.status === 'parcial' && <span style={{ marginLeft:8, fontSize:10, color:'var(--fs-text-4)' }}>parcial — resta {fC(r.restante)}</span>}
             </div>
             {isConsol && <div style={{ fontSize:11.5, color:'var(--fs-text-4)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{empresasMap[r.empresa_id] || '—'}</div>}
             <div style={{ fontSize:12, color:'var(--fs-text-3)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.categoria || 'Sem categoria'}</div>
-            <div className="fs-num" style={{ fontSize:12.5, fontWeight:800, color: r.dias > 60 ? 'var(--fs-danger)' : r.dias > 30 ? 'var(--fs-warning, #eab308)' : 'var(--fs-text-2)' }}>{r.dias}d</div>
+            <div className="fs-num" style={{ fontSize:12.5, fontWeight:800, color: r.dias > 60 ? 'var(--fs-danger)' : r.dias > 30 ? 'var(--fs-warning, var(--fs-warning))' : 'var(--fs-text-2)' }}>{r.dias}d</div>
             <div style={{ fontSize:11.5, color:'var(--fs-text-4)' }}>{agingFaixa(r.dias)}</div>
-            <div className="fs-num" style={{ fontSize:12.5, fontWeight:800, textAlign:'right', color: r.tipo==='entrada' ? 'var(--fs-warning, #eab308)' : 'var(--fs-danger)' }}>{fCFull(r.restante)}</div>
+            <div className="fs-num" style={{ fontSize:12.5, fontWeight:800, textAlign:'right', color: r.tipo==='entrada' ? 'var(--fs-warning, var(--fs-warning))' : 'var(--fs-danger)' }}>{fCFull(r.restante)}</div>
             <div style={{ textAlign:'right' }}>
               <button onClick={() => handleBaixar(r)} title="Marcar como liquidado hoje (baixa integral)"
                 style={{ background:'transparent', border:'1px solid var(--fs-border)', borderRadius:6, color:'var(--fs-text-3)', fontSize:11, fontWeight:600, padding:'4px 10px', cursor:'pointer' }}>

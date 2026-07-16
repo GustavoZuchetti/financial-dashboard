@@ -13,7 +13,7 @@ const S = {
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { textAlign: 'left', color: 'var(--fs-text-4)', fontSize: 12, fontWeight: 600, padding: '10px 12px', borderBottom: '1px solid var(--fs-border)', textTransform: 'uppercase' },
   td: { padding: '12px', borderBottom: '1px solid var(--fs-border)', fontSize: 14, color: 'var(--fs-text-1)' },
-  badge: (t) => ({ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: t === 'criacao' ? 'rgba(59,130,246,0.1)' : t === 'edicao' ? 'rgba(59,130,246,0.1)' : 'rgba(239,68,68,0.1)', color: t === 'criacao' ? '#3b82f6' : t === 'edicao' ? '#3b82f6' : '#ef4444' }),
+  badge: (t) => ({ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: t === 'criacao' ? 'rgba(var(--fs-brand-rgb),0.1)' : t === 'edicao' ? 'rgba(var(--fs-brand-rgb),0.1)' : 'rgba(var(--fs-danger-rgb),0.1)', color: t === 'criacao' ? 'var(--fs-brand)' : t === 'edicao' ? 'var(--fs-brand)' : 'var(--fs-danger)' }),
   input: { width: '100%', background: 'var(--fs-input-bg)', border: '1px solid var(--fs-input-border)', borderRadius: 8, padding: '10px 14px', color: 'var(--fs-text-1)', fontSize: 14, outline: 'none', boxSizing: 'border-box' },
   filterRow: { display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center' },
   kpiRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 },
@@ -61,15 +61,15 @@ export default function AuditoriaPage() {
         </div>
         <div style={S.kpi}>
           <div style={S.kpiLabel}>Criacoes</div>
-          <div style={{...S.kpiValue, color: '#3b82f6'}}>{criacoes}</div>
+          <div style={{...S.kpiValue, color: 'var(--fs-brand)'}}>{criacoes}</div>
         </div>
         <div style={S.kpi}>
           <div style={S.kpiLabel}>Edicoes</div>
-          <div style={{...S.kpiValue, color: '#3b82f6'}}>{edicoes}</div>
+          <div style={{...S.kpiValue, color: 'var(--fs-brand)'}}>{edicoes}</div>
         </div>
         <div style={S.kpi}>
           <div style={S.kpiLabel}>Exclusoes</div>
-          <div style={{...S.kpiValue, color: '#ef4444'}}>{exclusoes}</div>
+          <div style={{...S.kpiValue, color: 'var(--fs-danger)'}}>{exclusoes}</div>
         </div>
       </div>
 

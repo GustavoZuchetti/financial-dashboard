@@ -6,12 +6,12 @@ import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, 
 
 // ─── Paleta ──────────────────────────────────────────────────────────────────
 const C = {
-  green:    '#22c55e',
-  blue:     '#3b82f6',
-  red:      '#ef4444',
+  green:    'var(--fs-success)',
+  blue:     'var(--fs-brand)',
+  red:      'var(--fs-danger)',
   gray:     '#64748b',
-  purple:   '#8b5cf6',
-  yellow:   '#f59e0b',
+  purple:   'var(--fs-purple)',
+  yellow:   'var(--fs-warning)',
   teal:     '#14b8a6',
   orange:   '#f97316',
 }
@@ -147,7 +147,7 @@ function KPICard({ title, value, prev, accent, isExpense, loading, large }) {
           {delta !== null && (
             <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:6 }}>
               <span style={{ fontSize:10, color:'var(--fs-text-4)' }}>vs anterior</span>
-              <span style={{ fontSize:10, fontWeight:700, color:favorable?C.green:C.red, background:favorable?'rgba(34,197,94,0.12)':'rgba(239,68,68,0.12)', border:`1px solid ${favorable?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'}`, padding:'1px 6px', borderRadius:4 }}>
+              <span style={{ fontSize:10, fontWeight:700, color:favorable?C.green:C.red, background:favorable?'rgba(var(--fs-success-rgb),0.12)':'rgba(var(--fs-danger-rgb),0.12)', border:`1px solid ${favorable?'rgba(var(--fs-success-rgb),0.3)':'rgba(var(--fs-danger-rgb),0.3)'}`, padding:'1px 6px', borderRadius:4 }}>
                 {favorable?'✓ F':'✗ D'} {Math.abs(delta).toFixed(1)}%
               </span>
             </div>
@@ -255,7 +255,7 @@ export default function DREGeral() {
   const mE  = v.rl>0 ? (v.ebt/v.rl*100) : 0
   const mL  = v.rl>0 ? (v.resL/v.rl*100) : 0
 
-  const badge = { display:'inline-block', background:'rgba(59,130,246,0.1)', color:'#93c5fd', padding:'3px 12px', borderRadius:20, fontSize:11, fontWeight:700, marginLeft:8, border:'1px solid rgba(59,130,246,0.2)' }
+  const badge = { display:'inline-block', background:'rgba(var(--fs-brand-rgb),0.1)', color:'var(--fs-brand-text)', padding:'3px 12px', borderRadius:20, fontSize:11, fontWeight:700, marginLeft:8, border:'1px solid rgba(var(--fs-brand-rgb),0.2)' }
 
   return (
     <>
@@ -265,13 +265,13 @@ export default function DREGeral() {
         <div style={{ position:'fixed', inset:0, zIndex:9999, background:'var(--fs-bg)', display:'flex', flexDirection:'column', padding:'36px 48px', overflowY:'auto' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:28 }}>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <div style={{ width:40,height:40,background:'linear-gradient(135deg,#1d4ed8,#3b82f6)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,color:'#fff',fontSize:16 }}>FS</div>
+              <div style={{ width:40,height:40,background:'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,color:'#fff',fontSize:16 }}>FS</div>
               <div>
                 <div style={{ fontWeight:800, fontSize:18, color:'var(--fs-text-1)' }}>Facesign {isConsol&&<span style={{...badge,display:'inline-flex',alignItems:'center',gap:5}}><SvgIcon name="layers" size={11} color="currentColor" />Consolidado</span>}</div>
                 <div style={{ fontSize:12, color:'var(--fs-text-4)' }}>DRE — {formatPeriod(startDate,endDate)}</div>
               </div>
             </div>
-            <button onClick={()=>setShowPres(false)} style={{ background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',color:'#f87171',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:700 }}>✕ ESC</button>
+            <button onClick={()=>setShowPres(false)} style={{ background:'rgba(var(--fs-danger-rgb),0.08)',border:'1px solid rgba(var(--fs-danger-rgb),0.2)',color:'var(--fs-danger)',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:700 }}>✕ ESC</button>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:20 }}>
             <KPICard title="Receita Bruta"      value={v.rb}   prev={pv.rb}   accent={C.green}  loading={loading} large />
@@ -335,13 +335,13 @@ export default function DREGeral() {
               <span style={{ color:'var(--fs-text-4)' }}>→</span>
               <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
             </div>
-            <button onClick={()=>setShowPres(true)} style={{ background:'linear-gradient(135deg,#1e3a5f,#1d4ed8)',border:'1px solid #2563eb',color:'#bfdbfe',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:700 }}>
+            <button onClick={()=>setShowPres(true)} style={{ background:'linear-gradient(135deg,#1e3a5f,var(--fs-brand-dark))',border:'1px solid var(--fs-brand-dark)',color:'#bfdbfe',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:700 }}>
               <span style={{display:'inline-flex',alignItems:'center',gap:6}}><SvgIcon name="presentation" size={13} color="currentColor" />Apresentação</span>
             </button>
           </div>
         </div>
 
-        {error && <div style={{ background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:8,padding:'12px 16px',color:'#fca5a5',marginBottom:20 }}>⚠️ {error}</div>}
+        {error && <div style={{ background:'rgba(var(--fs-danger-rgb),0.08)',border:'1px solid rgba(var(--fs-danger-rgb),0.2)',borderRadius:8,padding:'12px 16px',color:'#fca5a5',marginBottom:20 }}>⚠️ {error}</div>}
 
         {/* KPI Cards — estrutura DRE completa */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:14 }}>

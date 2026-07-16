@@ -38,7 +38,7 @@ const CustomTooltip = ({ active, payload, label }) => {
       boxShadow:'0 4px 16px rgba(0,0,0,0.3)',
     }}>
       <div style={{ fontWeight:700, color:text1, marginBottom:4 }}>{label}</div>
-      <div style={{ color: isNeg ? '#ef4444' : '#3b82f6', fontWeight:600, fontSize:13 }}>
+      <div style={{ color: isNeg ? 'var(--fs-danger)' : 'var(--fs-brand)', fontWeight:600, fontSize:13 }}>
         {isNeg && val !== 0 ? '-' : ''}{fmtFull(Math.abs(val))}
       </div>
       {entry?.type === 'total' && (
@@ -81,10 +81,10 @@ const DREColumn = ({ label, startDate, endDate, waterfallData, kpis, onDateChang
 
     {/* KPIs */}
     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-      <KPICard title="Receita Bruta" value={fmt(kpis.receita)}   color="#22c55e" />
-      <KPICard title="Custos"        value={fmt(kpis.custos)}    color="#ef4444" />
-      <KPICard title="EBITDA"        value={fmt(kpis.ebitda)}    color={kpis.ebitda >= 0 ? '#3b82f6' : '#ef4444'} />
-      <KPICard title="Despesas"      value={fmt(kpis.despesas)}  color="#f59e0b" />
+      <KPICard title="Receita Bruta" value={fmt(kpis.receita)}   color="var(--fs-success)" />
+      <KPICard title="Custos"        value={fmt(kpis.custos)}    color="var(--fs-danger)" />
+      <KPICard title="EBITDA"        value={fmt(kpis.ebitda)}    color={kpis.ebitda >= 0 ? 'var(--fs-brand)' : 'var(--fs-danger)'} />
+      <KPICard title="Despesas"      value={fmt(kpis.despesas)}  color="var(--fs-warning)" />
     </div>
 
     {/* Gráfico Waterfall */}
@@ -118,9 +118,9 @@ const DREColumn = ({ label, startDate, endDate, waterfallData, kpis, onDateChang
                 <Cell
                   key={i}
                   fill={
-                    entry.type === 'total'    ? '#3b82f6' :
-                    entry.type === 'negative' ? '#ef4444' :
-                    '#22c55e'
+                    entry.type === 'total'    ? 'var(--fs-brand)' :
+                    entry.type === 'negative' ? 'var(--fs-danger)' :
+                    'var(--fs-success)'
                   }
                   fillOpacity={entry.type === 'total' ? 0.85 : 1}
                 />
@@ -133,8 +133,8 @@ const DREColumn = ({ label, startDate, endDate, waterfallData, kpis, onDateChang
       {/* Legenda manual */}
       <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:8, flexWrap:'wrap' }}>
         {[
-          { color:'#3b82f6', label:'Acumulado' },
-          { color:'#ef4444', label:'Dedução' },
+          { color:'var(--fs-brand)', label:'Acumulado' },
+          { color:'var(--fs-danger)', label:'Dedução' },
         ].map(({ color, label }) => (
           <div key={label} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'var(--fs-text-4)' }}>
             <div style={{ width:10, height:10, borderRadius:2, background:color }} />
@@ -147,7 +147,7 @@ const DREColumn = ({ label, startDate, endDate, waterfallData, kpis, onDateChang
     {/* Variação Receita → Resultado */}
     <div style={{ ...S.card, padding:'14px 16px' }}>
       <div style={S.kpiTitle}>Resultado Líquido</div>
-      <div style={{ fontSize:22, fontWeight:800, color: kpis.resultado >= 0 ? '#22c55e' : '#ef4444' }}>
+      <div style={{ fontSize:22, fontWeight:800, color: kpis.resultado >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)' }}>
         {fmt(kpis.resultado)}
       </div>
       {kpis.receita > 0 && (

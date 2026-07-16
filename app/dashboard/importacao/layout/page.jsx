@@ -49,7 +49,7 @@ const SEPARADORES = [
 const IS = { background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'8px 10px', fontSize:13, outline:'none', width:'100%' }
 const LS = { fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:5, display:'block' }
 const Card = ({ children, style }) => <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px', ...style }}>{children}</div>
-const Step = ({ n }) => <span style={{ background:'rgba(59,130,246,0.15)', color:'#60a5fa', width:22, height:22, borderRadius:'50%', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, marginRight:8, flexShrink:0 }}>{n}</span>
+const Step = ({ n }) => <span style={{ background:'rgba(var(--fs-brand-rgb),0.15)', color:'var(--fs-brand-text)', width:22, height:22, borderRadius:'50%', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:800, marginRight:8, flexShrink:0 }}>{n}</span>
 
 const EMPTY_FORM = { nome:'', descricao:'', separador:';', formato_data:'DD/MM/YYYY', linha_header:1, colunas:{}, tipo_regras:[], is_default:false }
 
@@ -172,18 +172,18 @@ export default function LayoutImportacao() {
           </div>
         </div>
         {mode==='list' ? (
-          <button onClick={openNew} style={{background:'#3b82f6',border:'none',color:'#fff',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:7}}>
+          <button onClick={openNew} style={{background:'var(--fs-brand)',border:'none',color:'#fff',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:7}}>
             <span style={{fontSize:16,lineHeight:1}}>+</span> Novo Layout
           </button>
         ) : (
           <div style={{display:'flex',gap:8}}>
             <button onClick={()=>{setMode('list');setMsg(null)}} style={{background:'var(--fs-surface)',border:'1px solid var(--fs-border)',color:'var(--fs-text-2)',borderRadius:10,padding:'9px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}>← Voltar</button>
-            <button onClick={save} disabled={saving} style={{background:saving?'rgba(59,130,246,0.5)':'#3b82f6',border:'none',color:'#fff',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:saving?'default':'pointer'}}>{saving?'Salvando...':'Salvar Layout'}</button>
+            <button onClick={save} disabled={saving} style={{background:saving?'rgba(var(--fs-brand-rgb),0.5)':'var(--fs-brand)',border:'none',color:'#fff',borderRadius:10,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:saving?'default':'pointer'}}>{saving?'Salvando...':'Salvar Layout'}</button>
           </div>
         )}
       </div>
 
-      {msg && <div style={{background:msg.type==='ok'?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',border:`1px solid ${msg.type==='ok'?'rgba(34,197,94,0.3)':'rgba(239,68,68,0.3)'}`,color:msg.type==='ok'?'#22c55e':'#ef4444',borderRadius:8,padding:'10px 16px',fontSize:13,fontWeight:600,marginBottom:16}}>{msg.text}</div>}
+      {msg && <div style={{background:msg.type==='ok'?'rgba(var(--fs-success-rgb),0.1)':'rgba(var(--fs-danger-rgb),0.1)',border:`1px solid ${msg.type==='ok'?'rgba(var(--fs-success-rgb),0.3)':'rgba(var(--fs-danger-rgb),0.3)'}`,color:msg.type==='ok'?'var(--fs-success)':'var(--fs-danger)',borderRadius:8,padding:'10px 16px',fontSize:13,fontWeight:600,marginBottom:16}}>{msg.text}</div>}
 
       {/* LISTA */}
       {mode==='list' && (loading
@@ -193,15 +193,15 @@ export default function LayoutImportacao() {
               <div style={{marginBottom:12,fontSize:13,color:'var(--fs-text-4)'}}>Layouts configurados</div>
               <div style={{fontSize:15,fontWeight:700,color:'var(--fs-text-1)',marginBottom:6}}>Nenhum layout configurado</div>
               <div style={{fontSize:13,color:'var(--fs-text-4)',marginBottom:20}}>Crie um layout para que o sistema reconheça automaticamente as colunas do seu arquivo ao importar</div>
-              <button onClick={openNew} style={{background:'#3b82f6',border:'none',color:'#fff',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer'}}>Criar primeiro layout</button>
+              <button onClick={openNew} style={{background:'var(--fs-brand)',border:'none',color:'#fff',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer'}}>Criar primeiro layout</button>
             </Card>
           : <div style={{display:'flex',flexDirection:'column',gap:12}}>
               {layouts.map(lay=>(
-                <div key={lay.id} style={{background:'var(--fs-surface)',border:lay.is_default?'1px solid rgba(59,130,246,0.5)':'1px solid var(--fs-border)',borderRadius:12,padding:'18px 22px',display:'grid',gridTemplateColumns:'1fr auto',gap:16,alignItems:'center'}}>
+                <div key={lay.id} style={{background:'var(--fs-surface)',border:lay.is_default?'1px solid rgba(var(--fs-brand-rgb),0.5)':'1px solid var(--fs-border)',borderRadius:12,padding:'18px 22px',display:'grid',gridTemplateColumns:'1fr auto',gap:16,alignItems:'center'}}>
                   <div>
                     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
                       <span style={{fontSize:15,fontWeight:800,color:'var(--fs-text-1)'}}>{lay.nome}</span>
-                      {lay.is_default&&<span style={{fontSize:10,fontWeight:700,background:'rgba(59,130,246,0.15)',color:'#60a5fa',border:'1px solid rgba(59,130,246,0.3)',padding:'2px 8px',borderRadius:20}}>PADRÃO</span>}
+                      {lay.is_default&&<span style={{fontSize:10,fontWeight:700,background:'rgba(var(--fs-brand-rgb),0.15)',color:'var(--fs-brand-text)',border:'1px solid rgba(var(--fs-brand-rgb),0.3)',padding:'2px 8px',borderRadius:20}}>PADRÃO</span>}
                     </div>
                     {lay.descricao&&<div style={{fontSize:12,color:'var(--fs-text-4)',marginBottom:6}}>{lay.descricao}</div>}
                     <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
@@ -217,18 +217,18 @@ export default function LayoutImportacao() {
                   </div>
                   <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'flex-end'}}>
                     <button onClick={()=>lay.is_default ? null : setDefault(lay.id)} style={{
-                      background: lay.is_default ? 'rgba(59,130,246,0.15)' : 'transparent',
-                      border: lay.is_default ? '1px solid rgba(59,130,246,0.4)' : '1px solid var(--fs-border)',
-                      color: lay.is_default ? '#60a5fa' : 'var(--fs-text-3)',
+                      background: lay.is_default ? 'rgba(var(--fs-brand-rgb),0.15)' : 'transparent',
+                      border: lay.is_default ? '1px solid rgba(var(--fs-brand-rgb),0.4)' : '1px solid var(--fs-border)',
+                      color: lay.is_default ? 'var(--fs-brand-text)' : 'var(--fs-text-3)',
                       borderRadius:7, padding:'6px 12px', fontSize:11, fontWeight:700,
                       cursor: lay.is_default ? 'default' : 'pointer',
                       display:'flex', alignItems:'center', gap:5,
                     }}>
-                      <span style={{ width:8,height:8,borderRadius:'50%', background: lay.is_default ? '#3b82f6' : 'var(--fs-border)', display:'inline-block', flexShrink:0 }} />
+                      <span style={{ width:8,height:8,borderRadius:'50%', background: lay.is_default ? 'var(--fs-brand)' : 'var(--fs-border)', display:'inline-block', flexShrink:0 }} />
                       {lay.is_default ? 'Padrão ativo' : 'Definir Padrão'}
                     </button>
-                    <button onClick={()=>openEdit(lay)} style={{background:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.25)',color:'#60a5fa',borderRadius:7,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer'}}>Editar</button>
-                    <button onClick={()=>deleteLayout(lay.id)} style={{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.2)',color:'#ef4444',borderRadius:7,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer'}}>Excluir</button>
+                    <button onClick={()=>openEdit(lay)} style={{background:'rgba(var(--fs-brand-rgb),0.1)',border:'1px solid rgba(var(--fs-brand-rgb),0.25)',color:'var(--fs-brand-text)',borderRadius:7,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer'}}>Editar</button>
+                    <button onClick={()=>deleteLayout(lay.id)} style={{background:'rgba(var(--fs-danger-rgb),0.1)',border:'1px solid rgba(var(--fs-danger-rgb),0.2)',color:'var(--fs-danger)',borderRadius:7,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer'}}>Excluir</button>
                   </div>
                 </div>
               ))}
@@ -255,11 +255,11 @@ export default function LayoutImportacao() {
             {/* Toggle: definir como padrão */}
             <div style={{ marginTop:14, display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'var(--fs-bg)', borderRadius:8, border:'1px solid var(--fs-border)', cursor:'pointer' }}
               onClick={() => setForm(f=>({...f, is_default:!f.is_default}))}>
-              <div style={{ width:36, height:20, borderRadius:10, background: form.is_default ? '#3b82f6' : 'var(--fs-border)', position:'relative', transition:'background 0.2s', flexShrink:0 }}>
+              <div style={{ width:36, height:20, borderRadius:10, background: form.is_default ? 'var(--fs-brand)' : 'var(--fs-border)', position:'relative', transition:'background 0.2s', flexShrink:0 }}>
                 <div style={{ width:16, height:16, borderRadius:'50%', background:'#fff', position:'absolute', top:2, left: form.is_default ? 18 : 2, transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)' }} />
               </div>
               <div>
-                <div style={{ fontSize:13, fontWeight:700, color: form.is_default ? '#60a5fa' : 'var(--fs-text-2)' }}>
+                <div style={{ fontSize:13, fontWeight:700, color: form.is_default ? 'var(--fs-brand-text)' : 'var(--fs-text-2)' }}>
                   {form.is_default ? '✓ Definido como layout padrão' : 'Definir como layout padrão'}
                 </div>
                 <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:1 }}>
@@ -294,7 +294,7 @@ export default function LayoutImportacao() {
 
             <div>
               <label style={LS}>Carregar arquivo de exemplo para detectar colunas automaticamente</label>
-              <div onClick={()=>fileRef.current?.click()} style={{border:'2px dashed var(--fs-border)',borderRadius:8,padding:'14px 18px',cursor:'pointer',display:'flex',alignItems:'center',gap:10}} onMouseEnter={e=>e.currentTarget.style.borderColor='#3b82f6'} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--fs-border)'}>
+              <div onClick={()=>fileRef.current?.click()} style={{border:'2px dashed var(--fs-border)',borderRadius:8,padding:'14px 18px',cursor:'pointer',display:'flex',alignItems:'center',gap:10}} onMouseEnter={e=>e.currentTarget.style.borderColor='var(--fs-brand)'} onMouseLeave={e=>e.currentTarget.style.borderColor='var(--fs-border)'}>
                 
                 <div>
                   <div style={{fontSize:13,color:'var(--fs-text-2)',fontWeight:600}}>Clique para carregar um CSV de exemplo</div>
@@ -304,7 +304,7 @@ export default function LayoutImportacao() {
               <input ref={fileRef} type="file" accept=".csv,.txt" style={{display:'none'}} onChange={e=>{if(e.target.files[0])handlePreviewFile(e.target.files[0])}}/>
               {csvHeaders.length>0&&(
                 <div style={{marginTop:10,display:'flex',flexWrap:'wrap',gap:6}}>
-                  {csvHeaders.map(h=><span key={h} style={{background:'rgba(59,130,246,0.1)',color:'#60a5fa',border:'1px solid rgba(59,130,246,0.2)',padding:'3px 9px',borderRadius:5,fontSize:11,fontWeight:600}}>{h}</span>)}
+                  {csvHeaders.map(h=><span key={h} style={{background:'rgba(var(--fs-brand-rgb),0.1)',color:'var(--fs-brand-text)',border:'1px solid rgba(var(--fs-brand-rgb),0.2)',padding:'3px 9px',borderRadius:5,fontSize:11,fontWeight:600}}>{h}</span>)}
                 </div>
               )}
             </div>
@@ -317,14 +317,14 @@ export default function LayoutImportacao() {
 
             {['Obrigatórios','Recomendados','Opcionais'].map(grupo=>(
               <div key={grupo} style={{marginBottom:22}}>
-                <div style={{fontSize:11,fontWeight:700,color:grupo==='Obrigatórios'?'#ef4444':grupo==='Recomendados'?'#f59e0b':'var(--fs-text-4)',textTransform:'uppercase',letterSpacing:'0.6px',marginBottom:10,paddingBottom:6,borderBottom:'1px solid var(--fs-border)'}}>
+                <div style={{fontSize:11,fontWeight:700,color:grupo==='Obrigatórios'?'var(--fs-danger)':grupo==='Recomendados'?'var(--fs-warning)':'var(--fs-text-4)',textTransform:'uppercase',letterSpacing:'0.6px',marginBottom:10,paddingBottom:6,borderBottom:'1px solid var(--fs-border)'}}>
                   {grupo}{grupo==='Obrigatórios'?' — necessários para importar':''}
                 </div>
                 <div style={{display:'flex',flexDirection:'column',gap:10}}>
                   {CAMPOS_SISTEMA.filter(c=>c.group===grupo).map(campo=>(
                     <div key={campo.key} style={{display:'grid',gridTemplateColumns:'220px 1fr 1fr',gap:12,alignItems:'center'}}>
                       <div>
-                        <div style={{fontSize:13,fontWeight:600,color:'var(--fs-text-1)'}}>{campo.label}{campo.required&&<span style={{color:'#ef4444',marginLeft:3}}>*</span>}</div>
+                        <div style={{fontSize:13,fontWeight:600,color:'var(--fs-text-1)'}}>{campo.label}{campo.required&&<span style={{color:'var(--fs-danger)',marginLeft:3}}>*</span>}</div>
                         <div style={{fontSize:10,color:'var(--fs-text-4)',marginTop:1}}>{campo.hint}</div>
                       </div>
                       {csvHeaders.length>0
@@ -348,7 +348,7 @@ export default function LayoutImportacao() {
           <Card>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
               <div style={{fontSize:13,fontWeight:800,color:'var(--fs-text-1)',display:'flex',alignItems:'center'}}><Step n="4"/>Regras de Classificação de Tipo</div>
-              <button onClick={addRegra} style={{background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.25)',color:'#22c55e',borderRadius:7,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}}>+ Adicionar Regra</button>
+              <button onClick={addRegra} style={{background:'rgba(var(--fs-success-rgb),0.1)',border:'1px solid rgba(var(--fs-success-rgb),0.25)',color:'var(--fs-success)',borderRadius:7,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer'}}>+ Adicionar Regra</button>
             </div>
             <div style={{fontSize:12,color:'var(--fs-text-4)',marginBottom:16,marginLeft:30}}>
               Define como cada valor da coluna "Tipo" do seu arquivo é classificado no sistema.<br/>
@@ -372,7 +372,7 @@ export default function LayoutImportacao() {
                         <option value="dre">Só DRE</option>
                         <option value="fluxo">Só Fluxo</option>
                       </select>
-                      <button onClick={()=>delRegra(i)} style={{background:'rgba(239,68,68,0.1)',border:'none',color:'#ef4444',borderRadius:6,width:32,height:32,cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+                      <button onClick={()=>delRegra(i)} style={{background:'rgba(var(--fs-danger-rgb),0.1)',border:'none',color:'var(--fs-danger)',borderRadius:6,width:32,height:32,cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
                     </div>
                   ))}
                 </>
@@ -385,11 +385,11 @@ export default function LayoutImportacao() {
               const novas = vals.filter(v=>!existing.includes(v))
               if (!novas.length) return null
               return (
-                <div style={{marginTop:12,background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:8,padding:'10px 14px'}}>
-                  <div style={{fontSize:11,fontWeight:700,color:'#f59e0b',marginBottom:6}}>Dica: Valores detectados no arquivo sem regra:</div>
+                <div style={{marginTop:12,background:'rgba(var(--fs-warning-rgb),0.08)',border:'1px solid rgba(var(--fs-warning-rgb),0.2)',borderRadius:8,padding:'10px 14px'}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'var(--fs-warning)',marginBottom:6}}>Dica: Valores detectados no arquivo sem regra:</div>
                   <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                     {novas.map(v=>(
-                      <button key={v} onClick={()=>setForm(f=>({...f,tipo_regras:[...f.tipo_regras,{valor_csv:v,tipo_destino:v.toLowerCase().includes('pagar')?'despesa':'receita',modulo:'ambos'}]}))} style={{background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.3)',color:'#f59e0b',borderRadius:5,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>+ {v}</button>
+                      <button key={v} onClick={()=>setForm(f=>({...f,tipo_regras:[...f.tipo_regras,{valor_csv:v,tipo_destino:v.toLowerCase().includes('pagar')?'despesa':'receita',modulo:'ambos'}]}))} style={{background:'rgba(var(--fs-warning-rgb),0.1)',border:'1px solid rgba(var(--fs-warning-rgb),0.3)',color:'var(--fs-warning)',borderRadius:5,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer'}}>+ {v}</button>
                     ))}
                   </div>
                 </div>
@@ -400,7 +400,7 @@ export default function LayoutImportacao() {
           {/* Botão inferior */}
           <div style={{display:'flex',justifyContent:'flex-end',gap:8,paddingBottom:24}}>
             <button onClick={()=>{setMode('list');setMsg(null)}} style={{background:'var(--fs-surface)',border:'1px solid var(--fs-border)',color:'var(--fs-text-2)',borderRadius:10,padding:'10px 20px',fontSize:13,fontWeight:600,cursor:'pointer'}}>Cancelar</button>
-            <button onClick={save} disabled={saving} style={{background:saving?'rgba(59,130,246,0.5)':'#3b82f6',border:'none',color:'#fff',borderRadius:10,padding:'10px 22px',fontSize:13,fontWeight:700,cursor:saving?'default':'pointer'}}>{saving?'Salvando...':'Salvar Layout'}</button>
+            <button onClick={save} disabled={saving} style={{background:saving?'rgba(var(--fs-brand-rgb),0.5)':'var(--fs-brand)',border:'none',color:'#fff',borderRadius:10,padding:'10px 22px',fontSize:13,fontWeight:700,cursor:saving?'default':'pointer'}}>{saving?'Salvando...':'Salvar Layout'}</button>
           </div>
         </div>
       )}

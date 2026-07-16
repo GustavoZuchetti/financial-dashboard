@@ -120,7 +120,7 @@ const CatBar = ({ label, value, total, color }) => {
 const TBtn = ({ label, active, onClick }) => (
   <button onClick={onClick} style={{
     padding:'5px 14px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer',
-    background: active ? 'var(--fs-brand,#3b82f6)' : 'transparent',
+    background: active ? 'var(--fs-brand,var(--fs-brand))' : 'transparent',
     color: active ? '#fff' : 'var(--fs-text-3)',
     border: active ? 'none' : '1px solid transparent',
     transition:'all 0.15s', outline:'none',
@@ -360,10 +360,10 @@ export default function FluxoCaixaPage() {
     catMap[cat] = (catMap[cat]||0) + Math.abs(Number(d.valor)||0)
   })
   const topCats = Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
-  const catColors = ['#ef4444','#f59e0b','#8b5cf6','#3b82f6','#14b8a6']
+  const catColors = ['var(--fs-danger)','var(--fs-warning)','var(--fs-purple)','var(--fs-brand)','#14b8a6']
 
   // ─── Tabela de lançamentos filtrada ───────────────────────────────────────
-  const tipoColor  = { receita:'#22c55e', custo:'#ef4444', despesa:'#f59e0b', deducao:'#f97316', receita_financeira:'#14b8a6', despesa_financeira:'#8b5cf6', investimento:'#64748b', entrada:'#22c55e', saida:'#ef4444' }
+  const tipoColor  = { receita:'var(--fs-success)', custo:'var(--fs-danger)', despesa:'var(--fs-warning)', deducao:'#f97316', receita_financeira:'#14b8a6', despesa_financeira:'var(--fs-purple)', investimento:'#64748b', entrada:'var(--fs-success)', saida:'var(--fs-danger)' }
   const tipoLabel  = { receita:'Receita Operacional', custo:'Custo', despesa:'Despesa', deducao:'Dedução', receita_financeira:'Rec. Financeira', despesa_financeira:'Desp. Financeira', investimento:'Investimento', entrada:'Receita Operacional', saida:'Despesa' }
   const isEntrada  = (tipo) => ['receita','receita_financeira','entrada','fluxo_entrada'].includes(tipo)
 
@@ -420,7 +420,7 @@ export default function FluxoCaixaPage() {
           <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
             <h1 style={{ fontSize:28, fontWeight:800, margin:0, color:'var(--fs-text-1)' }}>Fluxo de Caixa</h1>
             {isConsol && (
-              <span style={{ background:'rgba(59,130,246,0.12)', color:'#60a5fa', border:'1px solid rgba(59,130,246,0.25)', padding:'3px 11px', borderRadius:20, fontSize:12, fontWeight:700 }}>Consolidado</span>
+              <span style={{ background:'rgba(var(--fs-brand-rgb),0.12)', color:'var(--fs-brand-text)', border:'1px solid rgba(var(--fs-brand-rgb),0.25)', padding:'3px 11px', borderRadius:20, fontSize:12, fontWeight:700 }}>Consolidado</span>
             )}
           </div>
 
@@ -450,7 +450,7 @@ export default function FluxoCaixaPage() {
             Exportar
           </button>
 
-          <button style={{ display:'flex', alignItems:'center', gap:6, background:'#3b82f6', border:'none', borderRadius:10, padding:'8px 16px', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+          <button style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-brand)', border:'none', borderRadius:10, padding:'8px 16px', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo lançamento
           </button>
@@ -473,30 +473,30 @@ export default function FluxoCaixaPage() {
           {(vencidos.e > 0 || vencidos.s > 0 || vencidos.aE > 0 || vencidos.aS > 0) && (
             <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
               {vencidos.s > 0 && (
-                <div style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:'#ef4444', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Pagar Vencido</div>
-                  <div style={{ fontSize:22, fontWeight:800, color:'#ef4444' }}>{fC(vencidos.s)}</div>
+                <div style={{ background:'rgba(var(--fs-danger-rgb),0.08)', border:'1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-danger)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Pagar Vencido</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-danger)' }}>{fC(vencidos.s)}</div>
                   <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Saídas com data no passado</div>
                 </div>
               )}
               {vencidos.e > 0 && (
-                <div style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:'#f59e0b', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Receber Vencido</div>
-                  <div style={{ fontSize:22, fontWeight:800, color:'#f59e0b' }}>{fC(vencidos.e)}</div>
+                <div style={{ background:'rgba(var(--fs-warning-rgb),0.08)', border:'1px solid rgba(var(--fs-warning-rgb),0.3)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-warning)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Receber Vencido</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-warning)' }}>{fC(vencidos.e)}</div>
                   <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Entradas com data no passado</div>
                 </div>
               )}
               {vencidos.aS > 0 && (
-                <div style={{ background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.2)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:'#60a5fa', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Pagar · 30 dias</div>
-                  <div style={{ fontSize:22, fontWeight:800, color:'#60a5fa' }}>{fC(vencidos.aS)}</div>
+                <div style={{ background:'rgba(var(--fs-brand-rgb),0.08)', border:'1px solid rgba(var(--fs-brand-rgb),0.2)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-brand-text)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Pagar · 30 dias</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-brand-text)' }}>{fC(vencidos.aS)}</div>
                   <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Saídas nos próximos 30 dias</div>
                 </div>
               )}
               {vencidos.aE > 0 && (
-                <div style={{ background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:'#22c55e', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Receber · 30 dias</div>
-                  <div style={{ fontSize:22, fontWeight:800, color:'#22c55e' }}>{fC(vencidos.aE)}</div>
+                <div style={{ background:'rgba(var(--fs-success-rgb),0.08)', border:'1px solid rgba(var(--fs-success-rgb),0.2)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-success)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Receber · 30 dias</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-success)' }}>{fC(vencidos.aE)}</div>
                   <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Entradas nos próximos 30 dias</div>
                 </div>
               )}
@@ -513,7 +513,7 @@ export default function FluxoCaixaPage() {
               <div style={{ display:'flex', alignItems:'center', gap:16 }}>
                 {/* Legenda */}
                 <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-                  {[{c:'#3b82f6',l:'Entradas'},{c:'#ef4444',l:'Saídas'},{c:'#8b5cf6',l:'Saldo'}].map(({c,l})=>(
+                  {[{c:'var(--fs-brand)',l:'Entradas'},{c:'var(--fs-danger)',l:'Saídas'},{c:'var(--fs-purple)',l:'Saldo'}].map(({c,l})=>(
                     <div key={l} style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--fs-text-3)' }}>
                       <div style={{ width:8, height:8, borderRadius:'50%', background:c }} />
                       {l}
@@ -534,8 +534,8 @@ export default function FluxoCaixaPage() {
                 <ComposedChart data={chartData} margin={{top:4,right:8,left:0,bottom:4}}>
                   <defs>
                     <linearGradient id="gradEntradas" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.4} />
+                      <stop offset="5%"  stopColor="var(--fs-brand)" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="var(--fs-brand)" stopOpacity={0.4} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
@@ -543,8 +543,8 @@ export default function FluxoCaixaPage() {
                   <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} tickFormatter={fC} width={68} />
                   <Tooltip content={<TT />} cursor={false} />
                   <Bar dataKey="entradas" fill="url(#gradEntradas)" radius={[4,4,0,0]} name="Entradas" barSize={28} />
-                  <Bar dataKey="saidas"   fill="rgba(239,68,68,0.55)" radius={[4,4,0,0]} name="Saídas" barSize={28} />
-                  <Line type="monotone" dataKey="saldo" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r:4, fill:'#8b5cf6', strokeWidth:0 }} name="Saldo" />
+                  <Bar dataKey="saidas"   fill="rgba(var(--fs-danger-rgb),0.55)" radius={[4,4,0,0]} name="Saídas" barSize={28} />
+                  <Line type="monotone" dataKey="saldo" stroke="var(--fs-purple)" strokeWidth={2.5} dot={{ r:4, fill:'var(--fs-purple)', strokeWidth:0 }} name="Saldo" />
                 </ComposedChart>
               </ResponsiveContainer>
             ) : (
@@ -603,8 +603,8 @@ export default function FluxoCaixaPage() {
                 ) : lancFiltrados.map((l, i) => {
                   const entrada = isEntrada(l.tipo)
                   const cat     = tipoLabel[l.tipo] || l.categoria || l.tipo
-                  const catBg   = entrada ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'
-                  const catClr  = entrada ? '#22c55e' : '#ef4444'
+                  const catBg   = entrada ? 'rgba(var(--fs-success-rgb),0.1)' : 'rgba(var(--fs-danger-rgb),0.1)'
+                  const catClr  = entrada ? 'var(--fs-success)' : 'var(--fs-danger)'
                   return (
                     <div key={l.id||i} style={{
                       display:'grid', gridTemplateColumns:'60px 1fr 130px 110px', gap:8,
@@ -616,7 +616,7 @@ export default function FluxoCaixaPage() {
                     >
                       <div style={{ fontSize:12, color:'var(--fs-text-4)', fontWeight:600 }}>{fDate(l.data)}</div>
                       <div style={{ fontSize:13, color:'var(--fs-text-1)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:6 }}>
-                        <span style={{ color: entrada ? '#22c55e' : '#ef4444', fontSize:11 }}>{entrada ? '↑' : '↓'}</span>
+                        <span style={{ color: entrada ? 'var(--fs-success)' : 'var(--fs-danger)', fontSize:11 }}>{entrada ? '↑' : '↓'}</span>
                         {l.descricao || l.categoria || 'Lançamento'}
                       </div>
                       <div style={{ display:'flex', alignItems:'center' }}>
@@ -624,7 +624,7 @@ export default function FluxoCaixaPage() {
                           {cat.length > 16 ? cat.substring(0,16)+'…' : cat}
                         </span>
                       </div>
-                      <div style={{ fontSize:13, fontWeight:700, color: entrada ? '#22c55e' : '#ef4444', textAlign:'right' }}>
+                      <div style={{ fontSize:13, fontWeight:700, color: entrada ? 'var(--fs-success)' : 'var(--fs-danger)', textAlign:'right' }}>
                         {entrada ? '+' : '-'}{fC(Math.abs(Number(l.valor)))}
                       </div>
                     </div>

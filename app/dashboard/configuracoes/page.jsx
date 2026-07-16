@@ -14,10 +14,10 @@ const inp = {
 }
 const btn = (variant='primary') => ({
   background: variant === 'primary' ? 'var(--fs-brand)' : variant === 'danger'
-    ? 'rgba(239,68,68,0.1)' : 'var(--fs-surface-2)',
+    ? 'rgba(var(--fs-danger-rgb),0.1)' : 'var(--fs-surface-2)',
   color: variant === 'primary' ? '#fff' : variant === 'danger'
     ? 'var(--fs-danger)' : 'var(--fs-text-2)',
-  border: variant === 'danger' ? '1px solid rgba(239,68,68,0.2)'
+  border: variant === 'danger' ? '1px solid rgba(var(--fs-danger-rgb),0.2)'
     : variant === 'ghost' ? '1px solid var(--fs-border)' : 'none',
   borderRadius: 8, padding: '10px 20px', fontSize: 13,
   fontWeight: 700, cursor: 'pointer',
@@ -263,8 +263,8 @@ export default function ConfiguracoesPage() {
       {/* Toast */}
       {msg.text && (
         <div style={{
-          background: msg.tipo === 'error' ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
-          border: `1px solid ${msg.tipo === 'error' ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
+          background: msg.tipo === 'error' ? 'rgba(var(--fs-danger-rgb),0.1)' : 'rgba(var(--fs-success-rgb),0.1)',
+          border: `1px solid ${msg.tipo === 'error' ? 'rgba(var(--fs-danger-rgb),0.3)' : 'rgba(var(--fs-success-rgb),0.3)'}`,
           borderRadius: 8, padding: '10px 14px',
           color: msg.tipo === 'error' ? 'var(--fs-danger)' : 'var(--fs-success)',
           fontSize: 13, marginBottom: 16,
@@ -411,7 +411,7 @@ export default function ConfiguracoesPage() {
                           <td style={{ padding: '10px' }}>
                             <button
                               onClick={() => setResetModal({ userId: u.id, email: u.email })}
-                              style={{ background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.25)', borderRadius:6, color:'#f59e0b', padding:'4px 10px', fontSize:11, fontWeight:600, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5 }}
+                              style={{ background:'rgba(var(--fs-warning-rgb),0.1)', border:'1px solid rgba(var(--fs-warning-rgb),0.25)', borderRadius:6, color:'var(--fs-warning)', padding:'4px 10px', fontSize:11, fontWeight:600, cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5 }}
                             >
                               <SvgIcon name="lock" size={11} color="currentColor" /> Redefinir Senha
                             </button>
@@ -429,7 +429,7 @@ export default function ConfiguracoesPage() {
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 4 }}>+ Convidar Usuário</div>
             <div style={{ color: 'var(--fs-text-4)', fontSize: 13, marginBottom: 20 }}>Gere um link de acesso para um novo usuário (válido por 7 dias)</div>
             {!orgId && (
-              <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, padding: '10px 14px', color: 'var(--fs-warning)', fontSize: 13, marginBottom: 16 }}>
+              <div style={{ background: 'rgba(var(--fs-warning-rgb),0.1)', border: '1px solid rgba(var(--fs-warning-rgb),0.2)', borderRadius: 8, padding: '10px 14px', color: 'var(--fs-warning)', fontSize: 13, marginBottom: 16 }}>
                 Conta não vinculada a uma organização. Contate o administrador do sistema.
               </div>
             )}
@@ -454,7 +454,7 @@ export default function ConfiguracoesPage() {
             </form>
 
             {inviteLink && (
-              <div style={{ marginTop: 16, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ marginTop: 16, background: 'rgba(var(--fs-success-rgb),0.08)', border: '1px solid rgba(var(--fs-success-rgb),0.2)', borderRadius: 10, padding: '14px 16px' }}>
                 <div style={{ fontSize: 12, color: 'var(--fs-success)', fontWeight: 700, marginBottom: 8 }}>Link gerado — válido por 7 dias:</div>
                 <div style={{ fontSize: 12, color: 'var(--fs-text-2)', wordBreak: 'break-all', marginBottom: 8 }}>{inviteLink}</div>
                 <button onClick={() => { navigator.clipboard.writeText(inviteLink); toast('Link copiado!') }} style={{ ...btn('ghost'), padding: '6px 14px', fontSize: 12, display:'flex', alignItems:'center', gap:6 }}>
@@ -510,7 +510,7 @@ export default function ConfiguracoesPage() {
                     {logoUploading === 'dark' ? 'Enviando...' : 'Selecionar'}
                   </button>
                   {logoUrl && (
-                    <button onClick={() => removerLogo('dark')} style={{ ...btn('ghost'), color: 'var(--fs-danger)', borderColor: 'rgba(248,113,113,0.3)', display:'flex', alignItems:'center', gap:6, fontSize: 12, padding: '8px 12px' }}>
+                    <button onClick={() => removerLogo('dark')} style={{ ...btn('ghost'), color: 'var(--fs-danger)', borderColor: 'rgba(var(--fs-danger-rgb),0.3)', display:'flex', alignItems:'center', gap:6, fontSize: 12, padding: '8px 12px' }}>
                       <SvgIcon name="trash" size={13} color="var(--fs-danger)" />
                       Remover
                     </button>
@@ -546,7 +546,7 @@ export default function ConfiguracoesPage() {
                     {logoUploading === 'light' ? 'Enviando...' : 'Selecionar'}
                   </button>
                   {logoUrlLight && (
-                    <button onClick={() => removerLogo('light')} style={{ ...btn('ghost'), color: 'var(--fs-danger)', borderColor: 'rgba(248,113,113,0.3)', display:'flex', alignItems:'center', gap:6, fontSize: 12, padding: '8px 12px' }}>
+                    <button onClick={() => removerLogo('light')} style={{ ...btn('ghost'), color: 'var(--fs-danger)', borderColor: 'rgba(var(--fs-danger-rgb),0.3)', display:'flex', alignItems:'center', gap:6, fontSize: 12, padding: '8px 12px' }}>
                       <SvgIcon name="trash" size={13} color="var(--fs-danger)" />
                       Remover
                     </button>
@@ -587,7 +587,7 @@ export default function ConfiguracoesPage() {
       {resetResult && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
           <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, padding:28, width:440, maxWidth:'90vw' }}>
-            <div style={{ fontSize:16, fontWeight:700, color:'#10b981', marginBottom:10 }}>Senha redefinida com sucesso</div>
+            <div style={{ fontSize:16, fontWeight:700, color:'var(--fs-success)', marginBottom:10 }}>Senha redefinida com sucesso</div>
             <p style={{ fontSize:13, color:'var(--fs-text-3)', marginBottom:16, lineHeight:1.6 }}>
               Compartilhe as credenciais abaixo com o usuário. Esta janela é a única oportunidade de visualizar a senha.
             </p>

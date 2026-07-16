@@ -53,14 +53,14 @@ export default function ResetPasswordPage() {
       }}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
-          <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff', fontSize: 14 }}>FS</div>
+          <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff', fontSize: 14 }}>FS</div>
           <span style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>Facesign</span>
         </div>
 
         {/* Loading */}
         {stage === 'loading' && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{ width: 36, height: 36, border: '3px solid rgba(59,130,246,0.2)', borderTop: '3px solid #3b82f6', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+            <div style={{ width: 36, height: 36, border: '3px solid rgba(var(--fs-brand-rgb),0.2)', borderTop: '3px solid var(--fs-brand)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
             <div style={{ color: 'rgba(148,163,184,0.7)', fontSize: 14 }}>Validando link de recuperação...</div>
           </div>
         )}
@@ -76,7 +76,7 @@ export default function ResetPasswordPage() {
             </p>
 
             {msg && (
-              <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, padding: '10px 14px', color: '#fca5a5', fontSize: 13, marginBottom: 18 }}>
+              <div style={{ background: 'rgba(var(--fs-danger-rgb),0.08)', border: '1px solid rgba(var(--fs-danger-rgb),0.2)', borderRadius: 8, padding: '10px 14px', color: '#fca5a5', fontSize: 13, marginBottom: 18 }}>
                 {msg}
               </div>
             )}
@@ -98,7 +98,7 @@ export default function ResetPasswordPage() {
                   style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 14px', color: '#f1f5f9', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
                 />
               </div>
-              <button type="submit" disabled={loading} style={{ marginTop: 6, width: '100%', background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>
+              <button type="submit" disabled={loading} style={{ marginTop: 6, width: '100%', background: 'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>
                 {loading ? 'Salvando...' : 'Salvar nova senha'}
               </button>
             </form>
@@ -108,7 +108,7 @@ export default function ResetPasswordPage() {
         {/* Sucesso */}
         {stage === 'success' && (
           <div style={{ textAlign: 'center', padding: '12px 0' }}>
-            <div style={{ width: 52, height: 52, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: 22, color: '#10b981' }}>✓</div>
+            <div style={{ width: 52, height: 52, background: 'rgba(var(--fs-success-rgb),0.1)', border: '1px solid rgba(var(--fs-success-rgb),0.25)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: 22, color: 'var(--fs-success)' }}>✓</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>Senha alterada!</div>
             <div style={{ fontSize: 13, color: 'rgba(148,163,184,0.65)' }}>Redirecionando para o login...</div>
           </div>
@@ -117,11 +117,11 @@ export default function ResetPasswordPage() {
         {/* Link inválido */}
         {stage === 'error' && (
           <div style={{ textAlign: 'center', padding: '12px 0' }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#f87171', marginBottom: 10 }}>Link inválido ou expirado</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--fs-danger)', marginBottom: 10 }}>Link inválido ou expirado</div>
             <p style={{ fontSize: 13, color: 'rgba(148,163,184,0.65)', marginBottom: 24, lineHeight: 1.6 }}>
               O link de recuperação expirou ou já foi utilizado. Solicite um novo.
             </p>
-            <button onClick={() => router.push('/')} style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', borderRadius: 8, padding: '10px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => router.push('/')} style={{ background: 'rgba(var(--fs-brand-rgb),0.1)', border: '1px solid rgba(var(--fs-brand-rgb),0.3)', color: 'var(--fs-brand-text)', borderRadius: 8, padding: '10px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               Voltar ao login
             </button>
           </div>

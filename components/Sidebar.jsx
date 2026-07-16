@@ -177,9 +177,9 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
         .sub-item-link { transition: ${TRANSITION}; }
         .sub-item-link:hover { color: var(--fs-text-1) !important; background: rgba(var(--fs-brand-rgb),0.04) !important; }
         .select-empresa { transition: ${TRANSITION}; }
-        .select-empresa:focus { border-color: #3b82f6 !important; }
+        .select-empresa:focus { border-color: var(--fs-brand) !important; }
         .logout-btn { transition: ${TRANSITION}; }
-        .logout-btn:hover { background: rgba(239,68,68,0.15) !important; border-color: rgba(239,68,68,0.35) !important; }
+        .logout-btn:hover { background: rgba(var(--fs-danger-rgb),0.15) !important; border-color: rgba(var(--fs-danger-rgb),0.35) !important; }
       `}</style>
 
       {/* ── Logo Facesign ───────────────────────────────────────── */}
@@ -208,7 +208,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
               {empresas.length > 1 && (
                 <button
                   onClick={selecionarTodas}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--fs-border)', color: '#3b82f6', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--fs-border)', color: 'var(--fs-brand)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   ✓ Selecionar todas (consolidado)
                 </button>
@@ -219,9 +219,9 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
                   <button
                     key={e.id}
                     onClick={() => toggleEntidade(e.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', background: marcada ? 'rgba(59,130,246,0.08)' : 'transparent', border: 'none', color: 'var(--fs-text-1)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 12px', background: marcada ? 'rgba(var(--fs-brand-rgb),0.08)' : 'transparent', border: 'none', color: 'var(--fs-text-1)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
                   >
-                    <span style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, background: marcada ? '#3b82f6' : 'transparent', border: `1.5px solid ${marcada ? '#3b82f6' : 'var(--fs-text-4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, background: marcada ? 'var(--fs-brand)' : 'transparent', border: `1.5px solid ${marcada ? 'var(--fs-brand)' : 'var(--fs-text-4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {marcada && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                     </span>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: marcada ? 'var(--fs-text-1)' : 'var(--fs-text-2)', fontWeight: marcada ? 600 : 400 }}>{e.nome}</span>
@@ -306,10 +306,10 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
                         borderLeft: pathname === child.href ? '2px solid rgba(var(--fs-brand-rgb),0.4)' : '2px solid transparent',
                       }}
                     >
-                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: pathname === child.href ? '#3b82f6' : 'var(--fs-text-4)', flexShrink: 0 }} />
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: pathname === child.href ? 'var(--fs-brand)' : 'var(--fs-text-4)', flexShrink: 0 }} />
                       {child.label}
                       {child.adminOnly && (
-                        <span style={{ fontSize:9, background:'rgba(239,68,68,0.12)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.2)', padding:'1px 5px', borderRadius:4, marginLeft:'auto', fontWeight:700, letterSpacing:'0.3px' }}>ADM</span>
+                        <span style={{ fontSize:9, background:'rgba(var(--fs-danger-rgb),0.12)', color:'var(--fs-danger)', border:'1px solid rgba(var(--fs-danger-rgb),0.2)', padding:'1px 5px', borderRadius:4, marginLeft:'auto', fontWeight:700, letterSpacing:'0.3px' }}>ADM</span>
                       )}
                     </Link>
                   ))}
@@ -325,7 +325,7 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: 'var(--fs-surface-2)', borderRadius: 8, marginBottom: 8 }}>
           <div style={{
             width: 28, height: 28, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
+            background: 'linear-gradient(135deg, var(--fs-brand-dark), var(--fs-brand))',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 11, color: '#fff', fontWeight: 800, flexShrink: 0,
           }}>
@@ -342,9 +342,9 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 30, height: 30, flexShrink: 0,
-              background: 'rgba(239,68,68,0.07)',
-              border: '1px solid rgba(239,68,68,0.15)',
-              borderRadius: 8, color: '#f87171', cursor: 'pointer',
+              background: 'rgba(var(--fs-danger-rgb),0.07)',
+              border: '1px solid rgba(var(--fs-danger-rgb),0.15)',
+              borderRadius: 8, color: 'var(--fs-danger)', cursor: 'pointer',
             }}
           >
             <Icon path={ICONS.logout} size={14} color="currentColor" />

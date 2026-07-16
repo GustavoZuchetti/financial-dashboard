@@ -124,7 +124,7 @@ export default function FluxoComparativo() {
             <div style={{ fontSize:16, fontWeight:700, color:'var(--fs-text-3)' }}>{fC(v2)}</div>
           </div>
           {pct !== null && (
-            <div style={{ marginLeft:'auto', fontSize:13, fontWeight:700, color: pos ? '#22c55e' : '#ef4444' }}>
+            <div style={{ marginLeft:'auto', fontSize:13, fontWeight:700, color: pos ? 'var(--fs-success)' : 'var(--fs-danger)' }}>
               {pos ? '▲' : '▼'} {Math.abs(pct)}%
             </div>
           )}
@@ -176,10 +176,10 @@ export default function FluxoComparativo() {
                   <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fC} width={68} />
                   <Tooltip content={<TT />} cursor={false} />
                   <Legend iconType="circle" wrapperStyle={{fontSize:11,paddingTop:8}} />
-                  <Bar dataKey="entradas1" fill="#3b82f6" radius={[3,3,0,0]} name="Entradas P1" barSize={12} />
-                  <Bar dataKey="entradas2" fill="rgba(59,130,246,0.35)" radius={[3,3,0,0]} name="Entradas P2" barSize={12} />
-                  <Bar dataKey="saidas1"   fill="#ef4444" radius={[3,3,0,0]} name="Saídas P1"   barSize={12} />
-                  <Bar dataKey="saidas2"   fill="rgba(239,68,68,0.35)" radius={[3,3,0,0]} name="Saídas P2" barSize={12} />
+                  <Bar dataKey="entradas1" fill="var(--fs-brand)" radius={[3,3,0,0]} name="Entradas P1" barSize={12} />
+                  <Bar dataKey="entradas2" fill="rgba(var(--fs-brand-rgb),0.35)" radius={[3,3,0,0]} name="Entradas P2" barSize={12} />
+                  <Bar dataKey="saidas1"   fill="var(--fs-danger)" radius={[3,3,0,0]} name="Saídas P1"   barSize={12} />
+                  <Bar dataKey="saidas2"   fill="rgba(var(--fs-danger-rgb),0.35)" radius={[3,3,0,0]} name="Saídas P2" barSize={12} />
                 </BarChart>
               </ResponsiveContainer>
             ) : <div style={{textAlign:'center',padding:40,color:'var(--fs-text-4)'}}>Sem dados nos períodos selecionados</div>}
@@ -207,9 +207,9 @@ export default function FluxoComparativo() {
                           <tr key={i} style={{ borderBottom:'1px solid var(--fs-border)' }}>
                             <td style={{ padding:'10px 12px', fontWeight:600, color:'var(--fs-text-1)' }}>{r.mes}</td>
                             {[r.entradas1, r.saidas1, r.saldo1, r.entradas2, r.saidas2, r.saldo2].map((v,j) => (
-                              <td key={j} style={{ padding:'10px 12px', textAlign:'right', fontWeight:j===2||j===5?700:400, color: j===2?(r.saldo1>=0?'#22c55e':'#ef4444'):j===5?(r.saldo2>=0?'#22c55e':'#ef4444'):'var(--fs-text-2)' }}>{fC(v)}</td>
+                              <td key={j} style={{ padding:'10px 12px', textAlign:'right', fontWeight:j===2||j===5?700:400, color: j===2?(r.saldo1>=0?'var(--fs-success)':'var(--fs-danger)'):j===5?(r.saldo2>=0?'var(--fs-success)':'var(--fs-danger)'):'var(--fs-text-2)' }}>{fC(v)}</td>
                             ))}
-                            <td style={{ padding:'10px 12px', textAlign:'right', fontWeight:700, color: delta >= 0 ? '#22c55e' : '#ef4444' }}>{delta >= 0 ? '+' : ''}{fC(delta)}</td>
+                            <td style={{ padding:'10px 12px', textAlign:'right', fontWeight:700, color: delta >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)' }}>{delta >= 0 ? '+' : ''}{fC(delta)}</td>
                           </tr>
                         )
                       })}

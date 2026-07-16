@@ -139,8 +139,8 @@ function classificarFluxo(tipoCsv) {
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function Toast({ msg, type, onClose }) {
   useEffect(() => { const t = setTimeout(onClose, type === 'error' ? 7000 : 4500); return () => clearTimeout(t) }, [onClose, type])
-  const colors = { success: '#10b981', error: 'var(--fs-danger)', info: 'var(--fs-brand)' }
-  const bgTint = { success: 'rgba(16,185,129,0.12)', error: 'rgba(239,68,68,0.12)', info: 'rgba(59,130,246,0.12)' }
+  const colors = { success: 'var(--fs-success)', error: 'var(--fs-danger)', info: 'var(--fs-brand)' }
+  const bgTint = { success: 'rgba(var(--fs-success-rgb),0.12)', error: 'rgba(var(--fs-danger-rgb),0.12)', info: 'rgba(var(--fs-brand-rgb),0.12)' }
   const icons  = { success: '✓', error: '✕', info: 'ℹ' }
   const c = colors[type] || colors.info
   return (
@@ -269,7 +269,7 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
                       ? <span
                           onClick={() => onEdit(row)}
                           title="Clique para alternar entre Entrada e Saída"
-                          style={{ background: isEntrada ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: isEntrada ? '#10b981' : '#ef4444', border: `1px solid ${isEntrada ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', userSelect: 'none' }}>
+                          style={{ background: isEntrada ? 'rgba(var(--fs-success-rgb),0.1)' : 'rgba(var(--fs-danger-rgb),0.1)', color: isEntrada ? 'var(--fs-success)' : 'var(--fs-danger)', border: `1px solid ${isEntrada ? 'rgba(var(--fs-success-rgb),0.3)' : 'rgba(var(--fs-danger-rgb),0.3)'}`, padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700, cursor: 'pointer', userSelect: 'none' }}>
                           {isEntrada ? '↑ ENTRADA' : '↓ SAÍDA'}
                         </span>
                       : map
@@ -342,7 +342,7 @@ function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
         <div style={{ marginBottom: 20, borderTop: '1px solid var(--fs-border)', paddingTop: 14 }}>
           <label style={{ display: 'block', fontSize: 11, color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Ou ignorar esta categoria</label>
           <button onClick={() => onSave('__ignorar__')}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.05)', cursor: 'pointer' }}>
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(var(--fs-danger-rgb),0.25)', background: 'rgba(var(--fs-danger-rgb),0.05)', cursor: 'pointer' }}>
             <span style={{ fontSize: 18 }}>⛔</span>
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fs-danger)' }}>Não incluir no DRE</div>
@@ -936,8 +936,8 @@ export default function ImportacaoPage() {
             {confirmModal.reimportBlocked ? (
               // Arquivo não atende à regra de reimportação
               <>
-                <div style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'12px 14px', fontSize:13, color:'var(--fs-text-2)', marginBottom:4 }}>
-                  <strong style={{ color:'#ef4444' }}>⛔ Reimportação não permitida</strong>
+                <div style={{ background:'rgba(var(--fs-danger-rgb),0.08)', border:'1px solid rgba(var(--fs-danger-rgb),0.2)', borderRadius:8, padding:'12px 14px', fontSize:13, color:'var(--fs-text-2)', marginBottom:4 }}>
+                  <strong style={{ color:'var(--fs-danger)' }}>⛔ Reimportação não permitida</strong>
                   <div style={{ marginTop:6, color:'var(--fs-text-3)' }}>{confirmModal.reimportMotivo}</div>
                   <div style={{ marginTop:8, fontSize:12, color:'var(--fs-text-4)' }}>
                     Para reimportar um período já existente, o arquivo deve conter dados desde ontem (d-1) até a data mais futura prevista, garantindo que o histórico já realizado seja preservado.
@@ -953,15 +953,15 @@ export default function ImportacaoPage() {
             ) : confirmModal.smartReimport ? (
               // Reimportação inteligente: oferecer substituição parcial OU total
               <>
-                <div style={{ background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:8, padding:'12px 14px', fontSize:13, color:'var(--fs-text-2)', marginBottom:8 }}>
-                  <strong style={{ color:'#22c55e' }}>Arquivo válido para atualização</strong>
+                <div style={{ background:'rgba(var(--fs-success-rgb),0.08)', border:'1px solid rgba(var(--fs-success-rgb),0.2)', borderRadius:8, padding:'12px 14px', fontSize:13, color:'var(--fs-text-2)', marginBottom:8 }}>
+                  <strong style={{ color:'var(--fs-success)' }}>Arquivo válido para atualização</strong>
                   <div style={{ marginTop:6 }}>Escolha como deseja importar os novos dados:</div>
                 </div>
                 {/* Opção 1: Atualização parcial — preserva histórico */}
                 <button
                   onClick={() => executeImport({ ...confirmModal, replace: true, smartReimport: true })}
                   disabled={isImporting}
-                  style={{ background: isImporting ? 'var(--fs-surface-3)' : 'rgba(34,197,94,0.15)', color: isImporting ? 'var(--fs-text-4)' : '#22c55e', border:'1px solid rgba(34,197,94,0.35)', borderRadius:9, padding:'12px', fontSize:13, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', textAlign:'left' }}
+                  style={{ background: isImporting ? 'var(--fs-surface-3)' : 'rgba(var(--fs-success-rgb),0.15)', color: isImporting ? 'var(--fs-text-4)' : 'var(--fs-success)', border:'1px solid rgba(var(--fs-success-rgb),0.35)', borderRadius:9, padding:'12px', fontSize:13, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', textAlign:'left' }}
                 >
                   <div style={{ fontWeight:800, marginBottom:3 }}>Atualizar previsões (recomendado)</div>
                   <div style={{ fontSize:12, opacity:0.8 }}>Preserva o histórico já realizado. Substitui apenas registros a partir de hoje.</div>
@@ -970,7 +970,7 @@ export default function ImportacaoPage() {
                 <button
                   onClick={() => executeImport({ ...confirmModal, replace: true, smartReimport: false })}
                   disabled={isImporting}
-                  style={{ background: isImporting ? 'var(--fs-surface-3)' : 'rgba(239,68,68,0.1)', color: isImporting ? 'var(--fs-text-4)' : '#ef4444', border:'1px solid rgba(239,68,68,0.3)', borderRadius:9, padding:'12px', fontSize:13, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', textAlign:'left' }}
+                  style={{ background: isImporting ? 'var(--fs-surface-3)' : 'rgba(var(--fs-danger-rgb),0.1)', color: isImporting ? 'var(--fs-text-4)' : 'var(--fs-danger)', border:'1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius:9, padding:'12px', fontSize:13, fontWeight:700, cursor: isImporting ? 'not-allowed' : 'pointer', textAlign:'left' }}
                 >
                   <div style={{ fontWeight:800, marginBottom:3 }}>Substituir tudo</div>
                   <div style={{ fontSize:12, opacity:0.8 }}>Apaga todos os {confirmModal.count} registros existentes e reimporta o arquivo completo.</div>
@@ -1028,7 +1028,7 @@ export default function ImportacaoPage() {
           <button
             onClick={() => router.push('/dashboard/importacao/layout')}
             style={{ display:'flex', alignItems:'center', gap:7, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'9px 16px', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor:'pointer', transition:'all 0.15s', whiteSpace:'nowrap' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor='#3b82f6'; e.currentTarget.style.color='#60a5fa' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor='var(--fs-brand)'; e.currentTarget.style.color='var(--fs-brand-text)' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor='var(--fs-border)'; e.currentTarget.style.color='var(--fs-text-2)' }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>

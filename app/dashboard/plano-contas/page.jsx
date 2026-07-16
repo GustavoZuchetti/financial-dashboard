@@ -31,15 +31,15 @@ const ICONS = {
 }
 
 const DRE_GROUPS = [
-  { key: 'receita',            label: 'Receita Bruta',             cor: '#22c55e', desc: 'Receitas operacionais de serviços/produtos' },
+  { key: 'receita',            label: 'Receita Bruta',             cor: 'var(--fs-success)', desc: 'Receitas operacionais de serviços/produtos' },
   { key: 'deducao',            label: 'Deduções',                  cor: '#f97316', desc: 'Impostos sobre receita, devoluções, descontos' },
-  { key: 'custo',              label: 'Custos Variáveis',          cor: '#ef4444', desc: 'CMV, CPV — custos diretamente ligados à receita' },
-  { key: 'despesa',            label: 'Despesas Fixas',            cor: '#f59e0b', desc: 'Despesas operacionais fixas (salários, aluguel, etc.)' },
+  { key: 'custo',              label: 'Custos Variáveis',          cor: 'var(--fs-danger)', desc: 'CMV, CPV — custos diretamente ligados à receita' },
+  { key: 'despesa',            label: 'Despesas Fixas',            cor: 'var(--fs-warning)', desc: 'Despesas operacionais fixas (salários, aluguel, etc.)' },
   { key: 'receita_financeira', label: 'Receitas Financeiras',      cor: '#14b8a6', desc: 'Juros recebidos, rendimentos financeiros' },
-  { key: 'despesa_financeira', label: 'Despesas Financeiras',      cor: '#8b5cf6', desc: 'Juros pagos, IOF, tarifas bancárias' },
+  { key: 'despesa_financeira', label: 'Despesas Financeiras',      cor: 'var(--fs-purple)', desc: 'Juros pagos, IOF, tarifas bancárias' },
   { key: 'imposto_lucro',      label: 'Impostos sobre Lucro',      cor: '#f97316', desc: 'IR, CSLL e outros impostos sobre o lucro' },
   { key: 'investimento',       label: 'Investimentos (CAPEX)',     cor: '#64748b', desc: 'Aquisição de ativos, investimentos de longo prazo' },
-  { key: 'entrada',            label: 'Entradas — Fluxo de Caixa', cor: '#3b82f6', desc: 'Entradas de caixa (módulo FC)' },
+  { key: 'entrada',            label: 'Entradas — Fluxo de Caixa', cor: 'var(--fs-brand)', desc: 'Entradas de caixa (módulo FC)' },
   { key: 'saida',              label: 'Saídas — Fluxo de Caixa',   cor: '#ec4899', desc: 'Saídas de caixa (módulo FC)' },
 ]
 const TIPO_LABELS = Object.fromEntries(DRE_GROUPS.map(g => [g.key, g.label]))
@@ -315,7 +315,7 @@ export default function PlanoContasPage() {
       </div>
 
       {msg && (
-        <div style={{ background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:8,padding:'9px 14px',color:'var(--fs-success)',fontSize:13,marginBottom:16 }}>
+        <div style={{ background:'rgba(var(--fs-success-rgb),0.1)',border:'1px solid rgba(var(--fs-success-rgb),0.2)',borderRadius:8,padding:'9px 14px',color:'var(--fs-success)',fontSize:13,marginBottom:16 }}>
           {msg}
         </div>
       )}
@@ -356,7 +356,7 @@ export default function PlanoContasPage() {
                     <div style={{ display:'flex',alignItems:'center',gap:8 }}>
                       <span style={{ fontWeight:700,color:'var(--fs-text-1)',fontSize:14 }}>{grupo.label}</span>
                       <span style={{ background:`${grupo.cor}18`,color:grupo.cor,border:`1px solid ${grupo.cor}30`,padding:'1px 8px',borderRadius:20,fontSize:11,fontWeight:700 }}>{gc.length} conta{gc.length!==1?'s':''}</span>
-                      {mCount > 0 && <span style={{ background:'rgba(59,130,246,0.1)',color:'var(--fs-brand)',border:'1px solid rgba(59,130,246,0.2)',padding:'1px 8px',borderRadius:20,fontSize:11,fontWeight:700 }}>{mCount} De-Para</span>}
+                      {mCount > 0 && <span style={{ background:'rgba(var(--fs-brand-rgb),0.1)',color:'var(--fs-brand)',border:'1px solid rgba(var(--fs-brand-rgb),0.2)',padding:'1px 8px',borderRadius:20,fontSize:11,fontWeight:700 }}>{mCount} De-Para</span>}
                     </div>
                     <div style={{ fontSize:12,color:'var(--fs-text-4)',marginTop:2 }}>{grupo.desc}</div>
                   </div>
@@ -385,7 +385,7 @@ export default function PlanoContasPage() {
                             <td style={{ padding:'11px 16px',textAlign:'center' }}>
                               {mps.length > 0 ? (
                                 <button onClick={() => setContaDetalhes(conta)}
-                                  style={{ background:'rgba(59,130,246,0.1)',color:'var(--fs-brand)',border:'1px solid rgba(59,130,246,0.2)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:4 }}>
+                                  style={{ background:'rgba(var(--fs-brand-rgb),0.1)',color:'var(--fs-brand)',border:'1px solid rgba(var(--fs-brand-rgb),0.2)',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:4 }}>
                                   <Icon d={ICONS.eye} color="var(--fs-brand)" size={12} />
                                   {mps.length}
                                 </button>
@@ -398,7 +398,7 @@ export default function PlanoContasPage() {
                                   <Icon d={ICONS.edit} color="var(--fs-text-2)" size={12} /> Editar
                                 </button>
                                 <button onClick={() => excluir(conta.id)}
-                                  style={{ display:'inline-flex',alignItems:'center',background:'transparent',border:'1px solid rgba(239,68,68,0.2)',borderRadius:7,padding:'5px 8px',fontSize:12,color:'var(--fs-danger)',cursor:'pointer' }}>
+                                  style={{ display:'inline-flex',alignItems:'center',background:'transparent',border:'1px solid rgba(var(--fs-danger-rgb),0.2)',borderRadius:7,padding:'5px 8px',fontSize:12,color:'var(--fs-danger)',cursor:'pointer' }}>
                                   <Icon d={ICONS.trash} color="var(--fs-danger)" size={13} />
                                 </button>
                               </div>
@@ -442,7 +442,7 @@ export default function PlanoContasPage() {
                         <Icon d={ICONS.edit} color="var(--fs-text-2)" size={12} /> Editar
                       </button>
                       <button onClick={() => excluir(conta.id)}
-                        style={{ display:'inline-flex',alignItems:'center',background:'transparent',border:'1px solid rgba(239,68,68,0.2)',borderRadius:7,padding:'5px 8px',fontSize:12,color:'var(--fs-danger)',cursor:'pointer' }}>
+                        style={{ display:'inline-flex',alignItems:'center',background:'transparent',border:'1px solid rgba(var(--fs-danger-rgb),0.2)',borderRadius:7,padding:'5px 8px',fontSize:12,color:'var(--fs-danger)',cursor:'pointer' }}>
                         <Icon d={ICONS.trash} color="var(--fs-danger)" size={13} />
                       </button>
                     </div>

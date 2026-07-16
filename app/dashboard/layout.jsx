@@ -65,7 +65,7 @@ export default function DashboardLayout({ children }) {
   if (loading) return (
     <div style={{ minHeight:'100vh', background:'var(--fs-bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16 }}>
-        <div style={{ width:40, height:40, border:'3px solid #1a1a2e', borderTop:'3px solid #3b82f6', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+        <div style={{ width:40, height:40, border:'3px solid #1a1a2e', borderTop:'3px solid var(--fs-brand)', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
         <span style={{ color:'var(--fs-text-2)', fontSize:14, fontWeight:500 }}>Carregando ambiente...</span>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -89,7 +89,7 @@ export default function DashboardLayout({ children }) {
               </p>
               <button
                 onClick={() => router.push('/dashboard/configuracoes')}
-                style={{ background:'#3b82f6', color:'#fff', border:'none', padding:'12px 24px', borderRadius:8, fontWeight:700, cursor:'pointer' }}>
+                style={{ background:'var(--fs-brand)', color:'#fff', border:'none', padding:'12px 24px', borderRadius:8, fontWeight:700, cursor:'pointer' }}>
                 Ir para Configurações
               </button>
             </div>

@@ -28,13 +28,13 @@ const pad2 = (n) => String(n).padStart(2,'0')
 // ─── Componentes utilitários ──────────────────────────────────────────────────
 const Badge = ({ tipo }) => {
   const map = {
-    entrada:            { label:'Entrada',        bg:'rgba(34,197,94,0.12)',   color:'#22c55e' },
-    saida:              { label:'Saída',           bg:'rgba(239,68,68,0.12)',   color:'#ef4444' },
-    receita:            { label:'Receita',         bg:'rgba(34,197,94,0.12)',   color:'#22c55e' },
-    despesa:            { label:'Despesa',         bg:'rgba(239,68,68,0.12)',   color:'#ef4444' },
-    custo:              { label:'Custo',           bg:'rgba(245,158,11,0.12)',  color:'#f59e0b' },
+    entrada:            { label:'Entrada',        bg:'rgba(var(--fs-success-rgb),0.12)',   color:'var(--fs-success)' },
+    saida:              { label:'Saída',           bg:'rgba(var(--fs-danger-rgb),0.12)',   color:'var(--fs-danger)' },
+    receita:            { label:'Receita',         bg:'rgba(var(--fs-success-rgb),0.12)',   color:'var(--fs-success)' },
+    despesa:            { label:'Despesa',         bg:'rgba(var(--fs-danger-rgb),0.12)',   color:'var(--fs-danger)' },
+    custo:              { label:'Custo',           bg:'rgba(var(--fs-warning-rgb),0.12)',  color:'var(--fs-warning)' },
     receita_financeira: { label:'Rec. Financeira', bg:'rgba(20,184,166,0.12)',  color:'#14b8a6' },
-    despesa_financeira: { label:'Desp. Financeira',bg:'rgba(139,92,246,0.12)', color:'#8b5cf6' },
+    despesa_financeira: { label:'Desp. Financeira',bg:'rgba(var(--fs-purple-rgb),0.12)', color:'var(--fs-purple)' },
   }
   const s = map[tipo] || { label: tipo, bg:'rgba(100,116,139,0.12)', color:'#64748b' }
   return (
@@ -46,7 +46,7 @@ const Badge = ({ tipo }) => {
 
 const Toast = ({ msg, type, onClose }) => {
   useEffect(() => { const t = setTimeout(onClose, 3500); return () => clearTimeout(t) }, [onClose])
-  const bg = type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6'
+  const bg = type === 'success' ? 'var(--fs-success)' : type === 'error' ? 'var(--fs-danger)' : 'var(--fs-brand)'
   return (
     <div style={{ position:'fixed', bottom:24, right:24, zIndex:1000, background:bg, color:'#fff', borderRadius:10, padding:'12px 20px', fontSize:13, fontWeight:600, boxShadow:'0 4px 20px rgba(0,0,0,0.4)', display:'flex', alignItems:'center', gap:10, maxWidth:360 }}>
       <span>{msg}</span>
@@ -60,8 +60,8 @@ const ConfirmModal = ({ item, onConfirm, onCancel, loading }) => (
   <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
     <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, padding:28, maxWidth:420, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,0.5)' }}>
       <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-        <div style={{ width:40, height:40, borderRadius:10, background:'rgba(239,68,68,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+        <div style={{ width:40, height:40, borderRadius:10, background:'rgba(var(--fs-danger-rgb),0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--fs-danger)" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
         </div>
         <div>
           <div style={{ fontSize:16, fontWeight:800, color:'var(--fs-text-1)' }}>Confirmar exclusão</div>
@@ -86,7 +86,7 @@ const ConfirmModal = ({ item, onConfirm, onCancel, loading }) => (
         <button onClick={onCancel} disabled={loading} style={{ padding:'9px 20px', borderRadius:8, border:'1px solid var(--fs-border)', background:'transparent', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
           Cancelar
         </button>
-        <button onClick={onConfirm} disabled={loading} style={{ padding:'9px 20px', borderRadius:8, border:'none', background:'#ef4444', color:'#fff', fontSize:13, fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display:'flex', alignItems:'center', gap:6 }}>
+        <button onClick={onConfirm} disabled={loading} style={{ padding:'9px 20px', borderRadius:8, border:'none', background:'var(--fs-danger)', color:'#fff', fontSize:13, fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, display:'flex', alignItems:'center', gap:6 }}>
           {loading ? 'Excluindo...' : 'Excluir registro'}
         </button>
       </div>
@@ -99,8 +99,8 @@ const BulkModal = ({ count, periodo, onConfirm, onCancel, loading }) => (
   <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
     <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, padding:28, maxWidth:440, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,0.5)' }}>
       <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-        <div style={{ width:40, height:40, borderRadius:10, background:'rgba(239,68,68,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+        <div style={{ width:40, height:40, borderRadius:10, background:'rgba(var(--fs-danger-rgb),0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--fs-danger)" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
         </div>
         <div>
           <div style={{ fontSize:16, fontWeight:800, color:'var(--fs-text-1)' }}>Excluir em lote</div>
@@ -108,9 +108,9 @@ const BulkModal = ({ count, periodo, onConfirm, onCancel, loading }) => (
         </div>
       </div>
 
-      <div style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:8, padding:'12px 14px', marginBottom:20 }}>
+      <div style={{ background:'rgba(var(--fs-danger-rgb),0.08)', border:'1px solid rgba(var(--fs-danger-rgb),0.2)', borderRadius:8, padding:'12px 14px', marginBottom:20 }}>
         <div style={{ fontSize:13, color:'var(--fs-text-1)' }}>
-          Você está prestes a excluir <strong style={{ color:'#ef4444' }}>{count} registro{count !== 1 ? 's' : ''}</strong> do período{' '}
+          Você está prestes a excluir <strong style={{ color:'var(--fs-danger)' }}>{count} registro{count !== 1 ? 's' : ''}</strong> do período{' '}
           <strong style={{ color:'var(--fs-text-1)' }}>{periodo}</strong>.
         </div>
         <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:6 }}>
@@ -122,7 +122,7 @@ const BulkModal = ({ count, periodo, onConfirm, onCancel, loading }) => (
         <button onClick={onCancel} disabled={loading} style={{ padding:'9px 20px', borderRadius:8, border:'1px solid var(--fs-border)', background:'transparent', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
           Cancelar
         </button>
-        <button onClick={onConfirm} disabled={loading} style={{ padding:'9px 20px', borderRadius:8, border:'none', background:'#ef4444', color:'#fff', fontSize:13, fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+        <button onClick={onConfirm} disabled={loading} style={{ padding:'9px 20px', borderRadius:8, border:'none', background:'var(--fs-danger)', color:'#fff', fontSize:13, fontWeight:700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
           {loading ? 'Excluindo...' : `Excluir ${count} registro${count !== 1 ? 's' : ''}`}
         </button>
       </div>
@@ -666,7 +666,7 @@ export default function GestaoFluxoCaixaPage() {
               <div>
                 <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Tipo *</div>
                 <div style={{ display:'flex', gap:8 }}>
-                  {[['entrada','Entrada','#22c55e'],['saida','Saída','#ef4444']].map(([v,l,clr])=>(
+                  {[['entrada','Entrada','var(--fs-success)'],['saida','Saída','var(--fs-danger)']].map(([v,l,clr])=>(
                     <button key={v} onClick={()=>setEditForm(f=>({...f,tipo:v}))} style={{ flex:1, padding:'8px', borderRadius:8, fontWeight:700, fontSize:13, cursor:'pointer', transition:'all 0.15s', border: editForm.tipo===v ? `2px solid ${clr}` : '2px solid var(--fs-border)', background: editForm.tipo===v ? `rgba(${v==='entrada'?'34,197,94':'239,68,68'},0.12)` : 'var(--fs-bg)', color: editForm.tipo===v ? clr : 'var(--fs-text-3)' }}>
                       {l}
                     </button>
@@ -700,7 +700,7 @@ export default function GestaoFluxoCaixaPage() {
             </div>
             <div style={{ display:'flex', gap:8, marginTop:20, justifyContent:'flex-end' }}>
               <button onClick={()=>setEditItem(null)} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-2)', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
-              <button onClick={handleSaveEdit} disabled={editLoading} style={{ background:editLoading?'rgba(59,130,246,0.5)':'#3b82f6', border:'none', color:'#fff', borderRadius:8, padding:'8px 20px', fontSize:13, fontWeight:700, cursor:editLoading?'default':'pointer' }}>
+              <button onClick={handleSaveEdit} disabled={editLoading} style={{ background:editLoading?'rgba(var(--fs-brand-rgb),0.5)':'var(--fs-brand)', border:'none', color:'#fff', borderRadius:8, padding:'8px 20px', fontSize:13, fontWeight:700, cursor:editLoading?'default':'pointer' }}>
                 {editLoading ? 'Salvando...' : '✓ Salvar Alterações'}
               </button>
             </div>
@@ -718,7 +718,7 @@ export default function GestaoFluxoCaixaPage() {
               <div>
                 <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Tipo *</div>
                 <div style={{ display:'flex', gap:8 }}>
-                  {[['entrada','A Receber','#22c55e'],['saida','A Pagar','#ef4444']].map(([v,l,clr])=>(
+                  {[['entrada','A Receber','var(--fs-success)'],['saida','A Pagar','var(--fs-danger)']].map(([v,l,clr])=>(
                     <button key={v} onClick={()=>setNovoForm(f=>({...f,tipo:v}))} style={{ flex:1, padding:'8px', borderRadius:8, fontWeight:700, fontSize:13, cursor:'pointer', transition:'all 0.15s', border: novoForm.tipo===v ? `2px solid ${clr}` : '2px solid var(--fs-border)', background: novoForm.tipo===v ? `rgba(${v==='entrada'?'34,197,94':'239,68,68'},0.12)` : 'var(--fs-bg)', color: novoForm.tipo===v ? clr : 'var(--fs-text-3)' }}>
                       {l}
                     </button>
@@ -755,7 +755,7 @@ export default function GestaoFluxoCaixaPage() {
             </div>
             <div style={{ display:'flex', gap:8, marginTop:20, justifyContent:'flex-end' }}>
               <button onClick={()=>{setNovoModal(false);setNovoForm({data:today,descricao:'',tipo:'saida',valor:'',categoria:''})}} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-2)', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
-              <button onClick={handleNovoLancamento} disabled={novoLoading} style={{ background: novoLoading?'rgba(59,130,246,0.5)':'#3b82f6', border:'none', color:'#fff', borderRadius:8, padding:'8px 20px', fontSize:13, fontWeight:700, cursor:novoLoading?'default':'pointer' }}>
+              <button onClick={handleNovoLancamento} disabled={novoLoading} style={{ background: novoLoading?'rgba(var(--fs-brand-rgb),0.5)':'var(--fs-brand)', border:'none', color:'#fff', borderRadius:8, padding:'8px 20px', fontSize:13, fontWeight:700, cursor:novoLoading?'default':'pointer' }}>
                 {novoLoading ? 'Salvando...' : '✓ Inserir Lançamento'}
               </button>
             </div>
@@ -779,7 +779,7 @@ export default function GestaoFluxoCaixaPage() {
       <div style={{ marginBottom:22 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:6 }}>
           <h1 style={{ fontSize:28, fontWeight:800, margin:0 }}>Gestão de Registros</h1>
-          <span style={{ background:'rgba(239,68,68,0.1)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.2)', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700 }}>
+          <span style={{ background:'rgba(var(--fs-danger-rgb),0.1)', color:'var(--fs-danger)', border:'1px solid rgba(var(--fs-danger-rgb),0.2)', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:700 }}>
             <span style={{display:'inline-flex',alignItems:'center',gap:5}}><SvgIcon name="lock" size={12} color="currentColor" />Admin only</span>
           </span>
         </div>
@@ -835,7 +835,7 @@ export default function GestaoFluxoCaixaPage() {
         </button>
 
         {/* Botão novo lançamento */}
-        <button onClick={()=>setNovoModal(true)} style={{ display:'flex', alignItems:'center', gap:6, background:'#3b82f6', border:'none', borderRadius:8, padding:'7px 14px', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+        <button onClick={()=>setNovoModal(true)} style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-brand)', border:'none', borderRadius:8, padding:'7px 14px', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Novo Lançamento
         </button>
@@ -843,7 +843,7 @@ export default function GestaoFluxoCaixaPage() {
         {/* Botão excluir selecionados */}
         {selected.size > 0 && (
           <button onClick={()=>setBulkModal(true)}
-            style={{ display:'flex', alignItems:'center', gap:6, background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:8, padding:'6px 14px', color:'#ef4444', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+            style={{ display:'flex', alignItems:'center', gap:6, background:'rgba(var(--fs-danger-rgb),0.12)', border:'1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius:8, padding:'6px 14px', color:'var(--fs-danger)', fontSize:12, fontWeight:700, cursor:'pointer' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
             Excluir {selected.size} selecionado{selected.size > 1 ? 's' : ''}
           </button>
@@ -854,9 +854,9 @@ export default function GestaoFluxoCaixaPage() {
       <div style={{ display:'flex', gap:10, marginBottom:10, flexWrap:'wrap' }}>
         {[
           { label:'Total de registros', value: String(total),                     color:'var(--fs-text-1)' },
-          { label:'Entradas (período)', value: fC(totalGlobalE),                   color:'#22c55e' },
-          { label:'Saídas (período)',   value: fC(totalGlobalS),                   color:'#ef4444' },
-          { label:'Saldo (período)',    value: fC(totalGlobalE - totalGlobalS),    color: totalGlobalE >= totalGlobalS ? '#22c55e' : '#ef4444' },
+          { label:'Entradas (período)', value: fC(totalGlobalE),                   color:'var(--fs-success)' },
+          { label:'Saídas (período)',   value: fC(totalGlobalS),                   color:'var(--fs-danger)' },
+          { label:'Saldo (período)',    value: fC(totalGlobalE - totalGlobalS),    color: totalGlobalE >= totalGlobalS ? 'var(--fs-success)' : 'var(--fs-danger)' },
         ].map(k => (
           <div key={k.label} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'10px 16px', flex:1, minWidth:140 }}>
             <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>{k.label}</div>
@@ -917,7 +917,7 @@ export default function GestaoFluxoCaixaPage() {
                   onKeyDown={e => e.key === 'Enter' && handleSaveSaldo()}
                   autoFocus
                 />
-                <button onClick={handleSaveSaldo} style={{ background:'#3b82f6', border:'none', color:'#fff', borderRadius:7, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>Salvar</button>
+                <button onClick={handleSaveSaldo} style={{ background:'var(--fs-brand)', border:'none', color:'#fff', borderRadius:7, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>Salvar</button>
                 <button onClick={()=>setEditSaldo(false)} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:7, padding:'6px 10px', fontSize:12, cursor:'pointer' }}>✕</button>
               </div>
             </div>
@@ -938,7 +938,7 @@ export default function GestaoFluxoCaixaPage() {
 
         {/* Cabeçalho */}
         <div style={{ display:'grid', gridTemplateColumns:'40px 1fr 140px 100px 132px 116px 130px 96px', gap:8, padding:'11px 16px', borderBottom:'2px solid var(--fs-border)', background:'var(--fs-bg)' }}>
-          <div><input type="checkbox" checked={registros.length > 0 && selected.size === registros.length} onChange={toggleAll} style={{ cursor:'pointer', accentColor:'#3b82f6', width:14, height:14 }} /></div>
+          <div><input type="checkbox" checked={registros.length > 0 && selected.size === registros.length} onChange={toggleAll} style={{ cursor:'pointer', accentColor:'var(--fs-brand)', width:14, height:14 }} /></div>
           {['Descrição','Categoria','Tipo','Situação','Valor','Saldo do Dia',''].map(h=>(
             <div key={h} style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', display:'flex', alignItems:'center', justifyContent: h==='Valor'||h==='Saldo do Dia' ? 'flex-end' : 'flex-start' }}>{h}</div>
           ))}
@@ -967,10 +967,10 @@ export default function GestaoFluxoCaixaPage() {
                 {fDateBR(data)}
               </div>
               <div style={{ marginLeft:'auto', display:'flex', gap:16, fontSize:11 }}>
-                <span style={{ color:'#22c55e', fontWeight:700 }}>
+                <span style={{ color:'var(--fs-success)', fontWeight:700 }}>
                   +{fC(lancamentos.filter(r=>r.tipo==='entrada').reduce((a,c)=>a+Number(c.valor),0))}
                 </span>
-                <span style={{ color:'#ef4444', fontWeight:700 }}>
+                <span style={{ color:'var(--fs-danger)', fontWeight:700 }}>
                   -{fC(lancamentos.filter(r=>r.tipo==='saida').reduce((a,c)=>a+Number(c.valor),0))}
                 </span>
               </div>
@@ -985,13 +985,13 @@ export default function GestaoFluxoCaixaPage() {
                 <div key={r.id}
                   style={{ display:'grid', gridTemplateColumns:'40px 1fr 140px 100px 132px 116px 130px 96px', gap:8, padding:'6px 16px', minHeight:36,
                     borderBottom: isLast ? 'none' : '1px solid rgba(var(--fs-border-rgb,55,65,81),0.5)',
-                    background: isSel ? 'rgba(59,130,246,0.06)' : 'transparent',
+                    background: isSel ? 'rgba(var(--fs-brand-rgb),0.06)' : 'transparent',
                     alignItems:'center', transition:'background 0.1s',
                   }}
                   onMouseEnter={e=>{ if(!isSel) e.currentTarget.style.background='var(--fs-hover)' }}
                   onMouseLeave={e=>{ if(!isSel) e.currentTarget.style.background='transparent' }}
                 >
-                  <div><input type="checkbox" checked={isSel} onChange={()=>toggleSelect(r.id)} style={{ cursor:'pointer', accentColor:'#3b82f6', width:14, height:14 }} /></div>
+                  <div><input type="checkbox" checked={isSel} onChange={()=>toggleSelect(r.id)} style={{ cursor:'pointer', accentColor:'var(--fs-brand)', width:14, height:14 }} /></div>
 
                   {/* Descrição */}
                   <div style={{ fontSize:12.5, color:'var(--fs-text-1)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:8 }}>
@@ -1044,7 +1044,7 @@ export default function GestaoFluxoCaixaPage() {
                     {(r.status || 'aberto') !== 'pago' && (r.status || 'aberto') !== 'cancelado' && (
                       <button onClick={()=>handleBaixar(r)} title="Baixar (marcar como liquidado hoje)"
                         style={{ background:'transparent', border:'1px solid transparent', borderRadius:6, padding:'5px 6px', cursor:'pointer', color:'var(--fs-text-4)', transition:'all 0.15s', display:'flex', alignItems:'center' }}
-                        onMouseEnter={e=>{ e.currentTarget.style.background='rgba(34,197,94,0.1)'; e.currentTarget.style.color='var(--fs-success)'; e.currentTarget.style.borderColor='rgba(34,197,94,0.25)' }}
+                        onMouseEnter={e=>{ e.currentTarget.style.background='rgba(var(--fs-success-rgb),0.1)'; e.currentTarget.style.color='var(--fs-success)'; e.currentTarget.style.borderColor='rgba(var(--fs-success-rgb),0.25)' }}
                         onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--fs-text-4)'; e.currentTarget.style.borderColor='transparent' }}
                       >
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
@@ -1052,14 +1052,14 @@ export default function GestaoFluxoCaixaPage() {
                     )}
                     <button onClick={()=>openEdit(r)} title="Editar"
                       style={{ background:'transparent', border:'1px solid transparent', borderRadius:6, padding:'5px 6px', cursor:'pointer', color:'var(--fs-text-4)', transition:'all 0.15s', display:'flex', alignItems:'center' }}
-                      onMouseEnter={e=>{ e.currentTarget.style.background='rgba(59,130,246,0.1)'; e.currentTarget.style.color='#60a5fa'; e.currentTarget.style.borderColor='rgba(59,130,246,0.2)' }}
+                      onMouseEnter={e=>{ e.currentTarget.style.background='rgba(var(--fs-brand-rgb),0.1)'; e.currentTarget.style.color='var(--fs-brand-text)'; e.currentTarget.style.borderColor='rgba(var(--fs-brand-rgb),0.2)' }}
                       onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--fs-text-4)'; e.currentTarget.style.borderColor='transparent' }}
                     >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
                     <button onClick={()=>setDelItem(r)} title="Excluir"
                       style={{ background:'transparent', border:'1px solid transparent', borderRadius:6, padding:'5px 6px', cursor:'pointer', color:'var(--fs-text-4)', transition:'all 0.15s', display:'flex', alignItems:'center' }}
-                      onMouseEnter={e=>{ e.currentTarget.style.background='rgba(239,68,68,0.1)'; e.currentTarget.style.color='#ef4444'; e.currentTarget.style.borderColor='rgba(239,68,68,0.2)' }}
+                      onMouseEnter={e=>{ e.currentTarget.style.background='rgba(var(--fs-danger-rgb),0.1)'; e.currentTarget.style.color='var(--fs-danger)'; e.currentTarget.style.borderColor='rgba(var(--fs-danger-rgb),0.2)' }}
                       onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--fs-text-4)'; e.currentTarget.style.borderColor='transparent' }}
                     >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>

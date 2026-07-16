@@ -20,57 +20,55 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --fs-bg:        #0f172a;
-  --fs-surface:   #1e293b;
-  --fs-surface-2: #263548;
-  --fs-surface-3: #2d3f55;
+  --fs-bg:        #0d1117;
+  --fs-surface:   #161c26;
+  --fs-surface-2: #1b2330;
+  --fs-surface-3: #212b3b;
 
-  --fs-border:    #334155;
-  --fs-border-2:  #475569;
+  --fs-border:    #26303f;
+  --fs-border-2:  #364357;
 
   --fs-hover:   rgba(255, 255, 255, 0.03);
   --fs-hover-2: rgba(255, 255, 255, 0.055);
 
-  --fs-brand:      #3b82f6;
-  --fs-brand-dark: #2563eb;
-  --fs-brand-deep: #1e3a8a;
-  --fs-brand-text: #60a5fa;
-  --fs-brand-glow: rgba(59, 130, 246, 0.12);
+  --fs-brand:      #14b8a6;
+  --fs-brand-dark: #0d9488;
+  --fs-brand-deep: #115e59;
+  --fs-brand-text: #2dd4bf;
+  --fs-brand-glow: rgba(20, 184, 166, 0.12);
 
-  /* Texto — todos AA ou superior sobre --fs-surface */
-  --fs-text-1: #f1f5f9;  /* 13.35:1 AAA */
-  --fs-text-2: #94a3b8;  /*  5.71:1 AA  */
-  --fs-text-3: #8aaabe;  /*  5.97:1 AA  */
-  --fs-text-4: #7b96ab;  /*  4.65:1 AA  — CORRIGIDO */
+  /* Texto — todos AA ou superior sobre --fs-surface (#161c26) */
+  --fs-text-1: #e9edf2;
+  --fs-text-2: #9aa7b5;
+  --fs-text-3: #8ca6ba;
+  --fs-text-4: #7e96a9;
 
-  /* Semânticas — todas AA sobre --fs-surface */
-  --fs-success: #10b981;  /* 5.77:1 AA ✅ */
-  --fs-danger:  #f87171;  /* 6.08:1 AA ✅ — CORRIGIDO */
-  --fs-warning: #f59e0b;  /* 6.81:1 AA ✅ */
-  --fs-purple:  #8b5cf6;  /* 4.55:1 AA ✅ */
+  /* Semânticas — AA sobre --fs-surface */
+  --fs-success: #34d399;
+  --fs-danger:  #f87171;
+  --fs-warning: #f59e0b;
+  --fs-purple:  #a78bfa;
 
-  /* Backgrounds semânticos */
-  --fs-success-bg: rgba(16, 185, 129, 0.10);
+  --fs-success-bg: rgba(52, 211, 153, 0.10);
   --fs-danger-bg:  rgba(248, 113, 113, 0.10);
   --fs-warning-bg: rgba(245, 158, 11, 0.10);
-  --fs-purple-bg:  rgba(139, 92, 246, 0.10);
+  --fs-purple-bg:  rgba(167, 139, 250, 0.10);
 
-  /* RGB para rgba() inline */
-  --fs-brand-rgb:   59, 130, 246;
-  --fs-success-rgb: 16, 185, 129;
+  --fs-brand-rgb:   20, 184, 166;
+  --fs-success-rgb: 52, 211, 153;
   --fs-danger-rgb:  248, 113, 113;
   --fs-warning-rgb: 245, 158, 11;
-  --fs-purple-rgb:  139, 92, 246;
+  --fs-purple-rgb:  167, 139, 250;
 
-  --fs-scrollbar-track: #1e293b;
-  --fs-scrollbar-thumb: #334155;
-  --fs-input-bg:     #0f172a;
-  --fs-input-border: #334155;
+  --fs-scrollbar-track: #161c26;
+  --fs-scrollbar-thumb: #26303f;
+  --fs-input-bg:     #0d1117;
+  --fs-input-border: #26303f;
   --fs-input-filter: invert(0.5);
 
-  /* Sombras */
   --fs-shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
   --fs-shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+
   --fs-shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
 }
 
@@ -84,25 +82,26 @@
    warning #b45309 →  7.73:1 AA  ✅ (era #d97706 → 3.19:1 ⚠️)
    danger  #dc2626 →  4.83:1 AA  ✅
    ─────────────────────────────────────────────────────────────── */
+
 [data-theme="light"] {
   color-scheme: light;
 
-  --fs-bg:        #f8fafc;
+  --fs-bg:        #f7f9fa;
   --fs-surface:   #ffffff;
-  --fs-surface-2: #f1f5f9;
-  --fs-surface-3: #e2e8f0;
+  --fs-surface-2: #f1f4f6;
+  --fs-surface-3: #e5eaee;
 
-  --fs-border:    #e2e8f0;
-  --fs-border-2:  #cbd5e1;
+  --fs-border:    #e3e8ec;
+  --fs-border-2:  #cbd4db;
 
   --fs-hover:   rgba(15, 23, 42, 0.045);
   --fs-hover-2: rgba(15, 23, 42, 0.075);
 
-  --fs-brand:      #2563eb;
-  --fs-brand-dark: #1d4ed8;
-  --fs-brand-deep: #1e40af;
-  --fs-brand-text: #1d4ed8;
-  --fs-brand-glow: rgba(37, 99, 235, 0.08);
+  --fs-brand:      #0d9488;
+  --fs-brand-dark: #0f766e;
+  --fs-brand-deep: #115e59;
+  --fs-brand-text: #0f766e;  /* 5.3:1 AA sobre branco */
+  --fs-brand-glow: rgba(13, 148, 136, 0.08);
 
   --fs-text-1: #0f172a;  /* 17.85:1 AAA */
   --fs-text-2: #334155;  /* 10.35:1 AAA */
@@ -119,7 +118,7 @@
   --fs-warning-bg: rgba(180, 83, 9, 0.08);
   --fs-purple-bg:  rgba(109, 40, 217, 0.08);
 
-  --fs-brand-rgb:   37, 99, 235;
+  --fs-brand-rgb:   13, 148, 136;
   --fs-success-rgb: 4, 120, 87;
   --fs-danger-rgb:  220, 38, 38;
   --fs-warning-rgb: 180, 83, 9;
@@ -140,12 +139,14 @@
 *, *::before, *::after { box-sizing: border-box; padding: 0; margin: 0; }
 
 /* ─── Tipografia proprietária ──────────────────────────────────────────────
-   Display (títulos): Sora — geométrica, assinatura visual do produto
-   Body/UI: Inter — legibilidade em densidade alta
+   Display (títulos): Space Grotesk — geometria com personalidade (Direção 3)
+   Body/UI: Manrope — legibilidade em densidade alta
+   Números: JetBrains Mono — colunas financeiras com aspecto de auditoria
    Valores financeiros: algarismos tabulares em todas as tabelas           */
 :root {
-  --fs-font-body:    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --fs-font-display: 'Sora Variable', var(--fs-font-body);
+  --fs-font-body:    'Manrope Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fs-font-display: 'Space Grotesk Variable', var(--fs-font-body);
+  --fs-font-num:     'JetBrains Mono Variable', ui-monospace, 'SF Mono', Consolas, monospace;
 }
 
 h1, h2, h3 {
@@ -154,6 +155,10 @@ h1, h2, h3 {
 }
 
 /* Algarismos tabulares em células de tabela e na classe utilitária .fs-num */
+.fs-num {
+  font-family: var(--fs-font-num);
+  font-size: 0.94em; /* mono é visualmente maior — compensa */
+}
 td, th, .fs-num {
   font-variant-numeric: tabular-nums lining-nums;
 }

@@ -1010,29 +1010,6 @@ export default function ImportacaoPage() {
     <div style={{ color: 'var(--fs-text-1)', width: '100%' }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Banner: layout personalizado ativo */}
-      {activeLayout && (
-        <div style={{ background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.2)', borderRadius:10, padding:'10px 16px', marginBottom:16, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <span style={{ fontSize:16 }}>⚙️</span>
-            <div>
-              <span style={{ fontSize:13, fontWeight:700, color:'#60a5fa' }}>Layout ativo: {activeLayout.nome}</span>
-              {activeLayout.descricao && <span style={{ fontSize:11, color:'var(--fs-text-4)', marginLeft:8 }}>{activeLayout.descricao}</span>}
-            </div>
-          </div>
-          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-            <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>
-              Sep: <strong style={{ color:'var(--fs-text-3)' }}>{activeLayout.separador === '\t' ? 'TAB' : activeLayout.separador}</strong>
-              {' · '}Data: <strong style={{ color:'var(--fs-text-3)' }}>{activeLayout.formato_data}</strong>
-              {' · '}{Object.keys(activeLayout.colunas || {}).length} colunas mapeadas
-              {' · '}{(activeLayout.tipo_regras || []).length} regras de tipo
-            </span>
-            <button onClick={() => setActiveLayout(null)} style={{ background:'transparent', border:'1px solid rgba(59,130,246,0.3)', color:'#60a5fa', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
-              Usar padrão
-            </button>
-          </div>
-        </div>
-      )}
       <ConfirmReplaceModal />
       {editingRow && (
         <MappingModal
@@ -1122,8 +1099,8 @@ export default function ImportacaoPage() {
         )}
       </div>
 
-      {/* Área de upload */}
-      {activeTab === 'dre' ? (
+      {/* Área de upload — oculta quando o módulo está integrado via API */}
+      {(activeTab === 'dre' ? apiAtivo.dre : apiAtivo.fluxo) ? null : activeTab === 'dre' ? (
         dataDre.length === 0 ? (
           <DropZone
             onFile={f => processFile(f, 'dre')} fileRef={fileRefDre}

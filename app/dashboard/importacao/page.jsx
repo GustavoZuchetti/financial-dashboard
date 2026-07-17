@@ -301,6 +301,9 @@ function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
 
   // Filtrar contas por módulo
   const contasFiltradas = (planoContas || []).filter(c => {
+    // Plano é propagado por entidade: mostrar só as contas da empresa
+    // selecionada (senão cada conta aparece 1x por empresa da org)
+    if (empresaId && c.empresa_id && c.empresa_id !== empresaId) return false
     if (modulo === 'dre') return ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','imposto_lucro','investimento'].includes(c.tipo)
     if (modulo === 'fluxo') return ['entrada','saida','fluxo_entrada','fluxo_saida'].includes(c.tipo)
     return true
@@ -1013,7 +1016,7 @@ export default function ImportacaoPage() {
       <ConfirmReplaceModal />
       {editingRow && (
         <MappingModal
-          row={editingRow} planoContas={planoContas}
+          row={editingRow} planoContas={(planoContas || []).filter(c => !empresaId || !c.empresa_id || c.empresa_id === empresaId)}
           modulo={activeTab} saving={savingMapping}
           onSave={saveMapping} onClose={() => setEditingRow(null)}
         />

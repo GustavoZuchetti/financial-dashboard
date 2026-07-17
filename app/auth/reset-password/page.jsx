@@ -38,10 +38,10 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh', background: '#080e1a',
+    <div data-theme="dark" style={{
+      minHeight: '100vh', background: 'var(--fs-bg)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontFamily: "'DM Sans', 'Segoe UI', sans-serif", padding: '24px',
+      fontFamily: 'var(--fs-font-body)', padding: '24px',
     }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap'); @keyframes spin{to{transform:rotate(360deg)}}`}</style>
 

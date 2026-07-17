@@ -56,8 +56,8 @@ function AceitarConviteForm() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f1117', padding:16 }}>
-      <div style={{ width:'100%', maxWidth:440, background:'#1a1f2e', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:40 }}>
+    <div data-theme="dark" style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--fs-bg)', padding:16 }}>
+      <div style={{ width:'100%', maxWidth:440, background:'var(--fs-surface)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:40 }}>
 
         <div style={{ textAlign:'center', marginBottom:32 }}>
           <div style={{ width:52,height:52,background:'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))',borderRadius:13,margin:'0 auto 14px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:800,color:'#fff' }}>FS</div>
@@ -125,7 +125,7 @@ function AceitarConviteForm() {
 
 export default function AceitarConvite() {
   return (
-    <Suspense fallback={<div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f1117', color:'var(--fs-text-2)' }}>Carregando...</div>}>
+    <Suspense fallback={<div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--fs-bg)', color:'var(--fs-text-2)' }}>Carregando...</div>}>
       <AceitarConviteForm />
     </Suspense>
   )

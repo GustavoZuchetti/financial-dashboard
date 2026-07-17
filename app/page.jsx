@@ -75,7 +75,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
+    <div data-theme="dark" style={{
       minHeight: '100vh',
       background: 'var(--fs-bg)',
       display: 'flex',

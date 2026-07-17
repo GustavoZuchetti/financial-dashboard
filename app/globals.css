@@ -31,11 +31,11 @@
   --fs-hover:   rgba(255, 255, 255, 0.03);
   --fs-hover-2: rgba(255, 255, 255, 0.055);
 
-  --fs-brand:      #14b8a6;
-  --fs-brand-dark: #0d9488;
-  --fs-brand-deep: #115e59;
-  --fs-brand-text: #2dd4bf;
-  --fs-brand-glow: rgba(20, 184, 166, 0.12);
+  --fs-brand:      #3b82f6;  /* azul — cor de destaque da marca Facesign */
+  --fs-brand-dark: #2563eb;
+  --fs-brand-deep: #1e3a8a;
+  --fs-brand-text: #60a5fa;
+  --fs-brand-glow: rgba(59, 130, 246, 0.12);
 
   /* Texto — todos AA ou superior sobre --fs-surface (#161c26) */
   --fs-text-1: #e9edf2;
@@ -54,7 +54,7 @@
   --fs-warning-bg: rgba(245, 158, 11, 0.10);
   --fs-purple-bg:  rgba(167, 139, 250, 0.10);
 
-  --fs-brand-rgb:   20, 184, 166;
+  --fs-brand-rgb:   59, 130, 246;
   --fs-success-rgb: 52, 211, 153;
   --fs-danger-rgb:  248, 113, 113;
   --fs-warning-rgb: 245, 158, 11;
@@ -97,11 +97,11 @@
   --fs-hover:   rgba(15, 23, 42, 0.045);
   --fs-hover-2: rgba(15, 23, 42, 0.075);
 
-  --fs-brand:      #0d9488;
-  --fs-brand-dark: #0f766e;
-  --fs-brand-deep: #115e59;
-  --fs-brand-text: #0f766e;  /* 5.3:1 AA sobre branco */
-  --fs-brand-glow: rgba(13, 148, 136, 0.08);
+  --fs-brand:      #2563eb;  /* azul — cor de destaque da marca Facesign */
+  --fs-brand-dark: #1d4ed8;
+  --fs-brand-deep: #1e40af;
+  --fs-brand-text: #1d4ed8;  /* 6.3:1 AA sobre branco */
+  --fs-brand-glow: rgba(37, 99, 235, 0.08);
 
   --fs-text-1: #0f172a;  /* 17.85:1 AAA */
   --fs-text-2: #334155;  /* 10.35:1 AAA */
@@ -118,7 +118,7 @@
   --fs-warning-bg: rgba(180, 83, 9, 0.08);
   --fs-purple-bg:  rgba(109, 40, 217, 0.08);
 
-  --fs-brand-rgb:   13, 148, 136;
+  --fs-brand-rgb:   37, 99, 235;
   --fs-success-rgb: 4, 120, 87;
   --fs-danger-rgb:  220, 38, 38;
   --fs-warning-rgb: 180, 83, 9;

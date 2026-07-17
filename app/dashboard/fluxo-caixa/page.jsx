@@ -431,10 +431,10 @@ export default function FluxoCaixaPage() {
           {/* Filtro de período */}
           <div style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'7px 12px' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fs-text-4)" strokeWidth="2"><path d="M3 4h18M3 8h18M3 12h18M3 16h10"/></svg>
-            <input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)}
+            <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} value={startDate} onChange={e=>setStartDate(e.target.value)}
               style={{ background:'transparent', border:'none', color:'var(--fs-text-2)', fontSize:12, outline:'none', colorScheme:'dark' }} />
             <span style={{ color:'var(--fs-text-4)', fontSize:12 }}>→</span>
-            <input type="date" value={endDate} onChange={e=>setEndDate(e.target.value)}
+            <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} value={endDate} onChange={e=>setEndDate(e.target.value)}
               style={{ background:'transparent', border:'none', color:'var(--fs-text-2)', fontSize:12, outline:'none', colorScheme:'dark' }} />
           </div>
 

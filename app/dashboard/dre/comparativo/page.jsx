@@ -73,9 +73,9 @@ const DREColumn = ({ label, startDate, endDate, waterfallData, kpis, onDateChang
     <div style={{ ...S.card, padding:'12px 16px' }}>
       <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:8 }}>{label}</div>
       <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-        <input type="date" style={S.input} value={startDate} onChange={e=>onDateChange('start', e.target.value)} />
+        <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} style={S.input} value={startDate} onChange={e=>onDateChange('start', e.target.value)} />
         <SvgIcon name="arrowRight" size={11} color="var(--fs-text-4)" />
-        <input type="date" style={S.input} value={endDate}   onChange={e=>onDateChange('end',   e.target.value)} />
+        <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} style={S.input} value={endDate}   onChange={e=>onDateChange('end',   e.target.value)} />
       </div>
     </div>
 

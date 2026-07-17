@@ -119,62 +119,29 @@ export default function CicloFinanceiroPage() {
         hist.push({ ano: a, mes: m })
       }
 
-      if (!isConsolidado || ids.length === 1) {
-        // ── Caminho original: lê a tabela pré-calculada ciclo_financeiro ──
-        const empId = ids[0]
-        const { data: atual } = await supabase.from('ciclo_financeiro')
-          .select('*').eq('empresa_id', empId).eq('ano', anoSel).eq('mes', mesSel).single()
-        setCicloAtual(atual || null)
-
-        const { data: histData = [] } = await supabase.from('ciclo_financeiro')
-          .select('ano,mes,pmr,pmp,pme')
-          .eq('empresa_id', empId)
-          .in('ano', [...new Set(hist.map(h=>h.ano))])
-          .order('ano').order('mes')
-
-        const histMapped = hist.map(({ ano, mes }) => {
-          const found = (histData||[]).find(d => d.ano === ano && d.mes === mes)
-          const pmr = Number(found?.pmr || 0)
-          const pmp = Number(found?.pmp || 0)
-          const pme = Number(found?.pme || 0)
-          const co  = pmr + pme
-          const cf  = co  - pmp
-          return {
-            name:    `${MESES_LABEL[mes-1]}/${String(ano).slice(2)}`,
-            pmr: Math.round(pmr), pmp: Math.round(pmp), pme: Math.round(pme),
-            cicloOp: Math.round(co), cicloCF: Math.round(cf), temDado: !!found,
-          }
-        })
-        setHistorico(histMapped)
-
-        const mesStart = `${anoSel}-${String(mesSel).padStart(2,'0')}-01`
-        const mesEnd   = new Date(anoSel, mesSel, 0).toISOString().split('T')[0]
-        const { data: fc = [] } = await supabase.from('fluxo_caixa')
-          .select('tipo,valor,data').eq('empresa_id', empId).gte('data', mesStart).lte('data', mesEnd)
-
-        const entradas = (fc||[]).filter(f=>f.tipo==='entrada').reduce((a,c)=>a+Number(c.valor),0)
-        const saidas   = (fc||[]).filter(f=>f.tipo==='saida').reduce((a,c)=>a+Number(c.valor),0)
-        setFcMes({ entradas, saidas, cntE: (fc||[]).filter(f=>f.tipo==='entrada').length, cntS: (fc||[]).filter(f=>f.tipo==='saida').length, total: fc?.length || 0 })
-
-      } else {
-        // ── Consolidado (múltiplas entidades): calcular AO VIVO a partir do
-        // fluxo_caixa bruto de todas as entidades selecionadas. PMR/PMP são
-        // razões (dias do mês / nº de lançamentos) — por isso é preciso somar
-        // as CONTAGENS de todas as entidades antes de calcular a razão, nunca
-        // somar ou tirar média dos PMR/PMP já calculados de cada entidade
-        // isoladamente (isso produziria um número matematicamente errado).
+      // ═══ CÁLCULO UNIFICADO (single e consolidado) — PMR/PMP REAIS ═══
+      // PMR = média ponderada por valor dos dias entre EMISSÃO (competência)
+      // e RECEBIMENTO efetivo (data_liquidacao) dos títulos de entrada
+      // liquidados no mês. PMP idem para saídas. A fórmula antiga
+      // (dias do mês / nº de lançamentos) media frequência, não prazo.
+      // Consolidação: somar numeradores e denominadores de todas as
+      // entidades ANTES da razão (nunca média de razões por entidade).
+      {
         const anoMin = Math.min(...hist.map(h=>h.ano))
         const anoMax = Math.max(...hist.map(h=>h.ano))
         const rangeStart = `${anoMin}-01-01`
         const rangeEnd   = new Date(anoMax, 11, 31).toISOString().split('T')[0]
 
-        // Busca paginada (pode passar de 1000 linhas com várias entidades)
+        // Títulos LIQUIDADOS no range (base do prazo é a liquidação)
         let all = [], pg = 0
         while (true) {
-          const { data: batch } = await supabase.from('fluxo_caixa')
-            .select('tipo,valor,data').in('empresa_id', ids)
-            .gte('data', rangeStart).lte('data', rangeEnd)
+          let q = supabase.from('fluxo_caixa')
+            .select('tipo,valor,valor_liquidado,competencia,data,data_liquidacao,status')
+            .in('status', ['pago','parcial'])
+            .gte('data_liquidacao', rangeStart).lte('data_liquidacao', rangeEnd)
             .range(pg * 1000, (pg + 1) * 1000 - 1)
+          q = ids.length > 1 ? q.in('empresa_id', ids) : q.eq('empresa_id', ids[0])
+          const { data: batch } = await q
           if (!batch || batch.length === 0) break
           all = all.concat(batch)
           if (batch.length < 1000) break
@@ -182,24 +149,29 @@ export default function CicloFinanceiroPage() {
           if (pg > 50) break
         }
 
-        // Agrupar por ano-mês (contagens combinadas de todas as entidades)
+        // Acumula por mês de LIQUIDAÇÃO: Σ(valor×dias) e Σvalor
         const porMes = {}
+        let semEmissao = 0
         all.forEach(f => {
-          if (!f.data) return
-          const d = new Date(f.data + 'T00:00:00')
+          if (!f.data_liquidacao) return
+          const emissao = f.competencia && f.competencia !== '0000-00-00' ? f.competencia : null
+          if (!emissao) { semEmissao++; return }
+          const dias = Math.round((new Date(f.data_liquidacao) - new Date(emissao)) / 86400000)
+          if (dias < 0 || dias > 730) return  // datas incoerentes fora da base
+          const d = new Date(f.data_liquidacao + 'T00:00:00')
           const key = `${d.getFullYear()}-${d.getMonth()+1}`
-          if (!porMes[key]) porMes[key] = { cntE: 0, cntS: 0 }
-          if (f.tipo === 'entrada') porMes[key].cntE++
-          else if (f.tipo === 'saida') porMes[key].cntS++
+          if (!porMes[key]) porMes[key] = { numE:0, denE:0, cntE:0, numS:0, denS:0, cntS:0 }
+          const v = Math.abs(Number(f.status === 'parcial' ? (f.valor_liquidado ?? f.valor) : f.valor)) || 0
+          if (v <= 0) return
+          if (f.tipo === 'entrada') { porMes[key].numE += v*dias; porMes[key].denE += v; porMes[key].cntE++ }
+          else if (f.tipo === 'saida') { porMes[key].numS += v*dias; porMes[key].denS += v; porMes[key].cntS++ }
         })
 
         const histMapped = hist.map(({ ano, mes }) => {
-          const key = `${ano}-${mes}`
-          const g = porMes[key]
-          const diasNoMes = new Date(ano, mes, 0).getDate()
-          const pmr = g && g.cntE > 0 ? diasNoMes / g.cntE : 0
-          const pmp = g && g.cntS > 0 ? diasNoMes / g.cntS : 0
-          const pme = 0
+          const g = porMes[`${ano}-${mes}`]
+          const pmr = g && g.denE > 0 ? g.numE / g.denE : 0
+          const pmp = g && g.denS > 0 ? g.numS / g.denS : 0
+          const pme = 0  // empresa de serviços — sem estoque
           const co  = pmr + pme
           const cf  = co  - pmp
           return {
@@ -210,14 +182,14 @@ export default function CicloFinanceiroPage() {
         })
         setHistorico(histMapped)
 
-        // Mês selecionado (último item do histórico)
-        const atualKey = `${anoSel}-${mesSel}`
-        const gAtual = porMes[atualKey]
-        const diasNoMesSel = new Date(anoSel, mesSel, 0).getDate()
-        const pmrAtual = gAtual && gAtual.cntE > 0 ? diasNoMesSel / gAtual.cntE : 0
-        const pmpAtual = gAtual && gAtual.cntS > 0 ? diasNoMesSel / gAtual.cntS : 0
-        setCicloAtual(gAtual ? { pmr: pmrAtual, pmp: pmpAtual, pme: 0 } : null)
-
+        // Mês selecionado
+        const gAtual = porMes[`${anoSel}-${mesSel}`]
+        const pmrAtual = gAtual && gAtual.denE > 0 ? gAtual.numE / gAtual.denE : 0
+        const pmpAtual = gAtual && gAtual.denS > 0 ? gAtual.numS / gAtual.denS : 0
+        setCicloAtual(gAtual ? { pmr: pmrAtual, pmp: pmpAtual, pme: 0,
+          valorE: gAtual.denE, cntE: gAtual.cntE, valorS: gAtual.denS, cntS: gAtual.cntS } : null)
+      }
+      {
         // Fluxo do mês selecionado (valores monetários)
         const mesStart = `${anoSel}-${String(mesSel).padStart(2,'0')}-01`
         const mesEnd   = new Date(anoSel, mesSel, 0).toISOString().split('T')[0]

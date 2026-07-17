@@ -331,9 +331,9 @@ export default function DREGeral() {
           <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--fs-surface)', padding:'7px 14px', borderRadius:8, border:'1px solid var(--fs-border)' }}>
               <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>Período:</span>
-              <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
+              <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
               <span style={{ color:'var(--fs-text-4)' }}>→</span>
-              <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
+              <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
             </div>
             <button onClick={()=>setShowPres(true)} style={{ background:'linear-gradient(135deg,#1e3a5f,var(--fs-brand-dark))',border:'1px solid var(--fs-brand-dark)',color:'#bfdbfe',padding:'8px 16px',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:700 }}>
               <span style={{display:'inline-flex',alignItems:'center',gap:6}}><SvgIcon name="presentation" size={13} color="currentColor" />Apresentação</span>

@@ -676,7 +676,7 @@ export default function GestaoFluxoCaixaPage() {
               {/* Data */}
               <div>
                 <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Data *</div>
-                <input type="date" value={editForm.data} onChange={e=>setEditForm(f=>({...f,data:e.target.value}))}
+                <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} value={editForm.data} onChange={e=>setEditForm(f=>({...f,data:e.target.value}))}
                   style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'8px 10px', fontSize:13, outline:'none', colorScheme:'dark', width:'100%' }} />
               </div>
               {/* Descrição */}
@@ -728,7 +728,7 @@ export default function GestaoFluxoCaixaPage() {
               {/* Data */}
               <div>
                 <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Data *</div>
-                <input type="date" value={novoForm.data} onChange={e=>setNovoForm(f=>({...f,data:e.target.value}))}
+                <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} value={novoForm.data} onChange={e=>setNovoForm(f=>({...f,data:e.target.value}))}
                   style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', padding:'8px 10px', fontSize:13, outline:'none', colorScheme:'dark', width:'100%' }} />
               </div>
               {/* Descrição */}
@@ -794,10 +794,10 @@ export default function GestaoFluxoCaixaPage() {
         {/* Período */}
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
           <span style={{ fontSize:11, color:'var(--fs-text-4)', fontWeight:600 }}>Período</span>
-          <input type="date" value={startDate} onChange={e=>{setStartDate(e.target.value);setPage(0)}}
+          <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} value={startDate} onChange={e=>{setStartDate(e.target.value);setPage(0)}}
             style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:7, color:'var(--fs-text-2)', fontSize:12, padding:'5px 8px', outline:'none', colorScheme:'dark' }} />
           <SvgIcon name="arrowRight" size={11} color="var(--fs-text-4)" />
-          <input type="date" value={endDate} onChange={e=>{setEndDate(e.target.value);setPage(0)}}
+          <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} value={endDate} onChange={e=>{setEndDate(e.target.value);setPage(0)}}
             style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:7, color:'var(--fs-text-2)', fontSize:12, padding:'5px 8px', outline:'none', colorScheme:'dark' }} />
         </div>
 

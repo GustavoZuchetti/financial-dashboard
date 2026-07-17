@@ -146,9 +146,9 @@ export default function FluxoComparativo() {
           <div key={i} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 16px' }}>
             <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:8 }}>{lbl}</div>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <input type="date" value={s} onChange={ev=>{setS(ev.target.value)}} style={IS}/>
+              <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} value={s} onChange={ev=>{setS(ev.target.value)}} style={IS}/>
               <span style={{ color:'var(--fs-text-4)' }}>→</span>
-              <input type="date" value={e} onChange={ev=>{setE(ev.target.value)}} style={IS}/>
+              <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} value={e} onChange={ev=>{setE(ev.target.value)}} style={IS}/>
             </div>
           </div>
         ))}

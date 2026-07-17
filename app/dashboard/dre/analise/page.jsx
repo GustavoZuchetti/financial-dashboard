@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE, fmtBRL, fmtCompact } from '@/lib/dre-calc'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, ReferenceLine } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, ReferenceLine, ComposedChart} from 'recharts'
 
 const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
@@ -19,6 +19,7 @@ export default function DREAnalise() {
   const [data,       setData]       = useState([])
   const [evolucao,   setEvolucao]   = useState([])
   const [topClientes,setTopClientes]= useState([])
+  const [paretoGastos,setParetoGastos]= useState([])
 
   useEffect(() => {
     const id = localStorage.getItem('empresa_id')
@@ -72,6 +73,23 @@ export default function DREAnalise() {
           .sort((a,b) => b.valor - a.valor)
           .slice(0, 8)
       )
+
+      // ── Pareto de gastos por fornecedor (custos + despesas) ─────
+      const fornMap = {}
+      all.filter(l => ['custo','despesa'].includes(l.tipo)).forEach(l => {
+        const k = (l.descricao || l.categoria || 'Não identificado').trim()
+        fornMap[k] = (fornMap[k] || 0) + Math.abs(Number(l.valor))
+      })
+      const fornOrd = Object.entries(fornMap)
+        .map(([name, valor]) => ({ name, valor }))
+        .sort((a,b) => b.valor - a.valor)
+      const totalGastos = fornOrd.reduce((a,c) => a + c.valor, 0)
+      let acum = 0
+      setParetoGastos(fornOrd.slice(0, 12).map(f => {
+        acum += f.valor
+        return { name: f.name.substring(0,24), valor: f.valor,
+                 acumulado: totalGastos > 0 ? +((acum/totalGastos)*100).toFixed(1) : 0 }
+      }))
     } finally { setLoading(false) }
   }, [empresaId, debouncedStart, debouncedEnd, isConsol])
 
@@ -88,9 +106,9 @@ export default function DREAnalise() {
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center', background:'var(--fs-surface)', padding:'7px 14px', borderRadius:8, border:'1px solid var(--fs-border)' }}>
           <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>Período:</span>
-          <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
+          <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
           <span style={{ color:'var(--fs-text-4)' }}>→</span>
-          <input type="date" style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
+          <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} style={{ background:'var(--fs-input-bg)',border:'1px solid var(--fs-input-border)',borderRadius:6,color:'var(--fs-text-1)',padding:'5px 8px',fontSize:12,outline:'none' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
         </div>
       </div>
 
@@ -143,6 +161,27 @@ export default function DREAnalise() {
             </BarChart>
           </ResponsiveContainer>
         </div>
+      </div>
+
+      {/* Pareto de Gastos por Fornecedor */}
+      <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px', marginBottom:20 }}>
+        <h2 style={{ fontSize:14, fontWeight:700, color:'var(--fs-text-1)', marginBottom:4 }}>Maiores Gastos por Fornecedor — Pareto</h2>
+        <p style={{ fontSize:11.5, color:'var(--fs-text-4)', margin:'0 0 16px' }}>Custos + despesas do período, ordenados. A linha mostra o % acumulado do gasto total — evidencia a concentração.</p>
+        {paretoGastos.length === 0 ? (
+          <div style={{ padding:24, textAlign:'center', color:'var(--fs-text-4)', fontSize:12.5 }}>Sem gastos no período.</div>
+        ) : (
+        <ResponsiveContainer width="100%" height={300}>
+          <ComposedChart data={paretoGastos} margin={{top:10,right:14,left:0,bottom:44}}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} angle={-32} textAnchor="end" tick={{fill:'var(--fs-text-4)',fontSize:10}} height={70} />
+            <YAxis yAxisId="v" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fmtCompact} width={58} />
+            <YAxis yAxisId="p" orientation="right" domain={[0,100]} unit="%" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} width={42} />
+            <Tooltip {...tt} formatter={(v,n)=> n==='% acumulado' ? [`${v}%`, n] : [fmtBRL(v), 'Gasto']} />
+            <Bar yAxisId="v" dataKey="valor" fill="var(--fs-danger)" radius={[4,4,0,0]} barSize={26} name="Gasto" />
+            <Line yAxisId="p" type="monotone" dataKey="acumulado" stroke="var(--fs-warning)" strokeWidth={2.5} dot={{r:3, fill:'var(--fs-warning)'}} name="% acumulado" />
+          </ComposedChart>
+        </ResponsiveContainer>
+        )}
       </div>
 
       {/* Margens mensais */}

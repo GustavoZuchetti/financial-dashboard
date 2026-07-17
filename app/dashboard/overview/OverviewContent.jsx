@@ -184,11 +184,11 @@ const CustomPeriodPicker = ({ value, onChange, onClose }) => {
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
         <div>
           <label style={labelStyle}>Data inicial</label>
-          <input type="date" value={start} onChange={e => setStart(e.target.value)} style={inputStyle} max={end} />
+          <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} value={start} onChange={e => setStart(e.target.value)} style={inputStyle} max={end} />
         </div>
         <div>
           <label style={labelStyle}>Data final</label>
-          <input type="date" value={end} onChange={e => setEnd(e.target.value)} style={inputStyle} min={start} />
+          <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} value={end} onChange={e => setEnd(e.target.value)} style={inputStyle} min={start} />
         </div>
       </div>
 
@@ -585,7 +585,7 @@ export default function OverviewPage() {
                         <Pie data={recComp} cx="50%" cy="50%" innerRadius={48} outerRadius={72} dataKey="value" paddingAngle={2}>
                           {recComp.map((_,i)=><Cell key={i} fill={PIE_COLORS[i%PIE_COLORS.length]} />)}
                         </Pie>
-                        <Tooltip formatter={fC} contentStyle={{background:'var(--fs-bg)',border:'1px solid var(--fs-border)',borderRadius:8,fontSize:12}} cursor={false} />
+                        <Tooltip formatter={fC} wrapperStyle={{zIndex:30}} contentStyle={{background:'var(--fs-bg)',border:'1px solid var(--fs-border)',borderRadius:8,fontSize:12,whiteSpace:'nowrap'}} cursor={false} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', textAlign:'center', pointerEvents:'none' }}>

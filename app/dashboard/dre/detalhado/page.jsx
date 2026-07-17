@@ -448,9 +448,9 @@ export default function DREDetalhado() {
 
         <div style={{ display:'flex', gap:8, alignItems:'center', background:'var(--fs-surface)', padding:'8px 14px', borderRadius:10, border:'1px solid var(--fs-border)' }}>
           <span style={{ fontSize:12, color:'var(--fs-text-4)' }}>Período:</span>
-          <input type="date" style={{ background:'transparent', border:'none', color:'var(--fs-text-1)', fontSize:12, outline:'none', colorScheme:'dark' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
+          <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} style={{ background:'transparent', border:'none', color:'var(--fs-text-1)', fontSize:12, outline:'none', colorScheme:'dark' }} value={startDate} onChange={e=>setStartDate(e.target.value)} />
           <SvgIcon name="arrowRight" size={12} color="var(--fs-text-4)" />
-          <input type="date" style={{ background:'transparent', border:'none', color:'var(--fs-text-1)', fontSize:12, outline:'none', colorScheme:'dark' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
+          <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} style={{ background:'transparent', border:'none', color:'var(--fs-text-1)', fontSize:12, outline:'none', colorScheme:'dark' }} value={endDate} onChange={e=>setEndDate(e.target.value)} />
         </div>
         <button onClick={handleExport} disabled={loading || !data.length} title="Exportar para Excel (DRE + lançamentos do período)"
           style={{ display:'flex', alignItems:'center', gap:6, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'9px 16px', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor: (loading || !data.length) ? 'not-allowed' : 'pointer', opacity: (loading || !data.length) ? 0.5 : 1 }}>

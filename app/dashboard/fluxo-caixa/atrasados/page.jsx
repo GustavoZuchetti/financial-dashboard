@@ -173,6 +173,7 @@ export default function AtrasadosPage() {
               <XAxis dataKey="faixa" tick={{ fontSize:11, fill:'var(--fs-text-4)' }} axisLine={false} tickLine={false} />
               <YAxis tickFormatter={fC} tick={{ fontSize:10, fill:'var(--fs-text-4)' }} axisLine={false} tickLine={false} width={64} />
               <Tooltip formatter={(v, n) => [fCFull(v), n === 'receber' ? 'A Receber' : 'A Pagar']}
+                cursor={{ fill: 'var(--fs-hover-2)' }}
                 contentStyle={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, fontSize:12 }} />
               <Legend formatter={(v) => v === 'receber' ? 'A Receber' : 'A Pagar'} wrapperStyle={{ fontSize:12 }} />
               <Bar dataKey="receber" name="receber" fill="var(--fs-warning, var(--fs-warning))" radius={[4,4,0,0]} isAnimationActive={false} />

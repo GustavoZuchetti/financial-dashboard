@@ -121,9 +121,9 @@ export default function FluxoCaixaAnalise() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--fs-surface)', padding: '8px 14px', borderRadius: 8, border: '1px solid var(--fs-border)' }}>
           <span style={{ fontSize: 12, color: 'var(--fs-text-4)' }}>Período:</span>
-          <input type="date" style={S.input} value={startDate} onChange={e => setStartDate(e.target.value)} />
+          <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} style={S.input} value={startDate} onChange={e => setStartDate(e.target.value)} />
           <span style={{ color: 'var(--fs-text-4)' }}>→</span>
-          <input type="date" style={S.input} value={endDate}   onChange={e => setEndDate(e.target.value)}   />
+          <input type="date" onClick={e => { try { e.target.showPicker() } catch(_) {} }} style={S.input} value={endDate}   onChange={e => setEndDate(e.target.value)}   />
         </div>
       </div>
 

@@ -77,14 +77,13 @@ export default function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#080e1a',
+      background: 'var(--fs-bg)',
       display: 'flex',
       position: 'relative',
       overflow: 'hidden',
-      fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+      fontFamily: "var(--fs-font-body)",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=DM+Serif+Display:ital@0;1&display=swap');
 
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes fadeUp {
@@ -126,7 +125,7 @@ export default function LoginPage() {
           border: 1px solid rgba(255,255,255,0.1);
           border-radius: 10px;
           padding: 13px 16px;
-          color: #f1f5f9;
+          color: var(--fs-text-1);
           font-size: 14px;
           font-family: inherit;
           outline: none;
@@ -288,12 +287,12 @@ export default function LoginPage() {
                       fontWeight:800, color:'#fff', fontSize:16,
                       letterSpacing:'-0.5px',
                       boxShadow:'0 4px 16px rgba(var(--fs-brand-rgb),0.35)',
-                      fontFamily:"'DM Sans', sans-serif",
+                      fontFamily:"var(--fs-font-body)",
                     }}>FS</div>
                     <span style={{
                       fontSize:18, fontWeight:700, color:'rgba(255,255,255,0.9)',
                       letterSpacing:'-0.3px',
-                      fontFamily:"'DM Sans', sans-serif",
+                      fontFamily:"var(--fs-font-body)",
                     }}>Facesign</span>
                   </>
               }
@@ -307,10 +306,10 @@ export default function LoginPage() {
                 letterSpacing:'2px',
                 textTransform:'uppercase',
                 marginBottom:14,
-                fontFamily:"'DM Sans', sans-serif",
+                fontFamily:"var(--fs-font-body)",
               }}>Plataforma Financeira</div>
               <h1 style={{
-                fontFamily:"'DM Serif Display', Georgia, serif",
+                fontFamily:"var(--fs-font-display)",
                 fontSize:52, fontWeight:400,
                 color:'rgba(241,245,249,0.95)',
                 lineHeight:1.08,
@@ -327,7 +326,7 @@ export default function LoginPage() {
               fontSize:15, color:'rgba(148,163,184,0.7)',
               lineHeight:1.75, marginBottom:44,
               fontWeight:300, maxWidth:400,
-              fontFamily:"'DM Sans', sans-serif",
+              fontFamily:"var(--fs-font-body)",
             }}>
               Visualize, analise e decida com base em dados financeiros consolidados — de múltiplas entidades, em um único painel executivo.
             </p>
@@ -361,8 +360,8 @@ export default function LoginPage() {
                 { label:'Atualização', value:'Tempo real', icon:'◉' },
               ].map(s => (
                 <div key={s.label} className="stat-card">
-                  <div style={{ fontSize:10, color:'rgba(var(--fs-brand-rgb),0.7)', marginBottom:4, letterSpacing:'0.5px', fontFamily:"'DM Sans', sans-serif" }}>{s.icon} {s.label.toUpperCase()}</div>
-                  <div style={{ fontSize:15, fontWeight:700, color:'rgba(241,245,249,0.9)', fontFamily:"'DM Sans', sans-serif" }}>{s.value}</div>
+                  <div style={{ fontSize:10, color:'rgba(var(--fs-brand-rgb),0.7)', marginBottom:4, letterSpacing:'0.5px', fontFamily:"var(--fs-font-body)" }}>{s.icon} {s.label.toUpperCase()}</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:'rgba(241,245,249,0.9)', fontFamily:"var(--fs-font-body)" }}>{s.value}</div>
                 </div>
               ))}
             </div>
@@ -393,7 +392,7 @@ export default function LoginPage() {
             {/* Header do form */}
             <div style={{ marginBottom:36 }}>
               <h2 style={{
-                fontFamily:"'DM Serif Display', Georgia, serif",
+                fontFamily:"var(--fs-font-display)",
                 fontSize:30, fontWeight:400,
                 color:'rgba(241,245,249,0.95)',
                 letterSpacing:'-0.5px',
@@ -403,7 +402,7 @@ export default function LoginPage() {
               </h2>
               <p style={{
                 fontSize:13.5, color:'rgba(148,163,184,0.65)',
-                fontFamily:"'DM Sans', sans-serif",
+                fontFamily:"var(--fs-font-body)",
                 fontWeight:400, margin:0,
               }}>
                 {forgotMode
@@ -418,7 +417,7 @@ export default function LoginPage() {
               <div style={{
                 background:'rgba(var(--fs-danger-rgb),0.08)', border:'1px solid rgba(var(--fs-danger-rgb),0.2)',
                 borderRadius:10, padding:'11px 14px', color:'#fca5a5', fontSize:13, marginBottom:20,
-                display:'flex', alignItems:'center', gap:8, fontFamily:"'DM Sans', sans-serif",
+                display:'flex', alignItems:'center', gap:8, fontFamily:"var(--fs-font-body)",
               }}>
                 <span style={{ fontSize:15 }}>⚠</span> {error}
               </div>
@@ -432,29 +431,29 @@ export default function LoginPage() {
                 {forgotLink ? (
                   /* Link gerado diretamente — exibir na tela */
                   <>
-                    <div style={{ fontSize:15, fontWeight:700, color:'rgba(241,245,249,0.9)', marginBottom:8, fontFamily:"'DM Sans', sans-serif" }}>
+                    <div style={{ fontSize:15, fontWeight:700, color:'rgba(241,245,249,0.9)', marginBottom:8, fontFamily:"var(--fs-font-body)" }}>
                       Link de recuperação gerado
                     </div>
-                    <p style={{ fontSize:13, color:'rgba(148,163,184,0.65)', lineHeight:1.7, marginBottom:20, fontFamily:"'DM Sans', sans-serif" }}>
+                    <p style={{ fontSize:13, color:'rgba(148,163,184,0.65)', lineHeight:1.7, marginBottom:20, fontFamily:"var(--fs-font-body)" }}>
                       Clique no botão abaixo para redefinir sua senha agora:
                     </p>
                     <a href={forgotLink}
-                      style={{ display:'block', background:'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))', color:'#fff', borderRadius:10, padding:'13px 20px', fontSize:14, fontWeight:600, textDecoration:'none', marginBottom:16, fontFamily:"'DM Sans', sans-serif" }}>
+                      style={{ display:'block', background:'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))', color:'#fff', borderRadius:10, padding:'13px 20px', fontSize:14, fontWeight:600, textDecoration:'none', marginBottom:16, fontFamily:"var(--fs-font-body)" }}>
                       Redefinir minha senha →
                     </a>
-                    <p style={{ fontSize:11, color:'rgba(148,163,184,0.4)', lineHeight:1.6, marginBottom:20, fontFamily:"'DM Sans', sans-serif" }}>
+                    <p style={{ fontSize:11, color:'rgba(148,163,184,0.4)', lineHeight:1.6, marginBottom:20, fontFamily:"var(--fs-font-body)" }}>
                       Este link é de uso único e expira em 24 horas.
                     </p>
                   </>
                 ) : (
                   /* E-mail enviado normalmente */
-                  <p style={{ fontSize:13, color:'rgba(148,163,184,0.65)', lineHeight:1.7, marginBottom:24, fontFamily:"'DM Sans', sans-serif" }}>
+                  <p style={{ fontSize:13, color:'rgba(148,163,184,0.65)', lineHeight:1.7, marginBottom:24, fontFamily:"var(--fs-font-body)" }}>
                     Acesse o link enviado para <strong style={{ color:'rgba(241,245,249,0.8)' }}>{email}</strong> e siga as instruções para criar uma nova senha.
                   </p>
                 )}
 
                 <button onClick={() => { setForgotMode(false); setForgotSent(false); setForgotLink(null); setError(null) }}
-                  style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(148,163,184,0.8)', borderRadius:8, padding:'10px 20px', fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:"'DM Sans', sans-serif" }}>
+                  style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(148,163,184,0.8)', borderRadius:8, padding:'10px 20px', fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:"var(--fs-font-body)" }}>
                   Voltar ao login
                 </button>
               </div>
@@ -462,7 +461,7 @@ export default function LoginPage() {
               /* ── Modo: esqueci minha senha ── */
               <form onSubmit={handleForgot} style={{ display:'flex', flexDirection:'column', gap:0 }}>
                 <div style={{ marginBottom:24 }}>
-                  <label style={{ display:'block', fontSize:12.5, fontWeight:500, color:'rgba(148,163,184,0.7)', marginBottom:7, letterSpacing:'0.3px', fontFamily:"'DM Sans', sans-serif", textTransform:'uppercase' }}>E-mail</label>
+                  <label style={{ display:'block', fontSize:12.5, fontWeight:500, color:'rgba(148,163,184,0.7)', marginBottom:7, letterSpacing:'0.3px', fontFamily:"var(--fs-font-body)", textTransform:'uppercase' }}>E-mail</label>
                   <input
                     className="inp-field" type="email" value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -471,15 +470,15 @@ export default function LoginPage() {
                 </div>
                 <button type="submit" className="btn-primary" disabled={loading}>
                   {loading
-                    ? <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontFamily:"'DM Sans', sans-serif" }}>
+                    ? <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontFamily:"var(--fs-font-body)" }}>
                         <span style={{ width:15, height:15, border:'2px solid rgba(255,255,255,0.25)', borderTop:'2px solid #fff', borderRadius:'50%', animation:'spin 0.75s linear infinite', display:'inline-block' }} />
                         Enviando...
                       </span>
-                    : <span style={{ fontFamily:"'DM Sans', sans-serif" }}>Enviar link de recuperação</span>
+                    : <span style={{ fontFamily:"var(--fs-font-body)" }}>Enviar link de recuperação</span>
                   }
                 </button>
                 <button type="button" onClick={() => { setForgotMode(false); setError(null) }}
-                  style={{ marginTop:14, background:'transparent', border:'none', color:'rgba(148,163,184,0.6)', fontSize:13, cursor:'pointer', fontFamily:"'DM Sans', sans-serif" }}>
+                  style={{ marginTop:14, background:'transparent', border:'none', color:'rgba(148,163,184,0.6)', fontSize:13, cursor:'pointer', fontFamily:"var(--fs-font-body)" }}>
                   ← Voltar ao login
                 </button>
               </form>
@@ -487,7 +486,7 @@ export default function LoginPage() {
               /* ── Modo: login normal ── */
               <form onSubmit={handleLogin} style={{ display:'flex', flexDirection:'column', gap:0 }}>
                 <div style={{ marginBottom:16 }}>
-                  <label style={{ display:'block', fontSize:12.5, fontWeight:500, color:'rgba(148,163,184,0.7)', marginBottom:7, letterSpacing:'0.3px', fontFamily:"'DM Sans', sans-serif", textTransform:'uppercase' }}>E-mail</label>
+                  <label style={{ display:'block', fontSize:12.5, fontWeight:500, color:'rgba(148,163,184,0.7)', marginBottom:7, letterSpacing:'0.3px', fontFamily:"var(--fs-font-body)", textTransform:'uppercase' }}>E-mail</label>
                   <input
                     className="inp-field" type="email" value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -496,9 +495,9 @@ export default function LoginPage() {
                 </div>
                 <div style={{ marginBottom:16 }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:7 }}>
-                    <label style={{ fontSize:12.5, fontWeight:500, color:'rgba(148,163,184,0.7)', letterSpacing:'0.3px', fontFamily:"'DM Sans', sans-serif", textTransform:'uppercase' }}>Senha</label>
+                    <label style={{ fontSize:12.5, fontWeight:500, color:'rgba(148,163,184,0.7)', letterSpacing:'0.3px', fontFamily:"var(--fs-font-body)", textTransform:'uppercase' }}>Senha</label>
                     <button type="button" onClick={() => { setForgotMode(true); setError(null) }}
-                      style={{ background:'none', border:'none', color:'rgba(96,165,250,0.7)', fontSize:12, cursor:'pointer', fontFamily:"'DM Sans', sans-serif", padding:0, transition:'color 0.2s' }}
+                      style={{ background:'none', border:'none', color:'rgba(96,165,250,0.7)', fontSize:12, cursor:'pointer', fontFamily:"var(--fs-font-body)", padding:0, transition:'color 0.2s' }}
                       onMouseEnter={e => e.target.style.color='rgba(96,165,250,1)'}
                       onMouseLeave={e => e.target.style.color='rgba(96,165,250,0.7)'}
                     >
@@ -513,11 +512,11 @@ export default function LoginPage() {
                 </div>
                 <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop:12 }}>
                   {loading
-                    ? <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontFamily:"'DM Sans', sans-serif" }}>
+                    ? <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, fontFamily:"var(--fs-font-body)" }}>
                         <span style={{ width:15, height:15, border:'2px solid rgba(255,255,255,0.25)', borderTop:'2px solid #fff', borderRadius:'50%', animation:'spin 0.75s linear infinite', display:'inline-block' }} />
                         Autenticando...
                       </span>
-                    : <span style={{ fontFamily:"'DM Sans', sans-serif", display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                    : <span style={{ fontFamily:"var(--fs-font-body)", display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
                         Entrar na plataforma
                         <span style={{ fontSize:16, opacity:0.8 }}>→</span>
                       </span>
@@ -536,14 +535,14 @@ export default function LoginPage() {
               <p style={{
                 color:'rgba(100,116,139,0.6)',
                 fontSize:11.5, margin:0,
-                fontFamily:"'DM Sans', sans-serif",
+                fontFamily:"var(--fs-font-body)",
               }}>
                 © {new Date().getFullYear()} Facesign
               </p>
               <span style={{
                 fontSize:10.5,
                 color:'rgba(100,116,139,0.45)',
-                fontFamily:"'DM Sans', sans-serif",
+                fontFamily:"var(--fs-font-body)",
                 display:'flex', alignItems:'center', gap:5,
               }}>
                 <span style={{ width:5, height:5, borderRadius:'50%', background:'rgba(var(--fs-success-rgb),0.6)', display:'inline-block', boxShadow:'0 0 4px rgba(var(--fs-success-rgb),0.5)' }} />

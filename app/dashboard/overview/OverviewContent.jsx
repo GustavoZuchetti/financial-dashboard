@@ -13,7 +13,7 @@ import {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-const PIE_COLORS = ['var(--fs-brand)', 'var(--fs-purple)', '#14b8a6', 'var(--fs-warning)', '#ec4899', 'var(--fs-success)']
+const PIE_COLORS = ['var(--fs-brand)', 'var(--fs-purple)', 'var(--fs-teal)', 'var(--fs-warning)', '#ec4899', 'var(--fs-success)']
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 const fC = (v) => {
@@ -474,7 +474,7 @@ export default function OverviewPage() {
     return () => clearTimeout(t)
   }, [load, empresaId, firstLoad])
 
-  const tipoColor = { receita:'var(--fs-success)', custo:'var(--fs-danger)', despesa:'var(--fs-warning)', deducao:'#f97316', receita_financeira:'#14b8a6', despesa_financeira:'var(--fs-purple)', investimento:'#64748b' }
+  const tipoColor = { receita:'var(--fs-success)', custo:'var(--fs-danger)', despesa:'var(--fs-warning)', deducao:'#f97316', receita_financeira:'var(--fs-teal)', despesa_financeira:'var(--fs-purple)', investimento:'#64748b' }
   const dr = getRange()
 
   if (!empresaId) return (

@@ -98,7 +98,7 @@ export default function DREAnalise() {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
         {[
           { label:'Receita Bruta',    val:v.rb,   color:'var(--fs-success)' },
-          { label:'EBITDA',           val:v.ebt,  color:'#14b8a6' },
+          { label:'EBITDA',           val:v.ebt,  color:'var(--fs-teal)' },
           { label:'Res. Líquido',     val:v.resL, color:'var(--fs-purple)' },
           { label:'Resultado Final',  val:v.resF, color:'var(--fs-brand)' },
         ].map(k => (
@@ -123,7 +123,7 @@ export default function DREAnalise() {
               <Tooltip {...tt} cursor={false} />
               <Legend iconType="circle" wrapperStyle={{fontSize:11}} />
               <Line type="monotone" dataKey="receita"    stroke="var(--fs-success)" strokeWidth={2} dot={false} name="Receita Bruta" />
-              <Line type="monotone" dataKey="ebitda"     stroke="#14b8a6" strokeWidth={2} dot={false} name="EBITDA" />
+              <Line type="monotone" dataKey="ebitda"     stroke="var(--fs-teal)" strokeWidth={2} dot={false} name="EBITDA" />
               <Line type="monotone" dataKey="resLiquido" stroke="var(--fs-purple)" strokeWidth={2} dot={false} name="Res. Líquido" />
               <Line type="monotone" dataKey="resFinal"   stroke="var(--fs-brand)" strokeWidth={2.5} dot={{r:3}} name="Res. Final" />
             </LineChart>
@@ -160,7 +160,7 @@ export default function DREAnalise() {
             <ReferenceLine y={0} stroke="var(--fs-border-2)" strokeWidth={1} />
             <Tooltip {...tt} formatter={(v)=>`${v}%`} />
             <Legend iconType="circle" wrapperStyle={{fontSize:11}} />
-            <Line type="monotone" dataKey="mEBITDA"  stroke="#14b8a6" strokeWidth={2} dot={{r:3}} name="Margem EBITDA" />
+            <Line type="monotone" dataKey="mEBITDA"  stroke="var(--fs-teal)" strokeWidth={2} dot={{r:3}} name="Margem EBITDA" />
             <Line type="monotone" dataKey="mLiquida" stroke="var(--fs-purple)" strokeWidth={2} dot={{r:3}} name="Margem Líquida" />
           </LineChart>
         </ResponsiveContainer>

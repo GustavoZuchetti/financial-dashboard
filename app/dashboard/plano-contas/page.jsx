@@ -35,7 +35,7 @@ const DRE_GROUPS = [
   { key: 'deducao',            label: 'Deduções',                  cor: '#f97316', desc: 'Impostos sobre receita, devoluções, descontos' },
   { key: 'custo',              label: 'Custos Variáveis',          cor: 'var(--fs-danger)', desc: 'CMV, CPV — custos diretamente ligados à receita' },
   { key: 'despesa',            label: 'Despesas Fixas',            cor: 'var(--fs-warning)', desc: 'Despesas operacionais fixas (salários, aluguel, etc.)' },
-  { key: 'receita_financeira', label: 'Receitas Financeiras',      cor: '#14b8a6', desc: 'Juros recebidos, rendimentos financeiros' },
+  { key: 'receita_financeira', label: 'Receitas Financeiras',      cor: 'var(--fs-teal)', desc: 'Juros recebidos, rendimentos financeiros' },
   { key: 'despesa_financeira', label: 'Despesas Financeiras',      cor: 'var(--fs-purple)', desc: 'Juros pagos, IOF, tarifas bancárias' },
   { key: 'imposto_lucro',      label: 'Impostos sobre Lucro',      cor: '#f97316', desc: 'IR, CSLL e outros impostos sobre o lucro' },
   { key: 'investimento',       label: 'Investimentos (CAPEX)',     cor: '#64748b', desc: 'Aquisição de ativos, investimentos de longo prazo' },

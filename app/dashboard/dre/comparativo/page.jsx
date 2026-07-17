@@ -26,10 +26,10 @@ const CustomTooltip = ({ active, payload, label }) => {
     ? document.documentElement.getAttribute('data-theme') !== 'light'
     : true
 
-  const bg     = isDark ? '#1e2433' : '#ffffff'
-  const border = isDark ? '#2d3748' : '#e2e8f0'
-  const text1  = isDark ? '#f1f5f9' : '#0f172a'
-  const text2  = isDark ? '#94a3b8' : '#64748b'
+  const bg     = 'var(--fs-surface)'
+  const border = 'var(--fs-border)'
+  const text1  = 'var(--fs-text-1)'
+  const text2  = 'var(--fs-text-2)'
 
   return (
     <div style={{

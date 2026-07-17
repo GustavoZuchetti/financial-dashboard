@@ -360,10 +360,10 @@ export default function FluxoCaixaPage() {
     catMap[cat] = (catMap[cat]||0) + Math.abs(Number(d.valor)||0)
   })
   const topCats = Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
-  const catColors = ['var(--fs-danger)','var(--fs-warning)','var(--fs-purple)','var(--fs-brand)','#14b8a6']
+  const catColors = ['var(--fs-danger)','var(--fs-warning)','var(--fs-purple)','var(--fs-brand)','var(--fs-teal)']
 
   // ─── Tabela de lançamentos filtrada ───────────────────────────────────────
-  const tipoColor  = { receita:'var(--fs-success)', custo:'var(--fs-danger)', despesa:'var(--fs-warning)', deducao:'#f97316', receita_financeira:'#14b8a6', despesa_financeira:'var(--fs-purple)', investimento:'#64748b', entrada:'var(--fs-success)', saida:'var(--fs-danger)' }
+  const tipoColor  = { receita:'var(--fs-success)', custo:'var(--fs-danger)', despesa:'var(--fs-warning)', deducao:'#f97316', receita_financeira:'var(--fs-teal)', despesa_financeira:'var(--fs-purple)', investimento:'#64748b', entrada:'var(--fs-success)', saida:'var(--fs-danger)' }
   const tipoLabel  = { receita:'Receita Operacional', custo:'Custo', despesa:'Despesa', deducao:'Dedução', receita_financeira:'Rec. Financeira', despesa_financeira:'Desp. Financeira', investimento:'Investimento', entrada:'Receita Operacional', saida:'Despesa' }
   const isEntrada  = (tipo) => ['receita','receita_financeira','entrada','fluxo_entrada'].includes(tipo)
 

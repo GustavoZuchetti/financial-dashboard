@@ -48,6 +48,7 @@
   --fs-danger:  #f87171;
   --fs-warning: #f59e0b;
   --fs-purple:  #a78bfa;
+  --fs-teal:    #2dd4bf;  /* categórica de gráficos (EBITDA, séries) */
 
   --fs-success-bg: rgba(52, 211, 153, 0.10);
   --fs-danger-bg:  rgba(248, 113, 113, 0.10);
@@ -112,6 +113,7 @@
   --fs-danger:  #dc2626;  /* 4.83:1 AA ✅ */
   --fs-warning: #b45309;  /* 7.73:1 AA ✅ — CORRIGIDO */
   --fs-purple:  #6d28d9;  /* 6.45:1 AA ✅ */
+  --fs-teal:    #0d9488;  /* categórica de gráficos */
 
   --fs-success-bg: rgba(4, 120, 87, 0.08);
   --fs-danger-bg:  rgba(220, 38, 38, 0.08);

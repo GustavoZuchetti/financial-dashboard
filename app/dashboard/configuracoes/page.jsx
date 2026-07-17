@@ -487,7 +487,7 @@ export default function ConfiguracoesPage() {
                 <div style={{ fontSize: 12, color: 'var(--fs-text-4)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 10 }}>
                   Tema Escuro
                 </div>
-                <div style={{ width: 280, height: 90, background: '#0f172a', border: '1px solid var(--fs-border)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 12 }}>
+                <div style={{ width: 280, height: 90, background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 12 }}>
                   {logoUrl
                     ? <img src={logoUrl} alt="Logo tema escuro" style={{ maxWidth: '90%', maxHeight: '80px', objectFit: 'contain' }} />
                     : <span style={{ fontSize: 12, color: '#7b96ab' }}>Sem logo cadastrada</span>
@@ -526,7 +526,7 @@ export default function ConfiguracoesPage() {
                 <div style={{ width: 280, height: 90, background: '#f8fafc', border: '1px solid var(--fs-border)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 12 }}>
                   {logoUrlLight
                     ? <img src={logoUrlLight} alt="Logo tema claro" style={{ maxWidth: '90%', maxHeight: '80px', objectFit: 'contain' }} />
-                    : <span style={{ fontSize: 12, color: '#64748b' }}>Sem logo cadastrada</span>
+                    : <span style={{ fontSize: 12, color: 'var(--fs-text-4)' }}>Sem logo cadastrada</span>
                   }
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

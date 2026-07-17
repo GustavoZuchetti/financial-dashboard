@@ -12,7 +12,7 @@ const C = {
   gray:     '#64748b',
   purple:   'var(--fs-purple)',
   yellow:   'var(--fs-warning)',
-  teal:     '#14b8a6',
+  teal:     'var(--fs-teal)',
   orange:   '#f97316',
 }
 

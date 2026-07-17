@@ -33,10 +33,10 @@ const Badge = ({ tipo }) => {
     receita:            { label:'Receita',         bg:'rgba(var(--fs-success-rgb),0.12)',   color:'var(--fs-success)' },
     despesa:            { label:'Despesa',         bg:'rgba(var(--fs-danger-rgb),0.12)',   color:'var(--fs-danger)' },
     custo:              { label:'Custo',           bg:'rgba(var(--fs-warning-rgb),0.12)',  color:'var(--fs-warning)' },
-    receita_financeira: { label:'Rec. Financeira', bg:'rgba(20,184,166,0.12)',  color:'#14b8a6' },
+    receita_financeira: { label:'Rec. Financeira', bg:'rgba(20,184,166,0.12)',  color:'var(--fs-teal)' },
     despesa_financeira: { label:'Desp. Financeira',bg:'rgba(var(--fs-purple-rgb),0.12)', color:'var(--fs-purple)' },
   }
-  const s = map[tipo] || { label: tipo, bg:'rgba(100,116,139,0.12)', color:'#64748b' }
+  const s = map[tipo] || { label: tipo, bg:'rgba(100,116,139,0.12)', color:'var(--fs-text-4)' }
   return (
     <span style={{ background:s.bg, color:s.color, fontSize:11, fontWeight:700, padding:'3px 8px', borderRadius:5, whiteSpace:'nowrap' }}>
       {s.label}

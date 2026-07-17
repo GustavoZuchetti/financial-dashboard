@@ -83,8 +83,8 @@ function ToastContainer({ toasts, onRemove }) {
               onClick={() => onRemove(t.id)}
             >
               <span style={{ fontSize: 14, color: s.color, fontWeight: 700, lineHeight: 1.4, flexShrink: 0 }}>{s.icon}</span>
-              <span style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.5, flex: 1 }}>{t.message}</span>
-              <span style={{ fontSize: 16, color: '#475569', lineHeight: 1, flexShrink: 0, marginTop: 1 }}>×</span>
+              <span style={{ fontSize: 13, color: 'var(--fs-text-1)', lineHeight: 1.5, flex: 1 }}>{t.message}</span>
+              <span style={{ fontSize: 16, color: 'var(--fs-text-4)', lineHeight: 1, flexShrink: 0, marginTop: 1 }}>×</span>
             </div>
           )
         })}

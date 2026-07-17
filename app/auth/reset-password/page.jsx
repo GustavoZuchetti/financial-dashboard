@@ -68,7 +68,7 @@ export default function ResetPasswordPage() {
         {/* Formulário de nova senha */}
         {stage === 'form' && (
           <>
-            <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, fontWeight: 400, color: '#f1f5f9', margin: '0 0 6px', letterSpacing: '-0.5px' }}>
+            <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, fontWeight: 400, color: 'var(--fs-text-1)', margin: '0 0 6px', letterSpacing: '-0.5px' }}>
               Nova senha
             </h2>
             <p style={{ fontSize: 13, color: 'rgba(148,163,184,0.65)', margin: '0 0 28px' }}>
@@ -87,7 +87,7 @@ export default function ResetPasswordPage() {
                 <input
                   type="password" value={password} onChange={e => setPassword(e.target.value)}
                   placeholder="Mínimo 6 caracteres" required autoFocus
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 14px', color: '#f1f5f9', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 14px', color: 'var(--fs-text-1)', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
                 />
               </div>
               <div>
@@ -95,7 +95,7 @@ export default function ResetPasswordPage() {
                 <input
                   type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
                   placeholder="Repita a nova senha" required
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 14px', color: '#f1f5f9', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 14px', color: 'var(--fs-text-1)', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
                 />
               </div>
               <button type="submit" disabled={loading} style={{ marginTop: 6, width: '100%', background: 'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>
@@ -109,7 +109,7 @@ export default function ResetPasswordPage() {
         {stage === 'success' && (
           <div style={{ textAlign: 'center', padding: '12px 0' }}>
             <div style={{ width: 52, height: 52, background: 'rgba(var(--fs-success-rgb),0.1)', border: '1px solid rgba(var(--fs-success-rgb),0.25)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: 22, color: 'var(--fs-success)' }}>✓</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>Senha alterada!</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--fs-text-1)', marginBottom: 8 }}>Senha alterada!</div>
             <div style={{ fontSize: 13, color: 'rgba(148,163,184,0.65)' }}>Redirecionando para o login...</div>
           </div>
         )}

@@ -14,7 +14,7 @@ const BADGE_CONFIG = {
 }
 
 export default function TypeBadge({ type, size = 'sm', customLabel }) {
-  const cfg = BADGE_CONFIG[type] || { label: type, bg: 'rgba(100,100,100,0.15)', color: '#94a3b8', border: 'rgba(100,100,100,0.3)' }
+  const cfg = BADGE_CONFIG[type] || { label: type, bg: 'rgba(100,100,100,0.15)', color: 'var(--fs-text-2)', border: 'rgba(100,100,100,0.3)' }
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center',
@@ -35,6 +35,6 @@ export default function TypeBadge({ type, size = 'sm', customLabel }) {
 
 // Badge de F/D direto para uso no DRE
 export function FDBadge({ favorable, size = 'sm' }) {
-  if (favorable === null || favorable === undefined) return <span style={{ color: '#475569', fontSize: 11 }}>—</span>
+  if (favorable === null || favorable === undefined) return <span style={{ color: 'var(--fs-text-4)', fontSize: 11 }}>—</span>
   return <TypeBadge type={favorable ? 'favoravel' : 'desfavor'} size={size} />
 }

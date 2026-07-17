@@ -585,7 +585,9 @@ export default function OverviewPage() {
                         <Pie data={recComp} cx="50%" cy="50%" innerRadius={48} outerRadius={72} dataKey="value" paddingAngle={2}>
                           {recComp.map((_,i)=><Cell key={i} fill={PIE_COLORS[i%PIE_COLORS.length]} />)}
                         </Pie>
-                        <Tooltip formatter={fC} wrapperStyle={{zIndex:30}} contentStyle={{background:'var(--fs-bg)',border:'1px solid var(--fs-border)',borderRadius:8,fontSize:12,whiteSpace:'nowrap'}} cursor={false} />
+                        <Tooltip formatter={fC} wrapperStyle={{zIndex:60}} allowEscapeViewBox={{x:true,y:true}} offset={18}
+                          contentStyle={{background:'var(--fs-surface-3)',border:'1px solid var(--fs-border-2)',borderRadius:8,fontSize:12,whiteSpace:'nowrap',boxShadow:'var(--fs-shadow-md)'}}
+                          itemStyle={{color:'var(--fs-text-1)'}} labelStyle={{color:'var(--fs-text-2)'}} cursor={false} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', textAlign:'center', pointerEvents:'none' }}>

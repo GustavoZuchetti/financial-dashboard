@@ -85,9 +85,9 @@ export default function DREAnalise() {
         .sort((a,b) => b.valor - a.valor)
       const totalGastos = fornOrd.reduce((a,c) => a + c.valor, 0)
       let acum = 0
-      setParetoGastos(fornOrd.slice(0, 12).map(f => {
+      setParetoGastos(fornOrd.slice(0, 8).map(f => {
         acum += f.valor
-        return { name: f.name.substring(0,24), valor: f.valor,
+        return { name: f.name.substring(0,18), valor: f.valor,
                  acumulado: totalGastos > 0 ? +((acum/totalGastos)*100).toFixed(1) : 0 }
       }))
     } finally { setLoading(false) }
@@ -163,8 +163,9 @@ export default function DREAnalise() {
         </div>
       </div>
 
-      {/* Pareto de Gastos por Fornecedor */}
-      <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px', marginBottom:20 }}>
+      {/* Pareto de Gastos + Margens Mensais — lado a lado */}
+      <div style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:16, marginBottom:16 }}>
+      <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px' }}>
         <h2 style={{ fontSize:14, fontWeight:700, color:'var(--fs-text-1)', marginBottom:4 }}>Maiores Gastos por Fornecedor — Pareto</h2>
         <p style={{ fontSize:11.5, color:'var(--fs-text-4)', margin:'0 0 16px' }}>Custos + despesas do período, ordenados. A linha mostra o % acumulado do gasto total — evidencia a concentração.</p>
         {paretoGastos.length === 0 ? (
@@ -173,7 +174,7 @@ export default function DREAnalise() {
         <ResponsiveContainer width="100%" height={300}>
           <ComposedChart data={paretoGastos} margin={{top:10,right:14,left:0,bottom:44}}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} angle={-32} textAnchor="end" tick={{fill:'var(--fs-text-4)',fontSize:10}} height={70} />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} angle={-32} textAnchor="end" tick={{fill:'var(--fs-text-4)',fontSize:9.5}} height={64} />
             <YAxis yAxisId="v" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fmtCompact} width={58} />
             <YAxis yAxisId="p" orientation="right" domain={[0,100]} unit="%" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} width={42} />
             <Tooltip {...tt} formatter={(v,n)=> n==='% acumulado' ? [`${v}%`, n] : [fmtBRL(v), 'Gasto']} />
@@ -187,7 +188,7 @@ export default function DREAnalise() {
       {/* Margens mensais */}
       <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px' }}>
         <h2 style={{ fontSize:14, fontWeight:700, color:'var(--fs-text-1)', marginBottom:16 }}>Margens Mensais (%)</h2>
-        <ResponsiveContainer width="100%" height={200}>
+        <ResponsiveContainer width="100%" height={300}>
           <LineChart data={evolucao.map(m => ({
             ...m,
             mEBITDA:   m.receita > 0 ? +(m.ebitda   / m.receita * 100).toFixed(1) : 0,
@@ -203,6 +204,7 @@ export default function DREAnalise() {
             <Line type="monotone" dataKey="mLiquida" stroke="var(--fs-purple)" strokeWidth={2} dot={{r:3}} name="Margem Líquida" />
           </LineChart>
         </ResponsiveContainer>
+      </div>
       </div>
 
       {loading && <div style={{ textAlign:'center', padding:20, color:'var(--fs-brand)' }}>Carregando...</div>}

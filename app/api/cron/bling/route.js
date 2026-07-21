@@ -52,10 +52,17 @@ export async function GET(request) {
         await pausa(250)
       }
 
+      // Persistir o cursor na COLUNA cron_cursor (que é de onde ele é LIDO na
+      // próxima execução) e marcar ultima_sync_cron — antes o cursor ia só
+      // dentro de ultimo_resultado e nunca era relido, deixando o cron preso
+      // na mesma página final vazia (FACE travada em {fase:1,pagina:50}).
       await admin.from('integracoes').update({
         contatos_cache: nomesContato,
+        cron_cursor: { fase, pagina },
+        ultima_sync_cron: new Date().toISOString(),
         ultima_sync: new Date().toISOString(),
-        ultimo_resultado: { ...(raw.ultimo_resultado || {}), cron: r, cron_cursor: { fase, pagina } },
+        cron_resultado: r,
+        ultimo_resultado: { ...(raw.ultimo_resultado || {}), cron: r },
         updated_at: new Date().toISOString(),
       }).eq('id', integ.id)
     } catch (e) { r.erro = String(e.message || e) }

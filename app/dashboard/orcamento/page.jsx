@@ -35,7 +35,7 @@ const S = {
   td: { padding: '10px 12px', fontSize: '13px', color: 'var(--fs-text-1)', borderBottom: '1px solid var(--fs-border)', textAlign: 'right' },
   tdLeft: { padding: '10px 12px', fontSize: '13px', color: 'var(--fs-text-1)', borderBottom: '1px solid var(--fs-border)', textAlign: 'left' },
   subtotal: { background: 'var(--fs-surface-2)', fontWeight: 700, transition: 'background-color 0.3s' },
-  total: { background: '#1e2235', fontWeight: 800, borderTop: '2px solid #2a2a4a' },
+  total: { background: 'var(--fs-surface-2)', fontWeight: 800, borderTop: '2px solid var(--fs-border-2)' },
   groupHeader: { background: 'var(--fs-surface-2)', borderTop: '1px solid var(--fs-border)', borderBottom: '1px solid var(--fs-border)' },
 }
 
@@ -96,10 +96,10 @@ const DRERow = ({ label, orcado, realizado, isExpense, isSubtotal, isTotal, isGr
       <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : 'var(--fs-text-1)', fontWeight: isTotal || isSubtotal ? 700 : 400 }}>
         {isGroupHeader ? '' : fmtFull(realizado)}
       </td>
-      <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : (fd ? (fd.favorable ? 'var(--fs-success)' : 'var(--fs-danger)') : '#6b7280') }}>
+      <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : (fd ? (fd.favorable ? 'var(--fs-success)' : 'var(--fs-danger)') : 'var(--fs-text-4)') }}>
         {isGroupHeader ? '' : (fd ? (fd.delta >= 0 ? '+' : '') + fmtFull(fd.delta) : '—')}
       </td>
-      <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : (fd ? (fd.favorable ? 'var(--fs-success)' : 'var(--fs-danger)') : '#6b7280') }}>
+      <td style={{ ...S.td, color: isGroupHeader ? 'transparent' : (fd ? (fd.favorable ? 'var(--fs-success)' : 'var(--fs-danger)') : 'var(--fs-text-4)') }}>
         {isGroupHeader ? '' : (fd ? (fd.deltaPct >= 0 ? '+' : '') + fd.deltaPct.toFixed(1) + '%' : '—')}
       </td>
       <td style={{ ...S.td, textAlign: 'center' }}>

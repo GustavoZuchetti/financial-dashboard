@@ -55,7 +55,7 @@ function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:24, backdropFilter:'blur(3px)' }}>
       <div ref={ref} style={{
-        background: isDark ? '#141824' : '#fff',
+        background: 'var(--fs-surface-2)',
         border:'1px solid var(--fs-border)',
         borderRadius:16, width:'100%', maxWidth:780,
         maxHeight:'85vh', display:'flex', flexDirection:'column',

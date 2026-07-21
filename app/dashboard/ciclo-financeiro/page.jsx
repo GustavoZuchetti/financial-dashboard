@@ -28,7 +28,7 @@ const TT = ({ active, payload, label }) => {
   const isDark = typeof document !== 'undefined'
     ? document.documentElement.getAttribute('data-theme') !== 'light' : true
   return (
-    <div style={{ background: isDark ? '#1e2433' : '#fff', border:'1px solid var(--fs-border)', borderRadius:8, padding:'10px 14px', fontSize:12 }}>
+    <div style={{ background: 'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, padding:'10px 14px', fontSize:12 }}>
       <div style={{ fontWeight:700, color:'var(--fs-text-1)', marginBottom:5 }}>{label}</div>
       {payload.map((p,i) => (
         <div key={i} style={{ color:p.color, display:'flex', justifyContent:'space-between', gap:16, marginBottom:2 }}>

@@ -8,6 +8,7 @@ import { getAdmin, ensureToken, fetchCategoriasMap, processarPaginaFluxo, pausa 
 // e continua na execução seguinte — em poucas execuções a base inteira é
 // revarrida (situações/baixas do Bling atualizam via upsert por doc_ref).
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 const FASES = [
   { recurso: 'contas/receber', tipoFluxo: 'entrada' },
   { recurso: 'contas/pagar',   tipoFluxo: 'saida'   },
@@ -31,9 +32,12 @@ export async function GET(request) {
     .select('*').eq('modulo_fluxo_ativo', true).not('refresh_token', 'is', null)
 
   const relatorio = []
-  const inicio = Date.now()
+  const inicioGlobal = Date.now()
+  const nEnt = (integs || []).length || 1
+  const janelaPorEnt = Math.min(24000, Math.floor(50000 / nEnt))  // ms por entidade
 
   for (const raw of integs || []) {
+    const inicio = Date.now()
     const r = { integracao: raw.id, paginas: 0, gravados: 0 }
     try {
       const integ = await ensureToken(admin, raw)
@@ -41,7 +45,7 @@ export async function GET(request) {
       const categoriasMap = await fetchCategoriasMap(integ)
       const nomesContato = { ...(integ.contatos_cache || {}) }
 
-      while (Date.now() - inicio < 7500) {
+      while (Date.now() - inicio < janelaPorEnt && Date.now() - inicioGlobal < 55000) {
         const { recurso, tipoFluxo } = FASES[fase] || FASES[0]
         const res = await processarPaginaFluxo(admin, integ, recurso, tipoFluxo, pagina, 50, categoriasMap, nomesContato)
         r.gravados += res.gravados

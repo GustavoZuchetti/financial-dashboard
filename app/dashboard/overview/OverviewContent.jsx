@@ -327,7 +327,7 @@ export default function OverviewPage() {
 
       // fetchAll: Supabase corta em 1000 linhas/request — a FACE sozinha já
       // ultrapassa esse limite, o que distorcia KPIs e gráficos
-      const [curLanc, prevLanc, fcAll, fcAnterior, planoContas, cfgRows] = await Promise.all([
+      const [curLanc, prevLanc, fcAll, fcProximos30, fcAnterior, planoContas, cfgRows] = await Promise.all([
         fetchAll(buildQ('lancamentos', 'id,tipo,valor,data,descricao,categoria,conta_id')
           .gte('data', dr.start).lte('data', dr.end)),
         fetchAll(buildQ('lancamentos', 'tipo,valor,data')
@@ -335,6 +335,9 @@ export default function OverviewPage() {
         fetchAll(buildQ('fluxo_caixa', 'id,tipo,valor,data,descricao,status,valor_liquidado,data_liquidacao')
           .or(`and(data.gte.${dr.start},data.lte.${dr.end}),and(data_liquidacao.gte.${dr.start},data_liquidacao.lte.${dr.end})`)
           .order('data')),
+        // Próximos 30 dias (a vencer) — janela futura p/ KPIs "A Receber/A Pagar 30d"
+        fetchAll(buildQ('fluxo_caixa', 'tipo,valor,data,status,valor_liquidado')
+          .in('status', ['aberto','parcial']).gt('data', today).lte('data', next30str)),
         // Movimentos ANTERIORES ao período — compõem o saldo de partida
         fetchAll(buildQ('fluxo_caixa', 'tipo,valor,data,status,valor_liquidado,data_liquidacao')
           .or(`data.lt.${dr.start},data_liquidacao.lt.${dr.start}`)),
@@ -446,17 +449,24 @@ export default function OverviewPage() {
       const margDiff = margPrev!==0 ? margCur-margPrev : null
 
       // ── Métricas auxiliares ───────────────────────────────────────────────
-      const burnRate = (vCur.cv + vCur.df) / dr.nMonths
+      const burnRate = dr.nMonths > 0 ? Math.max(0, (vCur.cv + vCur.df) / dr.nMonths) : 0
       const caixa    = fcChart.length>0 ? fcChart[fcChart.length-1].saldo : (vCur.rb-vCur.cv-vCur.df)
       const runway   = (burnRate>0 && caixa>0) ? caixa/burnRate : null
-      const fc30     = (fcAll||[]).filter(f=>f.data>today&&f.data<=next30str)
-      const aReceber = fc30.filter(f=>['entrada','fluxo_entrada','receita'].includes(f.tipo)).reduce((a,f)=>a+Math.abs(Number(f.valor)||0),0)
-      const aPagar   = fc30.filter(f=>['saida','fluxo_saida','despesa','custo'].includes(f.tipo)).reduce((a,f)=>a+Math.abs(Number(f.valor)||0),0)
+      const runwayMotivo = caixa<=0 ? 'caixa negativo' : (burnRate<=0 ? 'sem burn' : null)
+      // A Receber/A Pagar próximos 30 dias — títulos a vencer (aberto/parcial),
+      // restante não liquidado no caso de parcial
+      const restante = (f) => {
+        const v = Math.abs(Number(f.valor)||0)
+        const liq = Math.min(Math.abs(Number(f.valor_liquidado)||0), v)
+        return f.status === 'parcial' ? v - liq : v
+      }
+      const aReceber = (fcProximos30||[]).filter(f=>f.tipo==='entrada').reduce((a,f)=>a+restante(f),0)
+      const aPagar   = (fcProximos30||[]).filter(f=>f.tipo==='saida').reduce((a,f)=>a+restante(f),0)
 
       // Variação Receita Bruta vs período anterior
       const rbPrev_p = vPrev.rb * scale
       const rbPct    = rbPrev_p > 0.01 ? (vCur.rb - rbPrev_p) / rbPrev_p * 100 : null
-      setKpis({ rb:vCur.rb, rbPct, rl:vCur.rl, rlPct, ebt:vCur.ebt, ebtPct, marg:margCur, margDiff, caixa, aReceber, aPagar, burnRate, runway })
+      setKpis({ rb:vCur.rb, rbPct, rl:vCur.rl, rlPct, ebt:vCur.ebt, ebtPct, marg:margCur, margDiff, caixa, aReceber, aPagar, burnRate, runway, runwayMotivo })
 
       // ── Lançamentos recentes ──────────────────────────────────────────────
       const rec = [...(curLanc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,6)
@@ -550,7 +560,7 @@ export default function OverviewPage() {
             <SCard first label="A Receber · 30 Dias" value={kpis.aReceber>0?fC(kpis.aReceber):'—'} color="var(--fs-success)" />
             <SCard label="A Pagar · 30 Dias"   value={kpis.aPagar>0?fC(kpis.aPagar):'—'}     color="var(--fs-danger)" />
             <SCard label="Burn Rate Mensal"     value={fC(kpis.burnRate)} sub="custos + despesas / mês" />
-            <SCard label="Runway"               value={kpis.runway?`${kpis.runway.toFixed(1)} meses`:'—'} sub="caixa ÷ burn rate" />
+            <SCard label="Runway"               value={kpis.runway?`${kpis.runway.toFixed(1)} meses`:'—'} sub={kpis.runway?'caixa ÷ burn rate':(kpis.runwayMotivo||'caixa ÷ burn rate')} color={kpis.runwayMotivo==='caixa negativo'?'var(--fs-danger)':undefined} />
           </div>
 
           {/* ── Gráficos linha 1 ────────────────────────────────────────────── */}

@@ -76,7 +76,7 @@ const ConfirmModal = ({ item, onConfirm, onCancel, loading }) => (
           <span style={{ color:'var(--fs-text-4)' }}>Descrição</span>
           <span style={{ color:'var(--fs-text-1)', fontWeight:600 }}>{item?.descricao || '—'}</span>
           <span style={{ color:'var(--fs-text-4)' }}>Valor</span>
-          <span style={{ color:'var(--fs-text-1)', fontWeight:600 }}>{fCFull(item?.valor)}</span>
+          <span style={{ color:'var(--fs-text-1)', fontWeight:600 }} className="fs-num">{fCFull(item?.valor)}</span>
           <span style={{ color:'var(--fs-text-4)' }}>Tipo</span>
           <span><Badge tipo={item?.tipo} /></span>
         </div>
@@ -923,7 +923,7 @@ export default function GestaoFluxoCaixaPage() {
             </div>
           ) : (
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)' }}>{fC(saldoInicialDB) || 'R$ 0'}</div>
+              <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)' }} className="fs-num">{fC(saldoInicialDB) || 'R$ 0'}</div>
               <button onClick={abrirEditSaldo} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
                 Editar
               </button>

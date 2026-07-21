@@ -19,7 +19,7 @@ const TT = ({ active, payload, label }) => {
       <div style={{ fontWeight:700, color:'var(--fs-text-1)', marginBottom:4 }}>{label}</div>
       {payload.map((p,i) => (
         <div key={i} style={{ color:p.color, display:'flex', justifyContent:'space-between', gap:16 }}>
-          <span>{p.name}</span><strong>{fC(p.value)}</strong>
+          <span>{p.name}</span><strong className="fs-num">{fC(p.value)}</strong>
         </div>
       ))}
     </div>
@@ -117,11 +117,11 @@ export default function FluxoComparativo() {
         <div style={{ display:'flex', gap:16, alignItems:'flex-end' }}>
           <div>
             <div style={{ fontSize:11, color:'var(--fs-text-4)', marginBottom:2 }}>Período 1</div>
-            <div style={{ fontSize:20, fontWeight:800, color:'var(--fs-text-1)' }}>{fC(v1)}</div>
+            <div style={{ fontSize:20, fontWeight:800, color:'var(--fs-text-1)' }} className="fs-num">{fC(v1)}</div>
           </div>
           <div>
             <div style={{ fontSize:11, color:'var(--fs-text-4)', marginBottom:2 }}>Período 2</div>
-            <div style={{ fontSize:16, fontWeight:700, color:'var(--fs-text-3)' }}>{fC(v2)}</div>
+            <div style={{ fontSize:16, fontWeight:700, color:'var(--fs-text-3)' }} className="fs-num">{fC(v2)}</div>
           </div>
           {pct !== null && (
             <div style={{ marginLeft:'auto', fontSize:13, fontWeight:700, color: pos ? 'var(--fs-success)' : 'var(--fs-danger)' }}>

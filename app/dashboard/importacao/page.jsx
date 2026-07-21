@@ -263,7 +263,7 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
               return (
                 <tr key={row.__id} style={{ borderBottom: '1px solid var(--fs-border)' }}>
                   <td style={{ padding: '11px 14px', color: 'var(--fs-text-1)', fontWeight: 600, width: '55%' }}>{row.__desc || '—'}</td>
-                  <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: 700, width: '22%', color: isEntrada ? 'var(--fs-success)' : row.valor < 0 ? 'var(--fs-danger)' : 'var(--fs-success)' }}>{fmtBRL(row.totalValor)}</td>
+                  <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: 700, width: '22%', color: isEntrada ? 'var(--fs-success)' : row.valor < 0 ? 'var(--fs-danger)' : 'var(--fs-success)' }} className="fs-num">{fmtBRL(row.totalValor)}</td>
                   <td style={{ padding: '11px 14px', width: modulo === 'dre' ? '13%' : '23%' }}>
                     {modulo === 'fluxo'
                       ? <span

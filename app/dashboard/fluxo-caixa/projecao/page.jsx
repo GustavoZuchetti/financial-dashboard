@@ -19,7 +19,7 @@ const TT = ({ active, payload, label }) => {
       <div style={{ fontWeight:700, color:'var(--fs-text-1)', marginBottom:4 }}>{label}</div>
       {payload.map((p,i) => (
         <div key={i} style={{ color:p.color, display:'flex', justifyContent:'space-between', gap:16 }}>
-          <span>{p.name}</span><strong>{fC(p.value)}</strong>
+          <span>{p.name}</span><strong className="fs-num">{fC(p.value)}</strong>
         </div>
       ))}
     </div>
@@ -153,7 +153,7 @@ export default function FluxoProjecao() {
             ].map(({ label, val, color }) => (
               <div key={label} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 16px' }}>
                 <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:4 }}>{label}</div>
-                <div style={{ fontSize:18, fontWeight:800, color }}>{fC(Math.round(val))}</div>
+                <div style={{ fontSize:18, fontWeight:800, color }} className="fs-num">{fC(Math.round(val))}</div>
               </div>
             ))}
           </div>
@@ -210,10 +210,10 @@ export default function FluxoProjecao() {
                       <span style={{ fontSize:9, background:'rgba(var(--fs-purple-rgb),0.15)', color:'var(--fs-purple)', border:'1px solid rgba(var(--fs-purple-rgb),0.3)', padding:'1px 6px', borderRadius:4, fontWeight:700 }}>PROJ</span>
                       {r.name}
                     </td>
-                    <td style={{ padding:'10px 12px', textAlign:'right', color:'var(--fs-success)', fontWeight:600 }}>{fC(r.entradas)}</td>
-                    <td style={{ padding:'10px 12px', textAlign:'right', color:'var(--fs-danger)', fontWeight:600 }}>{fC(r.saidas)}</td>
-                    <td style={{ padding:'10px 12px', textAlign:'right', fontWeight:700, color: r.saldo >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)' }}>{fC(r.saldo)}</td>
-                    <td style={{ padding:'10px 12px', textAlign:'right', fontWeight:800, color: r.acumulado >= 0 ? 'var(--fs-brand)' : 'var(--fs-danger)' }}>{fC(r.acumulado)}</td>
+                    <td style={{ padding:'10px 12px', textAlign:'right', color:'var(--fs-success)', fontWeight:600 }} className="fs-num">{fC(r.entradas)}</td>
+                    <td style={{ padding:'10px 12px', textAlign:'right', color:'var(--fs-danger)', fontWeight:600 }} className="fs-num">{fC(r.saidas)}</td>
+                    <td style={{ padding:'10px 12px', textAlign:'right', fontWeight:700, color: r.saldo >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)' }} className="fs-num">{fC(r.saldo)}</td>
+                    <td style={{ padding:'10px 12px', textAlign:'right', fontWeight:800, color: r.acumulado >= 0 ? 'var(--fs-brand)' : 'var(--fs-danger)' }} className="fs-num">{fC(r.acumulado)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -101,7 +101,7 @@ const TT = ({ active, payload, label }) => {
       <div style={{ fontWeight:700, color:'var(--fs-text-1)', marginBottom:4 }}>{label}</div>
       {payload.map((p,i) => (
         <div key={i} style={{ color:p.color, display:'flex', justifyContent:'space-between', gap:16 }}>
-          <span>{p.name}</span><strong>{fC(p.value)}</strong>
+          <span>{p.name}</span><strong className="fs-num">{fC(p.value)}</strong>
         </div>
       ))}
     </div>
@@ -592,7 +592,7 @@ export default function OverviewPage() {
                     </ResponsiveContainer>
                     <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', textAlign:'center', pointerEvents:'none' }}>
                       <div style={{ fontSize:9, color:'var(--fs-text-4)', textTransform:'uppercase' }}>TOTAL</div>
-                      <div style={{ fontSize:13, fontWeight:800, color:'var(--fs-text-1)' }}>{fC(recComp.reduce((a,r)=>a+r.value,0))}</div>
+                      <div style={{ fontSize:13, fontWeight:800, color:'var(--fs-text-1)' }} className="fs-num">{fC(recComp.reduce((a,r)=>a+r.value,0))}</div>
                     </div>
                   </div>
                   <div style={{ display:'flex', flexDirection:'column', gap:7, marginTop:4 }}>
@@ -645,7 +645,7 @@ export default function OverviewPage() {
                           <span>{r.data}</span><span>·</span><span style={{ textTransform:'capitalize' }}>{r.tipo}</span>
                         </div>
                       </div>
-                      <div style={{ fontSize:12, fontWeight:700, color:tipoColor[r.tipo]||'var(--fs-text-2)', flexShrink:0 }}>{fC(r.valor)}</div>
+                      <div style={{ fontSize:12, fontWeight:700, color:tipoColor[r.tipo]||'var(--fs-text-2)', flexShrink:0 }} className="fs-num">{fC(r.valor)}</div>
                     </div>
                   ))}
                 </div>

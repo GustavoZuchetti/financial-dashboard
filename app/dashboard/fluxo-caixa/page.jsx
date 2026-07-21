@@ -40,7 +40,7 @@ const TT = ({ active, payload, label }) => {
       {payload.map((p,i) => (
         <div key={i} style={{ display:'flex', justifyContent:'space-between', gap:20, marginBottom:2 }}>
           <span style={{ color:p.color }}>{p.name}</span>
-          <strong style={{ color:'var(--fs-text-1)' }}>{fC(p.value)}</strong>
+          <strong style={{ color:'var(--fs-text-1)' }} className="fs-num">{fC(p.value)}</strong>
         </div>
       ))}
     </div>
@@ -105,7 +105,7 @@ const CatBar = ({ label, value, total, color }) => {
       <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
         <span style={{ fontSize:13, color:'var(--fs-text-2)', fontWeight:500 }}>{label}</span>
         <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-          <span style={{ fontSize:13, fontWeight:700, color:'var(--fs-text-1)' }}>{fC(value)}</span>
+          <span style={{ fontSize:13, fontWeight:700, color:'var(--fs-text-1)' }} className="fs-num">{fC(value)}</span>
           <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{pct.toFixed(1)}%</span>
         </div>
       </div>
@@ -475,28 +475,28 @@ export default function FluxoCaixaPage() {
               {vencidos.s > 0 && (
                 <div style={{ background:'rgba(var(--fs-danger-rgb),0.08)', border:'1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
                   <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-danger)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Pagar Vencido</div>
-                  <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-danger)' }}>{fC(vencidos.s)}</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-danger)' }} className="fs-num">{fC(vencidos.s)}</div>
                   <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Saídas com data no passado</div>
                 </div>
               )}
               {vencidos.e > 0 && (
                 <div style={{ background:'rgba(var(--fs-warning-rgb),0.08)', border:'1px solid rgba(var(--fs-warning-rgb),0.3)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
                   <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-warning)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Receber Vencido</div>
-                  <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-warning)' }}>{fC(vencidos.e)}</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-warning)' }} className="fs-num">{fC(vencidos.e)}</div>
                   <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Entradas com data no passado</div>
                 </div>
               )}
               {vencidos.aS > 0 && (
                 <div style={{ background:'rgba(var(--fs-brand-rgb),0.08)', border:'1px solid rgba(var(--fs-brand-rgb),0.2)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
                   <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-brand-text)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Pagar · 30 dias</div>
-                  <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-brand-text)' }}>{fC(vencidos.aS)}</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-brand-text)' }} className="fs-num">{fC(vencidos.aS)}</div>
                   <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Saídas nos próximos 30 dias</div>
                 </div>
               )}
               {vencidos.aE > 0 && (
                 <div style={{ background:'rgba(var(--fs-success-rgb),0.08)', border:'1px solid rgba(var(--fs-success-rgb),0.2)', borderRadius:12, padding:'14px 18px', flex:1, minWidth:180 }}>
                   <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-success)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>A Receber · 30 dias</div>
-                  <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-success)' }}>{fC(vencidos.aE)}</div>
+                  <div style={{ fontSize:22, fontWeight:800, color:'var(--fs-success)' }} className="fs-num">{fC(vencidos.aE)}</div>
                   <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>Entradas nos próximos 30 dias</div>
                 </div>
               )}

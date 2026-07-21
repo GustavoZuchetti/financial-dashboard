@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE, fmtBRL, fmtCompact } from '@/lib/dre-calc'
+import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, ReferenceLine, ComposedChart} from 'recharts'
 
 const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -112,6 +113,7 @@ export default function DREAnalise() {
         </div>
       </div>
 
+      {loading ? <><KpiCardsSkeleton count={4} /><ChartSkeleton height={240} /></> : <>
       {/* KPIs — mesmos valores da Visão Geral */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
         {[
@@ -206,8 +208,8 @@ export default function DREAnalise() {
         </ResponsiveContainer>
       </div>
       </div>
+      </>}
 
-      {loading && <div style={{ textAlign:'center', padding:20, color:'var(--fs-brand)' }}>Carregando...</div>}
     </div>
   )
 }

@@ -633,7 +633,7 @@ export default function OverviewPage() {
               <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:2 }}>Atividade</div>
               <div style={{ fontSize:14, fontWeight:700, color:'var(--fs-text-1)', marginBottom:14 }}>Lançamentos recentes</div>
               {recentes.length===0 ? (
-                <div style={{ textAlign:'center', padding:'30px 0', color:'var(--fs-text-4)', fontSize:13 }}>Nenhum lançamento</div>
+                <EmptyState icon="inbox" title="Nenhum lançamento no período" compact>Ajuste o período ou sincronize o Bling para ver a movimentação recente aqui.</EmptyState>
               ) : (
                 <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                   {recentes.map((r,i)=>(

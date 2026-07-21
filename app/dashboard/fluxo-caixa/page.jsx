@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef, useId } from 'react'
 import EmptyState from '@/components/EmptyState'
+import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import SvgIcon from '@/components/SvgIcon'
 import { efeitosCaixa } from '@/lib/fluxo-status'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
@@ -458,7 +459,7 @@ export default function FluxoCaixaPage() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)', fontSize:14 }}>Carregando dados...</div>
+        <><KpiCardsSkeleton count={4} /><ChartSkeleton height={280} /></>
       ) : (
         <>
           {/* ── KPI Cards ─────────────────────────────────────────────────────── */}

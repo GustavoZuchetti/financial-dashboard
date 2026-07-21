@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
+import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, Cell
@@ -300,7 +301,7 @@ export default function CicloFinanceiroPage() {
       )}
 
       {loading ? (
-        <div style={{ textAlign:'center', padding:60, color:'var(--fs-text-4)', fontSize:14 }}>Calculando ciclos...</div>
+        <><KpiCardsSkeleton count={5} /><ChartSkeleton height={240} /></>
       ) : (
         <>
           {/* ── KPIs principais ─────────────────────────────────────────────── */}

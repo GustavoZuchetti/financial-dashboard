@@ -9,6 +9,7 @@ import { diasEntre, AGING_FAIXAS, agingFaixa } from '@/lib/fluxo-status'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 import SvgIcon from '@/components/SvgIcon'
 import EmptyState from '@/components/EmptyState'
+import { TableSkeleton } from '@/components/Skeleton'
 
 const fC = (v) => {
   const n = Number(v) || 0
@@ -212,7 +213,7 @@ export default function AtrasadosPage() {
           ))}
         </div>
         {loading ? (
-          <div style={{ padding:32, textAlign:'center', color:'var(--fs-text-4)', fontSize:13 }}>Carregando…</div>
+          <div style={{ padding:16 }}><TableSkeleton rows={6} cols={isConsol ? 8 : 7} /></div>
         ) : filtrados.length === 0 ? (
           <div style={{ padding:32, textAlign:'center', color:'var(--fs-text-4)', fontSize:13 }}>
             Nenhum título em atraso — caixa em dia. ✓

@@ -419,7 +419,7 @@ export default function OverviewPage() {
 
       const monthData = monthRange.map(i => {
         const v = calcDRE(byMonth[i] || [])
-        return { name: MESES[i], receita: v.rb, rl: v.rl, ebitda: v.ebt, resLiq: v.resL }
+        return { name: MESES[i], receita: v.rb, rl: v.rl, ebitda: v.ebt, resLiq: v.resL, lucroBruto: v.lb }
       })
       setMonthly(monthData)
 
@@ -480,6 +480,10 @@ export default function OverviewPage() {
       const ebtPct  = ebtPrev_p>0.01 ? (vCur.ebt-ebtPrev_p)/ebtPrev_p*100 : null
       const margCur = vCur.rb>0 ? vCur.resL/vCur.rb*100 : 0
       const margDiff = margPrev!==0 ? margCur-margPrev : null
+      // Margem Bruta = Lucro Bruto ÷ Receita Bruta (eficiência antes das despesas)
+      const margBrutaCur  = vCur.rb>0 ? vCur.lb/vCur.rb*100 : 0
+      const margBrutaPrev = vPrev.rb>0 ? vPrev.lb/vPrev.rb*100 : 0
+      const margBrutaDiff = margBrutaPrev!==0 ? margBrutaCur-margBrutaPrev : null
 
       // ── Métricas auxiliares ───────────────────────────────────────────────
       const burnRate = dr.nMonths > 0 ? Math.max(0, (vCur.cv + vCur.df) / dr.nMonths) : 0
@@ -499,7 +503,7 @@ export default function OverviewPage() {
       // Variação Receita Bruta vs período anterior
       const rbPrev_p = vPrev.rb * scale
       const rbPct    = rbPrev_p > 0.01 ? (vCur.rb - rbPrev_p) / rbPrev_p * 100 : null
-      setKpis({ rb:vCur.rb, rbPct, rl:vCur.rl, rlPct, ebt:vCur.ebt, ebtPct, marg:margCur, margDiff, caixa, aReceber, aPagar, burnRate, runway, runwayMotivo })
+      setKpis({ rb:vCur.rb, rbPct, rl:vCur.rl, rlPct, ebt:vCur.ebt, ebtPct, marg:margCur, margDiff, margBruta:margBrutaCur, margBrutaDiff, lb:vCur.lb, caixa, aReceber, aPagar, burnRate, runway, runwayMotivo })
 
       // ── Lançamentos recentes ──────────────────────────────────────────────
       const rec = [...(curLanc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,6)
@@ -584,6 +588,7 @@ export default function OverviewPage() {
           <div style={{ display:'flex', gap:12, marginBottom:12, flexWrap:'wrap' }}>
             <KCard hero label={`Receita Bruta · ${dr.subLabel}`} value={fC(kpis.rb)} pct={kpis.rbPct} info="Soma de todas as receitas brutas do período (antes de deduções). A comparação é contra o período anterior de mesma duração." pctLabel="vs período anterior" sparkData={monthly} sparkKey="receita" sparkColor="var(--fs-success)" sub={kpis.rl !== kpis.rb ? `Rec. Líquida: ${fC(kpis.rl)}` : null} />
             <KCard label="EBITDA"          value={fC(kpis.ebt)} info="Lucro antes de juros, impostos, depreciação e amortização. Aqui: Receita Líquida − Custos Variáveis − Despesas Fixas. Mede a geração de caixa operacional."                   pct={kpis.ebtPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="var(--fs-brand)" />
+            <KCard label="Margem Bruta"    value={`${kpis.margBruta.toFixed(1)}%`} info="Lucro Bruto ÷ Receita Bruta × 100. Eficiência da operação ANTES das despesas fixas — quanto sobra após custos variáveis e deduções. Variação em pontos percentuais (p.p.)." pct={kpis.margBrutaDiff} pctLabel="p.p. vs anterior" sparkData={monthly} sparkKey="lucroBruto" sparkColor="var(--fs-teal)" />
             <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`} info="Resultado Líquido ÷ Receita Bruta × 100. Quanto sobra de cada R$ 1 faturado após todos os custos, despesas e resultados financeiros. Variação em pontos percentuais (p.p.)."     pct={kpis.margDiff} pctLabel="p.p. vs anterior"  sparkData={monthly} sparkKey="resLiq" sparkColor="var(--fs-purple)" />
             <KCard label="Caixa Disponível" value={fC(kpis.caixa)} info="Saldo inicial das entidades + todo o movimento efetivo (entradas − saídas) até hoje, em regime de caixa. Negativo indica posição devedora ou saldo inicial não configurado." pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
           </div>

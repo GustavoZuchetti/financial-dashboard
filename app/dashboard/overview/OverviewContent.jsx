@@ -535,10 +535,6 @@ export default function OverviewPage() {
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ marginBottom:24 }}>
-        <div style={{ fontSize:11, color:'var(--fs-text-4)', fontWeight:700, textTransform:'uppercase', letterSpacing:'1px', marginBottom:6 }}>
-          {empNome || 'Consolidado'} · {dr.subLabel}
-        </div>
-
         <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
           <h1 style={{ fontSize:30, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>Overview</h1>
 

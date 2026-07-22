@@ -300,14 +300,28 @@ function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
   const [selectedContaId, setSelectedContaId] = useState('')
 
   // Filtrar contas por módulo
-  const contasFiltradas = (planoContas || []).filter(c => {
-    // Plano é propagado por entidade: mostrar só as contas da empresa
-    // selecionada (senão cada conta aparece 1x por empresa da org)
-    if (empresaId && c.empresa_id && c.empresa_id !== empresaId) return false
-    if (modulo === 'dre') return ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','imposto_lucro','investimento'].includes(c.tipo)
-    if (modulo === 'fluxo') return ['entrada','saida','fluxo_entrada','fluxo_saida'].includes(c.tipo)
-    return true
-  })
+  const contasFiltradas = (() => {
+    const porTipo = (c) => {
+      if (modulo === 'dre') return ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','imposto_lucro','investimento'].includes(c.tipo)
+      if (modulo === 'fluxo') return ['entrada','saida','fluxo_entrada','fluxo_saida'].includes(c.tipo)
+      return true
+    }
+    const todas = (planoContas || []).filter(porTipo)
+    // Plano é compartilhado entre as entidades da org (mesmos códigos). Prioriza
+    // as contas da empresa selecionada; se ela não tiver plano próprio (ex.:
+    // entidade recém-conectada) ou estiver em consolidado, cai para o plano da
+    // org, deduplicando por código para não repetir a mesma conta N vezes.
+    const daEmpresa = empresaId && empresaId !== 'todas'
+      ? todas.filter(c => c.empresa_id === empresaId)
+      : []
+    if (daEmpresa.length) return daEmpresa
+    const vistos = new Set()
+    return todas.filter(c => {
+      const k = c.codigo || c.nome
+      if (vistos.has(k)) return false
+      vistos.add(k); return true
+    })
+  })()
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
@@ -1016,7 +1030,7 @@ export default function ImportacaoPage() {
       <ConfirmReplaceModal />
       {editingRow && (
         <MappingModal
-          row={editingRow} planoContas={(planoContas || []).filter(c => !empresaId || !c.empresa_id || c.empresa_id === empresaId)}
+          row={editingRow} planoContas={contasFiltradas}
           modulo={activeTab} saving={savingMapping}
           onSave={saveMapping} onClose={() => setEditingRow(null)}
         />

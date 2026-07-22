@@ -296,7 +296,7 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
 }
 
 // ─── Modal De-Para ────────────────────────────────────────────────────────────
-function MappingModal({ row, planoContas, modulo, onSave, onClose, saving }) {
+function MappingModal({ row, planoContas, empresaId, modulo, onSave, onClose, saving }) {
   const [selectedContaId, setSelectedContaId] = useState('')
 
   // Filtrar contas por módulo
@@ -389,6 +389,7 @@ export default function ImportacaoPage() {
   const [apiAtivo,       setApiAtivo]       = useState({ dre: false, fluxo: false }) // módulo importado via API p/ a entidade selecionada
   const [empresaId,      setEmpresaId]      = useState(null)
   const [empresas,       setEmpresas]       = useState([])
+  const [orgEmpresaIds,  setOrgEmpresaIds]  = useState([])
 
   // Trava anti-duplicidade: módulos com importação via API ativa bloqueiam
   // a importação por arquivo da entidade correspondente
@@ -431,18 +432,27 @@ export default function ImportacaoPage() {
   const isAdmin  = isSuperAdmin || profile?.role === 'org_admin'
   const showToast = useCallback((msg, type = 'info') => setToast({ msg, type }), [])
 
-  const loadMappings = useCallback(async (id) => {
+  const loadMappings = useCallback(async (id, orgIds) => {
     if (!id) return
+    // Mapeamentos são COMPARTILHADOS na organização: entidades do mesmo grupo
+    // usam o mesmo plano de contas, logo o De-Para de uma vale para todas.
+    // Lê os de todas as entidades da org e deduplica por categoria_origem.
+    const escopo = (orgIds && orgIds.length) ? orgIds : [id]
     const [{ data }, { data: layouts }] = await Promise.all([
-      supabase.from('categoria_mappings').select('id,categoria_origem,tipo_destino,conta_id,empresa_id').eq('empresa_id', id),
+      supabase.from('categoria_mappings').select('id,categoria_origem,tipo_destino,conta_id,empresa_id').in('empresa_id', escopo),
       supabase.from('import_layouts').select('*').eq('empresa_id', id).eq('is_default', true).limit(1),
     ])
-    const all = data || []
+    // dedup por categoria_origem — prioriza o mapeamento da entidade atual
+    const porCat = {}
+    ;(data || []).forEach(m => {
+      const k = (m.categoria_origem || '').toLowerCase()
+      if (!porCat[k] || m.empresa_id === id) porCat[k] = m
+    })
+    const all = Object.values(porCat)
     const DRE_TIPOS = ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','imposto_lucro','investimento','ignorar']
     const FC_TIPOS  = ['entrada','saida','fluxo_entrada','fluxo_saida']
     setMappingsDre(all.filter(m => DRE_TIPOS.includes(m.tipo_destino)))
     setMappingsFluxo(all.filter(m => FC_TIPOS.includes(m.tipo_destino)))
-    // Ativa o layout padrão se existir
     setActiveLayout(layouts?.[0] || null)
   }, [])
 
@@ -459,6 +469,7 @@ export default function ImportacaoPage() {
         const empresasJson = await empresasRes.json()
         const emps = empresasJson.empresas || []
         const orgEmpresaIds = emps.map(e => e.id)
+        setOrgEmpresaIds(orgEmpresaIds)
 
         const { data: plano } = orgEmpresaIds.length
           ? await supabase.from('plano_contas').select('id,nome,tipo,codigo,empresa_id').in('empresa_id', orgEmpresaIds).order('nome')
@@ -467,7 +478,7 @@ export default function ImportacaoPage() {
         setPlanoContas(plano || [])
         const savedId = localStorage.getItem('empresa_id')
         const validId = (emps || []).find(e => e.id === savedId) ? savedId : emps?.[0]?.id
-        if (validId) { setEmpresaId(validId); await loadMappings(validId) }
+        if (validId) { setEmpresaId(validId); await loadMappings(validId, orgEmpresaIds) }
       } catch (e) {
         showToast('Erro ao carregar dados: ' + e.message, 'error')
       } finally {
@@ -479,7 +490,7 @@ export default function ImportacaoPage() {
 
   const handleEmpresaChange = async (id) => {
     setEmpresaId(id)
-    await loadMappings(id)
+    await loadMappings(id, orgEmpresaIds)
   }
 
   // ─── Processar arquivo ────────────────────────────────────────────────────
@@ -627,7 +638,7 @@ export default function ImportacaoPage() {
         tipo_destino:     tipo,
       })
       if (error) throw error
-      await loadMappings(empresaId)
+      await loadMappings(empresaId, orgEmpresaIds)
       setEditingRow(null)
       showToast(isIgnorar ? '⛔ Categoria marcada como ignorada.' : 'Mapeamento salvo!', isIgnorar ? 'info' : 'success')
     } catch (e) {
@@ -1030,7 +1041,7 @@ export default function ImportacaoPage() {
       <ConfirmReplaceModal />
       {editingRow && (
         <MappingModal
-          row={editingRow} planoContas={contasFiltradas}
+          row={editingRow} planoContas={planoContas} empresaId={empresaId}
           modulo={activeTab} saving={savingMapping}
           onSave={saveMapping} onClose={() => setEditingRow(null)}
         />

@@ -236,8 +236,3 @@ input:focus, select:focus, textarea:focus { outline: none; }
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
-
-/* Tooltip informativo dos KPIs (ícone "i") */
-.fs-infotip:hover { border-color: var(--fs-brand); color: var(--fs-brand); }
-.fs-infotip:hover .fs-infotip-bubble,
-.fs-infotip:focus .fs-infotip-bubble { opacity: 1; visibility: visible; }

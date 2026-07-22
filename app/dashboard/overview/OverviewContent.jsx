@@ -46,17 +46,32 @@ const Spark = ({ data, dataKey, color }) => (
 )
 
 // ─── KPI Card grande ──────────────────────────────────────────────────────────
-// ─── Tooltip informativo (ícone "i" com explicação da métrica no hover) ──────
-const InfoTip = ({ text }) => (
-  <span className="fs-infotip" tabIndex={0} aria-label={text}
-    style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:14, height:14, borderRadius:'50%', border:'1px solid var(--fs-text-4)', color:'var(--fs-text-4)', fontSize:9, fontWeight:700, cursor:'help', flexShrink:0, position:'relative', fontFamily:'var(--fs-font-body)' }}>
-    i
-    <span className="fs-infotip-bubble" role="tooltip"
-      style={{ position:'absolute', bottom:'calc(100% + 8px)', left:'50%', transform:'translateX(-50%)', width:230, background:'var(--fs-surface-3)', border:'1px solid var(--fs-border-2)', borderRadius:8, padding:'9px 11px', fontSize:11.5, fontWeight:400, lineHeight:1.45, color:'var(--fs-text-2)', textTransform:'none', letterSpacing:'normal', boxShadow:'var(--fs-shadow-md)', zIndex:70, opacity:0, visibility:'hidden', transition:'opacity 0.15s', pointerEvents:'none', textAlign:'left' }}>
-      {text}
+// ─── Tooltip informativo (ícone "i" — clique ou hover revela a explicação) ──
+const InfoTip = ({ text }) => {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [open])
+  return (
+    <span
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onClick={(e) => { e.stopPropagation(); setOpen(o => !o) }}
+      tabIndex={0} role="button" aria-label={text}
+      style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:15, height:15, borderRadius:'50%', border:`1px solid ${open ? 'var(--fs-brand)' : 'var(--fs-text-4)'}`, color: open ? 'var(--fs-brand)' : 'var(--fs-text-4)', fontSize:9.5, fontWeight:700, cursor:'pointer', flexShrink:0, position:'relative', fontFamily:'var(--fs-font-body)', transition:'all 0.15s' }}>
+      i
+      {open && (
+        <span role="tooltip"
+          style={{ position:'absolute', top:'calc(100% + 8px)', left:0, width:240, background:'var(--fs-surface-3)', border:'1px solid var(--fs-border-2)', borderRadius:8, padding:'10px 12px', fontSize:11.5, fontWeight:400, lineHeight:1.5, color:'var(--fs-text-2)', textTransform:'none', letterSpacing:'normal', boxShadow:'var(--fs-shadow-md)', zIndex:200, textAlign:'left', whiteSpace:'normal' }}>
+          {text}
+        </span>
+      )}
     </span>
-  </span>
-)
+  )
+}
 
 const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, isNegative, sub, hero, info }) => {
   const pctNum = pct !== undefined && pct !== null ? Number(pct) : null
@@ -574,7 +589,7 @@ export default function OverviewPage() {
           </div>
 
           {/* ── KPIs secundários ────────────────────────────────────────────── */}
-          <div style={{ display:'flex', marginBottom:20, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, overflow:'hidden', flexWrap:'wrap' }}>
+          <div style={{ display:'flex', marginBottom:20, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, flexWrap:'wrap' }}>
             <SCard first label="A Receber · 30 Dias" value={kpis.aReceber>0?fC(kpis.aReceber):'—'} info="Soma dos títulos de entrada a vencer nos próximos 30 dias (em aberto ou parcial). Parciais contam apenas o valor ainda não recebido." color="var(--fs-success)" />
             <SCard label="A Pagar · 30 Dias"   value={kpis.aPagar>0?fC(kpis.aPagar):'—'} info="Soma dos títulos de saída a vencer nos próximos 30 dias (em aberto ou parcial). Parciais contam apenas o valor ainda não pago."     color="var(--fs-danger)" />
             <SCard label="Burn Rate Mensal"     value={fC(kpis.burnRate)} info="(Custos Variáveis + Despesas Fixas) ÷ nº de meses do período. Ritmo médio de consumo de caixa operacional por mês." sub="custos + despesas / mês" />

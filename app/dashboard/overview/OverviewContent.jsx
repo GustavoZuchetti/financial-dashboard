@@ -493,9 +493,13 @@ export default function OverviewPage() {
       setFcMensal(fcChart)
 
       // ── Composição da Receita ─────────────────────────────────────────────
+      // Agrupa pela CATEGORIA de origem do lançamento (ex.: "Receita de
+      // serviços"), não pela conta contábil de destino (ex.: "Receita Bruta"),
+      // que agruparia tudo num só item. Só cai na conta do plano se a categoria
+      // e a descrição faltarem.
       const recMap = {}
       ;(curLanc||[]).filter(l=>l.tipo==='receita').forEach(l => {
-        const cat = planMap[l.conta_id] || l.categoria || l.descricao?.substring(0,25) || 'Receita Geral'
+        const cat = l.categoria || l.descricao?.substring(0,25) || planMap[l.conta_id] || 'Receita Geral'
         recMap[cat] = (recMap[cat]||0) + Number(l.valor)
       })
       const sortedRec = Object.entries(recMap).sort((a,b)=>b[1]-a[1])

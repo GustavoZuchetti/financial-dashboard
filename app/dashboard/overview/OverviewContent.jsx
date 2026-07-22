@@ -37,12 +37,10 @@ const fDate = (iso) => {
 const lastDay = (year, month) => new Date(year, month + 1, 0).getDate()
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
-const Spark = ({ data, dataKey, color }) => (
-  <ResponsiveContainer width="100%" height="100%">
-    <LineChart data={data} margin={{top:2,right:2,bottom:2,left:2}}>
-      <Line type="monotone" dataKey={dataKey} stroke={color} dot={false} strokeWidth={2} />
-    </LineChart>
-  </ResponsiveContainer>
+const Spark = ({ data, dataKey, color, w = 84, h = 40 }) => (
+  <LineChart width={w} height={h} data={data} margin={{top:2,right:2,bottom:2,left:2}}>
+    <Line type="monotone" dataKey={dataKey} stroke={color} dot={false} strokeWidth={2} isAnimationActive={false} />
+  </LineChart>
 )
 
 // ─── KPI Card grande ──────────────────────────────────────────────────────────
@@ -82,7 +80,7 @@ const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, i
       border:'1px solid var(--fs-border)',
       borderTop: hero ? '2px solid var(--fs-brand)' : '1px solid var(--fs-border)',
       borderRadius:12, padding: hero ? '20px 24px' : '18px 20px',
-      gridColumn: hero ? 'span 2' : 'span 1', minWidth:0,
+      gridColumn: hero ? 'span 2' : 'span 1', minWidth:0, overflow:'hidden',
     }}>
       <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
         <span style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px' }}>{label}</span>
@@ -103,8 +101,8 @@ const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, i
           {sub && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:4 }}>{sub}</div>}
         </div>
         {sparkData && sparkData.length > 1 && (
-          <div style={{ width: hero ? 130 : 84, height: hero ? 54 : 40, flexShrink:0 }}>
-            <Spark data={sparkData} dataKey={sparkKey} color={sparkColor || 'var(--fs-brand)'} />
+          <div style={{ width: hero ? 130 : 84, height: hero ? 54 : 40, flexShrink:0, overflow:'hidden' }}>
+            <Spark data={sparkData} dataKey={sparkKey} color={sparkColor || 'var(--fs-brand)'} w={hero ? 130 : 84} h={hero ? 54 : 40} />
           </div>
         )}
       </div>

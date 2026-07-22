@@ -236,3 +236,10 @@ input:focus, select:focus, textarea:focus { outline: none; }
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
+
+
+/* Grid de KPIs principais do Overview — 6 col desktop, 2 col em telas estreitas */
+@media (max-width: 900px) {
+  .fs-kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .fs-kpi-grid > * { grid-column: span 1 !important; }
+}

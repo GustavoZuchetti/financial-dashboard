@@ -82,7 +82,7 @@ const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, i
       border:'1px solid var(--fs-border)',
       borderTop: hero ? '2px solid var(--fs-brand)' : '1px solid var(--fs-border)',
       borderRadius:12, padding: hero ? '20px 24px' : '18px 20px',
-      flex: hero ? 1.6 : 1, minWidth:0,
+      gridColumn: hero ? 'span 2' : 'span 1', minWidth:0,
     }}>
       <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
         <span style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px' }}>{label}</span>
@@ -585,7 +585,7 @@ export default function OverviewPage() {
       ) : (
         <>
           {/* ── KPIs principais ─────────────────────────────────────────────── */}
-          <div style={{ display:'flex', gap:12, marginBottom:12, flexWrap:'wrap' }}>
+          <div className="fs-kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:12, marginBottom:12 }}>
             <KCard hero label={`Receita Bruta · ${dr.subLabel}`} value={fC(kpis.rb)} pct={kpis.rbPct} info="Soma de todas as receitas brutas do período (antes de deduções). A comparação é contra o período anterior de mesma duração." pctLabel="vs período anterior" sparkData={monthly} sparkKey="receita" sparkColor="var(--fs-success)" sub={kpis.rl !== kpis.rb ? `Rec. Líquida: ${fC(kpis.rl)}` : null} />
             <KCard label="EBITDA"          value={fC(kpis.ebt)} info="Lucro antes de juros, impostos, depreciação e amortização. Aqui: Receita Líquida − Custos Variáveis − Despesas Fixas. Mede a geração de caixa operacional."                   pct={kpis.ebtPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="var(--fs-brand)" />
             <KCard label="Margem Bruta"    value={`${kpis.margBruta.toFixed(1)}%`} info="Lucro Bruto ÷ Receita Bruta × 100. Eficiência da operação ANTES das despesas fixas — quanto sobra após custos variáveis e deduções. Variação em pontos percentuais (p.p.)." pct={kpis.margBrutaDiff} pctLabel="p.p. vs anterior" sparkData={monthly} sparkKey="lucroBruto" sparkColor="var(--fs-teal)" />

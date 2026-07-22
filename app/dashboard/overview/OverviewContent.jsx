@@ -95,31 +95,33 @@ const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, i
       background: hero ? 'var(--fs-surface-2)' : 'var(--fs-surface)',
       border:'1px solid var(--fs-border)',
       borderTop: hero ? '2px solid var(--fs-brand)' : '1px solid var(--fs-border)',
-      borderRadius:12, padding: hero ? '20px 24px' : '18px 20px',
+      borderRadius:12, padding: hero ? '20px 24px' : '16px 18px',
       gridColumn: hero ? 'span 2' : 'span 1', minWidth:0, overflow:'hidden',
     }}>
-      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
         <span style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px' }}>{label}</span>
         {info && <InfoTip text={info} />}
       </div>
-      <div>
-        <div className="fs-num" style={{ fontSize: hero ? 36 : 24, fontWeight: hero ? 800 : 750, fontFamily: hero ? 'var(--fs-font-display)' : undefined, color:'var(--fs-text-1)', lineHeight:1.1, marginBottom:6 }}>{value}</div>
-        {pctNum !== null && (
-          <div style={{ display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
-            <span style={{ fontSize:12, fontWeight:700, color: pos ? 'var(--fs-success)' : 'var(--fs-danger)', display:'inline-flex', alignItems:'center', gap:4 }}>
-              <SvgIcon name={pctNum >= 0 ? 'trendingUp' : 'trendingDown'} size={13} color="currentColor" />
-              {Math.abs(pctNum).toFixed(1)}%
-            </span>
-            {pctLabel && <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{pctLabel}</span>}
+      <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:10 }}>
+        <div style={{ minWidth:0, flex:'1 1 auto' }}>
+          <div className="fs-num" style={{ fontSize: hero ? 36 : 24, fontWeight: hero ? 800 : 750, fontFamily: hero ? 'var(--fs-font-display)' : undefined, color:'var(--fs-text-1)', lineHeight:1.1, marginBottom:6 }}>{value}</div>
+          {pctNum !== null && (
+            <div style={{ display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
+              <span style={{ fontSize:12, fontWeight:700, color: pos ? 'var(--fs-success)' : 'var(--fs-danger)', display:'inline-flex', alignItems:'center', gap:4 }}>
+                <SvgIcon name={pctNum >= 0 ? 'trendingUp' : 'trendingDown'} size={13} color="currentColor" />
+                {Math.abs(pctNum).toFixed(1)}%
+              </span>
+              {pctLabel && <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{pctLabel}</span>}
+            </div>
+          )}
+          {sub && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:4 }}>{sub}</div>}
+        </div>
+        {sparkData && sparkData.length > 1 && (
+          <div style={{ width: hero ? 120 : 72, flexShrink:0, alignSelf:'center' }}>
+            <Spark data={sparkData} dataKey={sparkKey} color={sparkColor || 'var(--fs-brand)'} h={hero ? 40 : 30} />
           </div>
         )}
-        {sub && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:4 }}>{sub}</div>}
       </div>
-      {sparkData && sparkData.length > 1 && (
-        <div style={{ marginTop:12, height: hero ? 44 : 34 }}>
-          <Spark data={sparkData} dataKey={sparkKey} color={sparkColor || 'var(--fs-brand)'} h={hero ? 44 : 34} />
-        </div>
-      )}
     </div>
   )
 }

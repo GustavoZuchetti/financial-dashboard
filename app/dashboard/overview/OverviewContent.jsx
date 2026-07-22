@@ -384,13 +384,20 @@ export default function OverviewPage() {
 
       const ENTRADA_TIPOS = ['entrada','fluxo_entrada','receita','receita_financeira']
       const saldoInicial = (cfgRows || []).reduce((a, r) => a + (Number(r.valor) || 0), 0)
-      // CAIXA EFETIVO: só efeitos (liquidações/vencimentos válidos) < início
+      // CAIXA EFETIVO: só efeitos (liquidações/vencimentos válidos) < início.
+      // ATENÇÃO: a base histórica pré-período pode estar incompleta (títulos
+      // antigos não sincronizados, aportes não classificados como entrada),
+      // gerando um "buraco" artificial que não é caixa real. Por isso o caixa
+      // parte do SALDO INICIAL configurado + movimento do período — mesma base
+      // da tela de Gestão, evitando reconstruir o caixa desde 2024 com dados
+      // incompletos. netAnterior fica disponível para diagnóstico, mas não
+      // entra no saldo base exibido.
       const netAnterior  = (fcAnterior || []).reduce((a, f) => {
         let s0 = 0
         efeitosCaixa(f).forEach(e => { if (e.data < dr.start) s0 += e.valor })
         return a + (ENTRADA_TIPOS.includes(f.tipo) ? s0 : -s0)
       }, 0)
-      const saldoBase = saldoInicial + netAnterior
+      const saldoBase = saldoInicial
 
       const planMap = Object.fromEntries((planoContas||[]).map(p=>[p.id,p.nome]))
       const vCur    = calcDRE(curLanc  || [])

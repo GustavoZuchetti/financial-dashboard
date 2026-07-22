@@ -46,7 +46,19 @@ const Spark = ({ data, dataKey, color }) => (
 )
 
 // ─── KPI Card grande ──────────────────────────────────────────────────────────
-const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, isNegative, sub, hero }) => {
+// ─── Tooltip informativo (ícone "i" com explicação da métrica no hover) ──────
+const InfoTip = ({ text }) => (
+  <span className="fs-infotip" tabIndex={0} aria-label={text}
+    style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:14, height:14, borderRadius:'50%', border:'1px solid var(--fs-text-4)', color:'var(--fs-text-4)', fontSize:9, fontWeight:700, cursor:'help', flexShrink:0, position:'relative', fontFamily:'var(--fs-font-body)' }}>
+    i
+    <span className="fs-infotip-bubble" role="tooltip"
+      style={{ position:'absolute', bottom:'calc(100% + 8px)', left:'50%', transform:'translateX(-50%)', width:230, background:'var(--fs-surface-3)', border:'1px solid var(--fs-border-2)', borderRadius:8, padding:'9px 11px', fontSize:11.5, fontWeight:400, lineHeight:1.45, color:'var(--fs-text-2)', textTransform:'none', letterSpacing:'normal', boxShadow:'var(--fs-shadow-md)', zIndex:70, opacity:0, visibility:'hidden', transition:'opacity 0.15s', pointerEvents:'none', textAlign:'left' }}>
+      {text}
+    </span>
+  </span>
+)
+
+const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, isNegative, sub, hero, info }) => {
   const pctNum = pct !== undefined && pct !== null ? Number(pct) : null
   const pos = pctNum === null ? null : !isNegative ? pctNum >= 0 : pctNum <= 0
   return (
@@ -57,7 +69,10 @@ const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, i
       borderRadius:12, padding: hero ? '20px 24px' : '18px 20px',
       flex: hero ? 1.6 : 1, minWidth:0,
     }}>
-      <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:10 }}>{label}</div>
+      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
+        <span style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px' }}>{label}</span>
+        {info && <InfoTip text={info} />}
+      </div>
       <div style={{ display:'flex', alignItems:'flex-end', gap:8 }}>
         <div style={{ flex:1 }}>
           <div className="fs-num" style={{ fontSize: hero ? 36 : 24, fontWeight: hero ? 800 : 750, fontFamily: hero ? 'var(--fs-font-display)' : undefined, color:'var(--fs-text-1)', lineHeight:1.1, marginBottom:6 }}>{value}</div>
@@ -85,9 +100,12 @@ const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, i
 // ─── KPI Card secundário ──────────────────────────────────────────────────────
 // Célula da faixa de indicadores secundários — uma única superfície com
 // divisórias internas em vez de quatro cards idênticos
-const SCard = ({ label, value, sub, color, first }) => (
+const SCard = ({ label, value, sub, color, first, info }) => (
   <div style={{ padding:'14px 20px', flex:1, minWidth:0, borderLeft: first ? 'none' : '1px solid var(--fs-border)' }}>
-    <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:6 }}>{label}</div>
+    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
+      <span style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px' }}>{label}</span>
+      {info && <InfoTip text={info} />}
+    </div>
     <div className="fs-num" style={{ fontSize:19, fontWeight:750, color: color || 'var(--fs-text-1)', lineHeight:1.2 }}>{value}</div>
     {sub && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:3 }}>{sub}</div>}
   </div>
@@ -549,18 +567,18 @@ export default function OverviewPage() {
         <>
           {/* ── KPIs principais ─────────────────────────────────────────────── */}
           <div style={{ display:'flex', gap:12, marginBottom:12, flexWrap:'wrap' }}>
-            <KCard hero label={`Receita Bruta · ${dr.subLabel}`} value={fC(kpis.rb)} pct={kpis.rbPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="receita" sparkColor="var(--fs-success)" sub={kpis.rl !== kpis.rb ? `Rec. Líquida: ${fC(kpis.rl)}` : null} />
-            <KCard label="EBITDA"          value={fC(kpis.ebt)}                   pct={kpis.ebtPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="var(--fs-brand)" />
-            <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`}     pct={kpis.margDiff} pctLabel="p.p. vs anterior"  sparkData={monthly} sparkKey="resLiq" sparkColor="var(--fs-purple)" />
-            <KCard label="Caixa Disponível" value={fC(kpis.caixa)} pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
+            <KCard hero label={`Receita Bruta · ${dr.subLabel}`} value={fC(kpis.rb)} pct={kpis.rbPct} info="Soma de todas as receitas brutas do período (antes de deduções). A comparação é contra o período anterior de mesma duração." pctLabel="vs período anterior" sparkData={monthly} sparkKey="receita" sparkColor="var(--fs-success)" sub={kpis.rl !== kpis.rb ? `Rec. Líquida: ${fC(kpis.rl)}` : null} />
+            <KCard label="EBITDA"          value={fC(kpis.ebt)} info="Lucro antes de juros, impostos, depreciação e amortização. Aqui: Receita Líquida − Custos Variáveis − Despesas Fixas. Mede a geração de caixa operacional."                   pct={kpis.ebtPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="var(--fs-brand)" />
+            <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`} info="Resultado Líquido ÷ Receita Bruta × 100. Quanto sobra de cada R$ 1 faturado após todos os custos, despesas e resultados financeiros. Variação em pontos percentuais (p.p.)."     pct={kpis.margDiff} pctLabel="p.p. vs anterior"  sparkData={monthly} sparkKey="resLiq" sparkColor="var(--fs-purple)" />
+            <KCard label="Caixa Disponível" value={fC(kpis.caixa)} info="Saldo inicial das entidades + todo o movimento efetivo (entradas − saídas) até hoje, em regime de caixa. Negativo indica posição devedora ou saldo inicial não configurado." pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
           </div>
 
           {/* ── KPIs secundários ────────────────────────────────────────────── */}
           <div style={{ display:'flex', marginBottom:20, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, overflow:'hidden', flexWrap:'wrap' }}>
-            <SCard first label="A Receber · 30 Dias" value={kpis.aReceber>0?fC(kpis.aReceber):'—'} color="var(--fs-success)" />
-            <SCard label="A Pagar · 30 Dias"   value={kpis.aPagar>0?fC(kpis.aPagar):'—'}     color="var(--fs-danger)" />
-            <SCard label="Burn Rate Mensal"     value={fC(kpis.burnRate)} sub="custos + despesas / mês" />
-            <SCard label="Runway"               value={kpis.runway?`${kpis.runway.toFixed(1)} meses`:'—'} sub={kpis.runway?'caixa ÷ burn rate':(kpis.runwayMotivo||'caixa ÷ burn rate')} color={kpis.runwayMotivo==='caixa negativo'?'var(--fs-danger)':undefined} />
+            <SCard first label="A Receber · 30 Dias" value={kpis.aReceber>0?fC(kpis.aReceber):'—'} info="Soma dos títulos de entrada a vencer nos próximos 30 dias (em aberto ou parcial). Parciais contam apenas o valor ainda não recebido." color="var(--fs-success)" />
+            <SCard label="A Pagar · 30 Dias"   value={kpis.aPagar>0?fC(kpis.aPagar):'—'} info="Soma dos títulos de saída a vencer nos próximos 30 dias (em aberto ou parcial). Parciais contam apenas o valor ainda não pago."     color="var(--fs-danger)" />
+            <SCard label="Burn Rate Mensal"     value={fC(kpis.burnRate)} info="(Custos Variáveis + Despesas Fixas) ÷ nº de meses do período. Ritmo médio de consumo de caixa operacional por mês." sub="custos + despesas / mês" />
+            <SCard label="Runway"               value={kpis.runway?`${kpis.runway.toFixed(1)} meses`:'—'} info="Caixa Disponível ÷ Burn Rate Mensal = meses de operação que o caixa atual sustenta no ritmo de gasto atual. Não se aplica quando o caixa está negativo." sub={kpis.runway?'caixa ÷ burn rate':(kpis.runwayMotivo||'caixa ÷ burn rate')} color={kpis.runwayMotivo==='caixa negativo'?'var(--fs-danger)':undefined} />
           </div>
 
           {/* ── Gráficos linha 1 ────────────────────────────────────────────── */}

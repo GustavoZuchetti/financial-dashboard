@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import EmptyState from '@/components/EmptyState'
+import { TableSkeleton } from '@/components/Skeleton'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import { getStatusInfo, efeitosCaixa, dataEfetiva } from '@/lib/fluxo-status'
@@ -946,7 +947,7 @@ export default function GestaoFluxoCaixaPage() {
 
         {/* Corpo */}
         {loading ? (
-          <div style={{ textAlign:'center', padding:60, color:'var(--fs-text-4)', fontSize:13 }}>Carregando...</div>
+          <div style={{ padding:16 }}><TableSkeleton rows={8} cols={6} /></div>
         ) : extratoComSaldo.length === 0 ? (
           busca ? (
             <EmptyState compact icon="search" title={`Nenhum registro contém “${busca}”`}>

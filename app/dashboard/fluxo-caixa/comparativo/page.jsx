@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
+import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -155,7 +156,7 @@ export default function FluxoComparativo() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign:'center', padding:60, color:'var(--fs-text-4)', fontSize:14 }}>Carregando dados...</div>
+        <><KpiCardsSkeleton count={4} /><ChartSkeleton height={260} /></>
       ) : (
         <>
           {/* KPIs */}

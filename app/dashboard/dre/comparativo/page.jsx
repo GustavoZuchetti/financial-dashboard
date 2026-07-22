@@ -7,6 +7,7 @@ import {
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE } from '@/lib/dre-calc'
 import SvgIcon from '@/components/SvgIcon'
+import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 
 // ─── Formatadores ─────────────────────────────────────────────────────────────
 const fmt     = (v) => new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', notation:'compact', maximumFractionDigits:1 }).format(Number(v)||0)
@@ -263,7 +264,7 @@ export default function DREComparativo() {
       </div>
 
       {firstLoad ? (
-        <div style={{ textAlign:'center', padding:80, color:'var(--fs-text-4)', fontSize:14 }}>Carregando dados...</div>
+        <><KpiCardsSkeleton count={4} /><ChartSkeleton height={260} /></>
       ) : (
         <div style={{ opacity: loading ? 0.55 : 1, transition:'opacity 0.2s', pointerEvents: loading ? 'none' : 'auto' }}>
           {/* Colunas comparativas */}

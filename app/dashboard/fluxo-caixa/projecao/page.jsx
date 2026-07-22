@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
+import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -161,7 +162,7 @@ export default function FluxoProjecao() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign:'center', padding:60, color:'var(--fs-text-4)', fontSize:14 }}>Calculando projeção...</div>
+        <><KpiCardsSkeleton count={4} /><ChartSkeleton height={260} /></>
       ) : historico.length === 0 ? (
         <div style={{ textAlign:'center', padding:60, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, color:'var(--fs-text-4)', fontSize:14 }}>
           Sem histórico suficiente para calcular projeção. Importe dados do Fluxo de Caixa primeiro.

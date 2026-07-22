@@ -187,7 +187,7 @@ export default function LayoutImportacao() {
 
       {/* LISTA */}
       {mode==='list' && (loading
-        ? <div style={{textAlign:'center',padding:60,color:'var(--fs-text-4)'}}>Carregando...</div>
+        ? <div className="fs-shimmer" style={{height:180,borderRadius:12,background:'var(--fs-surface-2)'}} />
         : layouts.length===0
           ? <Card style={{textAlign:'center',padding:60}}>
               <div style={{marginBottom:12,fontSize:13,color:'var(--fs-text-4)'}}>Layouts configurados</div>

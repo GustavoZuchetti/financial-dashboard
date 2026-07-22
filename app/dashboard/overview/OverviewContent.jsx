@@ -37,11 +37,27 @@ const fDate = (iso) => {
 const lastDay = (year, month) => new Date(year, month + 1, 0).getDate()
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
-const Spark = ({ data, dataKey, color, w = 84, h = 40 }) => (
-  <LineChart width={w} height={h} data={data} margin={{top:2,right:2,bottom:2,left:2}}>
-    <Line type="monotone" dataKey={dataKey} stroke={color} dot={false} strokeWidth={2} isAnimationActive={false} />
-  </LineChart>
-)
+const Spark = ({ data, dataKey, color, h = 34 }) => {
+  const vals = (data || []).map(d => Number(d?.[dataKey]) || 0)
+  if (vals.length < 2) return null
+  const W = 200, H = 40, pad = 3
+  const min = Math.min(...vals), max = Math.max(...vals)
+  const range = max - min || 1
+  const pts = vals.map((v, i) => {
+    const x = pad + (i / (vals.length - 1)) * (W - pad * 2)
+    const y = pad + (1 - (v - min) / range) * (H - pad * 2)
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  // largura 100% do container, altura fixa; preserveAspectRatio none deixa
+  // a linha esticar na horizontal acompanhando o card sem nunca transbordar
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"
+      style={{ display:'block', width:'100%', height:h }} aria-hidden="true">
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={2}
+        strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+    </svg>
+  )
+}
 
 // ─── KPI Card grande ──────────────────────────────────────────────────────────
 // ─── Tooltip informativo (ícone "i" — clique ou hover revela a explicação) ──
@@ -86,26 +102,24 @@ const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, i
         <span style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px' }}>{label}</span>
         {info && <InfoTip text={info} />}
       </div>
-      <div style={{ display:'flex', alignItems:'flex-end', gap:8 }}>
-        <div style={{ flex:1 }}>
-          <div className="fs-num" style={{ fontSize: hero ? 36 : 24, fontWeight: hero ? 800 : 750, fontFamily: hero ? 'var(--fs-font-display)' : undefined, color:'var(--fs-text-1)', lineHeight:1.1, marginBottom:6 }}>{value}</div>
-          {pctNum !== null && (
-            <div style={{ display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
-              <span style={{ fontSize:12, fontWeight:700, color: pos ? 'var(--fs-success)' : 'var(--fs-danger)', display:'inline-flex', alignItems:'center', gap:4 }}>
-                <SvgIcon name={pctNum >= 0 ? 'trendingUp' : 'trendingDown'} size={13} color="currentColor" />
-                {Math.abs(pctNum).toFixed(1)}%
-              </span>
-              {pctLabel && <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{pctLabel}</span>}
-            </div>
-          )}
-          {sub && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:4 }}>{sub}</div>}
-        </div>
-        {sparkData && sparkData.length > 1 && (
-          <div style={{ width: hero ? 130 : 84, height: hero ? 54 : 40, flexShrink:0, overflow:'hidden' }}>
-            <Spark data={sparkData} dataKey={sparkKey} color={sparkColor || 'var(--fs-brand)'} w={hero ? 130 : 84} h={hero ? 54 : 40} />
+      <div>
+        <div className="fs-num" style={{ fontSize: hero ? 36 : 24, fontWeight: hero ? 800 : 750, fontFamily: hero ? 'var(--fs-font-display)' : undefined, color:'var(--fs-text-1)', lineHeight:1.1, marginBottom:6 }}>{value}</div>
+        {pctNum !== null && (
+          <div style={{ display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
+            <span style={{ fontSize:12, fontWeight:700, color: pos ? 'var(--fs-success)' : 'var(--fs-danger)', display:'inline-flex', alignItems:'center', gap:4 }}>
+              <SvgIcon name={pctNum >= 0 ? 'trendingUp' : 'trendingDown'} size={13} color="currentColor" />
+              {Math.abs(pctNum).toFixed(1)}%
+            </span>
+            {pctLabel && <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{pctLabel}</span>}
           </div>
         )}
+        {sub && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:4 }}>{sub}</div>}
       </div>
+      {sparkData && sparkData.length > 1 && (
+        <div style={{ marginTop:12, height: hero ? 44 : 34 }}>
+          <Spark data={sparkData} dataKey={sparkKey} color={sparkColor || 'var(--fs-brand)'} h={hero ? 44 : 34} />
+        </div>
+      )}
     </div>
   )
 }

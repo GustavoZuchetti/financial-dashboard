@@ -95,30 +95,33 @@ const KCard = ({ label, value, pct, pctLabel, sparkData, sparkKey, sparkColor, i
       background: hero ? 'var(--fs-surface-2)' : 'var(--fs-surface)',
       border:'1px solid var(--fs-border)',
       borderTop: hero ? '2px solid var(--fs-brand)' : '1px solid var(--fs-border)',
-      borderRadius:12, padding: hero ? '20px 24px' : '16px 18px',
+      borderRadius:12, padding: hero ? '18px 22px' : '16px 18px',
       gridColumn: hero ? 'span 2' : 'span 1', minWidth:0, overflow:'hidden',
+      display:'flex', flexDirection:'column',
     }}>
-      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
-        <span style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px' }}>{label}</span>
+      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
+        <span style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.8px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{label}</span>
         {info && <InfoTip text={info} />}
       </div>
-      <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:10 }}>
-        <div style={{ minWidth:0, flex:'1 1 auto' }}>
-          <div className="fs-num" style={{ fontSize: hero ? 36 : 24, fontWeight: hero ? 800 : 750, fontFamily: hero ? 'var(--fs-font-display)' : undefined, color:'var(--fs-text-1)', lineHeight:1.1, marginBottom:6 }}>{value}</div>
-          {pctNum !== null && (
-            <div style={{ display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
-              <span style={{ fontSize:12, fontWeight:700, color: pos ? 'var(--fs-success)' : 'var(--fs-danger)', display:'inline-flex', alignItems:'center', gap:4 }}>
-                <SvgIcon name={pctNum >= 0 ? 'trendingUp' : 'trendingDown'} size={13} color="currentColor" />
-                {Math.abs(pctNum).toFixed(1)}%
-              </span>
-              {pctLabel && <span style={{ fontSize:11, color:'var(--fs-text-4)' }}>{pctLabel}</span>}
-            </div>
-          )}
-          {sub && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:4 }}>{sub}</div>}
+      <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:10, flex:1 }}>
+        <div style={{ minWidth:0, flex:'1 1 auto', display:'flex', flexDirection:'column', height:'100%' }}>
+          <div className="fs-num" style={{ fontSize: hero ? 34 : 23, fontWeight: hero ? 800 : 750, fontFamily: hero ? 'var(--fs-font-display)' : undefined, color:'var(--fs-text-1)', lineHeight:1.1 }}>{value}</div>
+          <div style={{ marginTop:'auto', paddingTop:8 }}>
+            {pctNum !== null && (
+              <div style={{ display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
+                <span style={{ fontSize:12, fontWeight:700, color: pos ? 'var(--fs-success)' : 'var(--fs-danger)', display:'inline-flex', alignItems:'center', gap:4 }}>
+                  <SvgIcon name={pctNum >= 0 ? 'trendingUp' : 'trendingDown'} size={13} color="currentColor" />
+                  {Math.abs(pctNum).toFixed(1)}%
+                </span>
+                {pctLabel && <span style={{ fontSize:10.5, color:'var(--fs-text-4)', whiteSpace:'nowrap' }}>{pctLabel}</span>}
+              </div>
+            )}
+            {sub && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:4 }}>{sub}</div>}
+          </div>
         </div>
         {sparkData && sparkData.length > 1 && (
-          <div style={{ width: hero ? 120 : 72, flexShrink:0, alignSelf:'center' }}>
-            <Spark data={sparkData} dataKey={sparkKey} color={sparkColor || 'var(--fs-brand)'} h={hero ? 40 : 30} />
+          <div style={{ width: hero ? 120 : 68, flexShrink:0, alignSelf:'center' }}>
+            <Spark data={sparkData} dataKey={sparkKey} color={sparkColor || 'var(--fs-brand)'} h={hero ? 38 : 30} />
           </div>
         )}
       </div>
@@ -602,11 +605,11 @@ export default function OverviewPage() {
       ) : (
         <>
           {/* ── KPIs principais ─────────────────────────────────────────────── */}
-          <div className="fs-kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:12, marginBottom:12 }}>
+          <div className="fs-kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:12, marginBottom:12, alignItems:'stretch' }}>
             <KCard hero label={`Receita Bruta · ${dr.subLabel}`} value={fC(kpis.rb)} pct={kpis.rbPct} info="Soma de todas as receitas brutas do período (antes de deduções). A comparação é contra o período anterior de mesma duração." pctLabel="vs período anterior" sparkData={monthly} sparkKey="receita" sparkColor="var(--fs-success)" sub={kpis.rl !== kpis.rb ? `Rec. Líquida: ${fC(kpis.rl)}` : null} />
-            <KCard label="EBITDA"          value={fC(kpis.ebt)} info="Lucro antes de juros, impostos, depreciação e amortização. Aqui: Receita Líquida − Custos Variáveis − Despesas Fixas. Mede a geração de caixa operacional."                   pct={kpis.ebtPct} pctLabel="vs período anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="var(--fs-brand)" />
-            <KCard label="Margem Bruta"    value={`${kpis.margBruta.toFixed(1)}%`} info="Lucro Bruto ÷ Receita Bruta × 100. Eficiência da operação ANTES das despesas fixas — quanto sobra após custos variáveis e deduções. Variação em pontos percentuais (p.p.)." pct={kpis.margBrutaDiff} pctLabel="p.p. vs anterior" sparkData={monthly} sparkKey="lucroBruto" sparkColor="var(--fs-teal)" />
-            <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`} info="Resultado Líquido ÷ Receita Bruta × 100. Quanto sobra de cada R$ 1 faturado após todos os custos, despesas e resultados financeiros. Variação em pontos percentuais (p.p.)."     pct={kpis.margDiff} pctLabel="p.p. vs anterior"  sparkData={monthly} sparkKey="resLiq" sparkColor="var(--fs-purple)" />
+            <KCard label="EBITDA"          value={fC(kpis.ebt)} info="Lucro antes de juros, impostos, depreciação e amortização. Aqui: Receita Líquida − Custos Variáveis − Despesas Fixas. Mede a geração de caixa operacional."                   pct={kpis.ebtPct} pctLabel="vs anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="var(--fs-brand)" />
+            <KCard label="Margem Bruta"    value={`${kpis.margBruta.toFixed(1)}%`} info="Lucro Bruto ÷ Receita Bruta × 100. Eficiência da operação ANTES das despesas fixas — quanto sobra após custos variáveis e deduções. Variação em pontos percentuais (p.p.)." pct={kpis.margBrutaDiff} pctLabel="p.p. vs ant." sparkData={monthly} sparkKey="lucroBruto" sparkColor="var(--fs-teal)" />
+            <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`} info="Resultado Líquido ÷ Receita Bruta × 100. Quanto sobra de cada R$ 1 faturado após todos os custos, despesas e resultados financeiros. Variação em pontos percentuais (p.p.)."     pct={kpis.margDiff} pctLabel="p.p. vs ant."  sparkData={monthly} sparkKey="resLiq" sparkColor="var(--fs-purple)" />
             <KCard label="Caixa Disponível" value={fC(kpis.caixa)} info="Saldo inicial das entidades + todo o movimento efetivo (entradas − saídas) até hoje, em regime de caixa. Negativo indica posição devedora ou saldo inicial não configurado." pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
           </div>
 

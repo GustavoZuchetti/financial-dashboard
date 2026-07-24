@@ -150,12 +150,30 @@ export default function OrcamentoPage() {
 
   const [empIds, setEmpIds] = useState([])
   const isConsol = empIds.length > 1
+  // ─── Escopo do orçamento ──────────────────────────────────────────────────
+  // 'entidade'    → uma meta por empresa (grupos que orçam empresa a empresa)
+  // 'consolidado' → uma meta única do grupo (gravada na organização)
+  const [escopoOrc, setEscopoOrc] = useState('entidade')
+  const [orgId, setOrgId] = useState(null)
+  useEffect(() => {
+    const salvo = typeof window !== 'undefined' ? localStorage.getItem('fs-orcamento-escopo') : null
+    if (salvo === 'consolidado' || salvo === 'entidade') setEscopoOrc(salvo)
+  }, [])
+  const trocarEscopo = (novo) => {
+    setEscopoOrc(novo)
+    try { localStorage.setItem('fs-orcamento-escopo', novo) } catch {}
+    setEditMode(false); setOrcEdits({}); setOrcMsg(null)
+  }
   useEffect(() => {
     // Resolve a seleção global (inclusive 'todas' → todas as entidades da org)
     ;(async () => {
       const ids = await getSelectedEntidadeIds()
       setEmpIds(ids || [])
       setEmpresaId(ids?.[0] || null)   // dispara o fetch existente
+      if (ids?.[0]) {
+        const { data: e } = await supabase.from('empresas').select('organization_id').eq('id', ids[0]).single()
+        setOrgId(e?.organization_id || null)
+      }
     })()
   }, [])
 
@@ -176,7 +194,9 @@ export default function OrcamentoPage() {
                   .select('tipo,categoria,valor,data,status,valor_liquidado,data_liquidacao')
                   .in('empresa_id', empIds)
                   .or(`and(data.gte.${startDate},data.lte.${endDate}),and(data_liquidacao.gte.${startDate},data_liquidacao.lte.${endDate})`),
-            supabase.from('orcamentos').select('*').in('empresa_id', empIds).eq('ano', ano).eq('mes', mes).eq('modulo', modulo)
+            (escopoOrc === 'consolidado'
+              ? supabase.from('orcamentos').select('*').eq('escopo','consolidado').eq('organization_id', orgId).eq('ano', ano).eq('mes', mes).eq('modulo', modulo)
+              : supabase.from('orcamentos').select('*').eq('escopo','entidade').in('empresa_id', empIds).eq('ano', ano).eq('mes', mes).eq('modulo', modulo))
           ])
           const normalizar = (rows) => modulo === 'dre' ? (rows || []) :
             (rows || []).flatMap(r => efeitosCaixa(r)
@@ -196,7 +216,9 @@ export default function OrcamentoPage() {
                   .select('tipo,categoria,valor,data,status,valor_liquidado,data_liquidacao')
                   .in('empresa_id', empIds)
                   .or(`and(data.gte.${startDate},data.lte.${endDate}),and(data_liquidacao.gte.${startDate},data_liquidacao.lte.${endDate})`),
-            supabase.from('orcamentos').select('*').in('empresa_id', empIds).eq('ano', ano).in('mes', mesesRange).eq('modulo', modulo)
+            (escopoOrc === 'consolidado'
+              ? supabase.from('orcamentos').select('*').eq('escopo','consolidado').eq('organization_id', orgId).eq('ano', ano).in('mes', mesesRange).eq('modulo', modulo)
+              : supabase.from('orcamentos').select('*').eq('escopo','entidade').in('empresa_id', empIds).eq('ano', ano).in('mes', mesesRange).eq('modulo', modulo))
           ])
           const normalizar = (rows) => modulo === 'dre' ? (rows || []) :
             (rows || []).flatMap(r => efeitosCaixa(r)
@@ -213,7 +235,7 @@ export default function OrcamentoPage() {
     }
 
     fetchData()
-  }, [empresaId, empIds, mes, ano, viewMode, modulo])
+  }, [empresaId, empIds, mes, ano, viewMode, modulo, escopoOrc, orgId])
 
   // ─── Consolidação por categoria e tipo ────────────────────────────────────────
   const buildRows = (tipo) => {
@@ -261,22 +283,38 @@ export default function OrcamentoPage() {
   const cancelEditMode = () => { setEditMode(false); setOrcEdits({}) }
 
   const saveOrcamento = async () => {
-    if (!empresaId || isConsol) {
-      setOrcMsg({ t: 'error', m: 'Metas são definidas por entidade — selecione uma empresa específica no seletor global para editar.' }); return
+    const consolidado = escopoOrc === 'consolidado'
+    if (consolidado && !orgId) {
+      setOrcMsg({ t: 'error', m: 'Organização não identificada — recarregue a página.' }); return
+    }
+    if (!consolidado && (!empresaId || isConsol)) {
+      setOrcMsg({ t: 'error', m: 'No escopo "Por entidade", selecione uma empresa específica no seletor global — ou mude para "Consolidado (grupo)" para uma meta única.' }); return
     }
     setSavingOrc(true)
     try {
-      const upsertRows = Object.entries(orcEdits)
+      const linhas = Object.entries(orcEdits)
         .filter(([, val]) => val !== '' && val !== null && val !== undefined)
         .map(([key, val]) => {
           const idx = key.indexOf('|')
           const tipo      = key.substring(0, idx)
           const categoria = key.substring(idx + 1)
-          return { empresa_id: empresaId, ano, mes, categoria, tipo, modulo, valor_orcado: parseFloat(String(val).replace(',', '.')) || 0 }
+          const base = { ano, mes, categoria, tipo, modulo, escopo: escopoOrc,
+                         valor_orcado: parseFloat(String(val).replace(',', '.')) || 0 }
+          return consolidado
+            ? { ...base, organization_id: orgId, empresa_id: null }
+            : { ...base, empresa_id: empresaId, organization_id: null }
         })
-      if (upsertRows.length > 0) {
-        const { error } = await supabase.from('orcamentos')
-          .upsert(upsertRows, { onConflict: 'empresa_id,ano,mes,categoria,tipo,modulo' })
+      if (linhas.length > 0) {
+        // Índices de unicidade são PARCIAIS (por escopo) e o PostgREST não os
+        // aceita em onConflict — então removemos as linhas equivalentes e
+        // reinserimos. Escopo/mês/módulo delimitam o alvo com precisão.
+        const cats = [...new Set(linhas.map(l => l.categoria))]
+        let del = supabase.from('orcamentos').delete()
+          .eq('ano', ano).eq('mes', mes).eq('modulo', modulo).eq('escopo', escopoOrc).in('categoria', cats)
+        del = consolidado ? del.eq('organization_id', orgId) : del.eq('empresa_id', empresaId)
+        const { error: errDel } = await del
+        if (errDel) { setOrcMsg({ t: 'error', m: 'Erro ao salvar: ' + errDel.message }); return }
+        const { error } = await supabase.from('orcamentos').insert(linhas)
         if (error) { setOrcMsg({ t: 'error', m: 'Erro ao salvar: ' + error.message }); return }
       }
       setOrcMsg({ t: 'ok', m: `✓ Orçamento de ${MESES[mes-1]}/${ano} salvo com sucesso.` })
@@ -284,8 +322,10 @@ export default function OrcamentoPage() {
       // recarregar dados
       const startDate = `${ano}-${String(mes).padStart(2,'0')}-01`
       const endDate   = new Date(ano, mes, 0).toISOString().split('T')[0]
-      const { data: orc } = await supabase.from('orcamentos').select('*')
-        .in('empresa_id', empIds).eq('ano', ano).eq('mes', mes).eq('modulo', modulo)
+      const recarga = escopoOrc === 'consolidado'
+        ? supabase.from('orcamentos').select('*').eq('escopo','consolidado').eq('organization_id', orgId).eq('ano', ano).eq('mes', mes).eq('modulo', modulo)
+        : supabase.from('orcamentos').select('*').eq('escopo','entidade').in('empresa_id', empIds).eq('ano', ano).eq('mes', mes).eq('modulo', modulo)
+      const { data: orc } = await recarga
       setOrcado(orc || [])
     } finally { setSavingOrc(false) }
   }
@@ -334,6 +374,26 @@ export default function OrcamentoPage() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* ── Escopo do orçamento: por entidade ou consolidado do grupo ────── */}
+      <div style={{ display:'flex', alignItems:'center', gap:14, flexWrap:'wrap', background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 16px', marginBottom:16 }}>
+        <span style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px' }}>Escopo do orçamento</span>
+        <div style={{ display:'flex', background:'var(--fs-input-bg)', border:'1px solid var(--fs-input-border)', borderRadius:8, overflow:'hidden' }}>
+          {[['entidade','Por entidade'],['consolidado','Consolidado (grupo)']].map(([val, rot]) => (
+            <button key={val} onClick={() => trocarEscopo(val)}
+              style={{ padding:'7px 15px', fontSize:12.5, fontWeight:600, border:'none', cursor:'pointer',
+                background: escopoOrc === val ? 'var(--fs-brand)' : 'transparent',
+                color: escopoOrc === val ? '#fff' : 'var(--fs-text-4)', transition:'all 0.2s' }}>
+              {rot}
+            </button>
+          ))}
+        </div>
+        <span style={{ fontSize:11.5, color:'var(--fs-text-4)', flex:1, minWidth:220 }}>
+          {escopoOrc === 'consolidado'
+            ? 'Meta única para todo o grupo — o realizado soma as entidades selecionadas.'
+            : 'Uma meta por empresa — selecione a entidade no seletor global para editar.'}
+        </span>
       </div>
 
       {orcMsg && (

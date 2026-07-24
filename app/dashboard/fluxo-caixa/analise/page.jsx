@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
-import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
+import { supabase, getSelectedEntidadeIds, fetchAll } from '@/lib/supabase'
 import { CHART_PALETTE, COLORS } from '@/lib/design-tokens'
 
 const fmtFull    = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
@@ -57,7 +57,9 @@ export default function FluxoCaixaAnalise() {
           const ids = await getSelectedEntidadeIds()
           if (ids.length) query = query.in('empresa_id', ids)
         }
-        const { data: fluxo } = await query
+        // fetchAll: sem paginar, o Supabase corta em 1000 linhas e os totais
+        // (Total Recebido/Pago, composição) ficavam subestimados em silêncio.
+        const fluxo = await fetchAll(query)
         setData(fluxo || [])
       } catch (e) {
         console.error(e)

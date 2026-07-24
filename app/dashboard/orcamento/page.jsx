@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts'
-import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
+import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import { efeitosCaixa } from '@/lib/fluxo-status'
 import { KpiCardsSkeleton, TableSkeleton } from '@/components/Skeleton'
@@ -187,14 +187,16 @@ export default function OrcamentoPage() {
           // Período mensal
           const startDate = `${ano}-${String(mes).padStart(2, '0')}-01`
           const endDate = new Date(ano, mes, 0).toISOString().split('T')[0]
-          const [{ data: lanc }, { data: orc }] = await Promise.all([
-            modulo === 'dre'
+          // fetchAll: o Supabase corta em 1000 linhas/request — sem paginar, o
+          // realizado vinha truncado e não fechava com a DRE (bug do acumulado).
+          const [lanc, orc] = await Promise.all([
+            fetchAll(modulo === 'dre'
               ? supabase.from('lancamentos').select('*').in('empresa_id', empIds).gte('data', startDate).lte('data', endDate)
               : supabase.from('fluxo_caixa')
                   .select('tipo,categoria,valor,data,status,valor_liquidado,data_liquidacao')
                   .in('empresa_id', empIds)
-                  .or(`and(data.gte.${startDate},data.lte.${endDate}),and(data_liquidacao.gte.${startDate},data_liquidacao.lte.${endDate})`),
-            (escopoOrc === 'consolidado'
+                  .or(`and(data.gte.${startDate},data.lte.${endDate}),and(data_liquidacao.gte.${startDate},data_liquidacao.lte.${endDate})`)),
+            fetchAll(escopoOrc === 'consolidado'
               ? supabase.from('orcamentos').select('*').eq('escopo','consolidado').eq('organization_id', orgId).eq('ano', ano).eq('mes', mes).eq('modulo', modulo)
               : supabase.from('orcamentos').select('*').eq('escopo','entidade').in('empresa_id', empIds).eq('ano', ano).eq('mes', mes).eq('modulo', modulo))
           ])
@@ -209,14 +211,14 @@ export default function OrcamentoPage() {
           const startDate = `${ano}-01-01`
           const endDate = new Date(ano, mes, 0).toISOString().split('T')[0]
           const mesesRange = Array.from({ length: mes }, (_, i) => i + 1)
-          const [{ data: lanc }, { data: orc }] = await Promise.all([
-            modulo === 'dre'
+          const [lanc, orc] = await Promise.all([
+            fetchAll(modulo === 'dre'
               ? supabase.from('lancamentos').select('*').in('empresa_id', empIds).gte('data', startDate).lte('data', endDate)
               : supabase.from('fluxo_caixa')
                   .select('tipo,categoria,valor,data,status,valor_liquidado,data_liquidacao')
                   .in('empresa_id', empIds)
-                  .or(`and(data.gte.${startDate},data.lte.${endDate}),and(data_liquidacao.gte.${startDate},data_liquidacao.lte.${endDate})`),
-            (escopoOrc === 'consolidado'
+                  .or(`and(data.gte.${startDate},data.lte.${endDate}),and(data_liquidacao.gte.${startDate},data_liquidacao.lte.${endDate})`)),
+            fetchAll(escopoOrc === 'consolidado'
               ? supabase.from('orcamentos').select('*').eq('escopo','consolidado').eq('organization_id', orgId).eq('ano', ano).in('mes', mesesRange).eq('modulo', modulo)
               : supabase.from('orcamentos').select('*').eq('escopo','entidade').in('empresa_id', empIds).eq('ano', ano).in('mes', mesesRange).eq('modulo', modulo))
           ])
@@ -322,10 +324,9 @@ export default function OrcamentoPage() {
       // recarregar dados
       const startDate = `${ano}-${String(mes).padStart(2,'0')}-01`
       const endDate   = new Date(ano, mes, 0).toISOString().split('T')[0]
-      const recarga = escopoOrc === 'consolidado'
+      const orc = await fetchAll(escopoOrc === 'consolidado'
         ? supabase.from('orcamentos').select('*').eq('escopo','consolidado').eq('organization_id', orgId).eq('ano', ano).eq('mes', mes).eq('modulo', modulo)
-        : supabase.from('orcamentos').select('*').eq('escopo','entidade').in('empresa_id', empIds).eq('ano', ano).eq('mes', mes).eq('modulo', modulo)
-      const { data: orc } = await recarga
+        : supabase.from('orcamentos').select('*').eq('escopo','entidade').in('empresa_id', empIds).eq('ano', ano).eq('mes', mes).eq('modulo', modulo))
       setOrcado(orc || [])
     } finally { setSavingOrc(false) }
   }

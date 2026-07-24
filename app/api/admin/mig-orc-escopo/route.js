@@ -36,11 +36,13 @@ export async function GET(request) {
   await run('integridade ids', `alter table public.orcamentos drop constraint if exists orcamentos_escopo_ids_check;
     alter table public.orcamentos add constraint orcamentos_escopo_ids_check check (
       (escopo = 'entidade' and empresa_id is not null) or (escopo = 'consolidado' and organization_id is not null))`)
-  // RLS: recriar policy cobrindo consolidado (organization_id) e entidade (empresa_id)
-  await run('rls', `do $$ declare c record; begin
-      for c in select polname from pg_policy where polrelid='public.orcamentos'::regclass loop
-        execute format('drop policy %I on public.orcamentos', c.polname); end loop; end $$;
-    create policy orcamentos_all on public.orcamentos for all
+  // RLS — ORDEM SEGURA: cria a policy nova PRIMEIRO; só depois remove as
+  // antigas. Se a criação falhar, as antigas continuam protegendo a tabela
+  // (nunca fica sem policy, o que bloquearia todo acesso).
+  const fn = await sql(t, `select proname from pg_proc where proname in ('get_my_org_id','user_empresa_ids')`)
+  passos.push({ nome: 'funcoes disponiveis', status: fn.status, detalhe: fn.body })
+  await run('rls nova policy', `drop policy if exists orcamentos_escopo on public.orcamentos;
+    create policy orcamentos_escopo on public.orcamentos for all
       using (
         (empresa_id is not null and empresa_id in (select id from public.empresas where organization_id = public.get_my_org_id()))
         or (organization_id is not null and organization_id = public.get_my_org_id())
@@ -49,6 +51,12 @@ export async function GET(request) {
         (empresa_id is not null and empresa_id in (select id from public.empresas where organization_id = public.get_my_org_id()))
         or (organization_id is not null and organization_id = public.get_my_org_id())
       )`)
+  // remove as legadas só se a nova existir (evita janela sem proteção)
+  await run('rls remove legadas', `do $$ declare c record; begin
+      if exists (select 1 from pg_policy where polrelid='public.orcamentos'::regclass and polname='orcamentos_escopo') then
+        for c in select polname from pg_policy where polrelid='public.orcamentos'::regclass and polname <> 'orcamentos_escopo' loop
+          execute format('drop policy %I on public.orcamentos', c.polname); end loop;
+      end if; end $$`)
   await run('reload', `notify pgrst, 'reload schema'`)
   const cols = await sql(t, `select column_name, is_nullable from information_schema.columns where table_name='orcamentos' order by ordinal_position`)
   return Response.json({ modo: 'aplicado', passos, colunas_finais: cols.body })

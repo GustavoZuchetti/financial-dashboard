@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAdmin, ensureToken, fetchCategoriasMap, processarPaginaFluxo, pausa } from '@/lib/bling-server'
+import { getAdmin, ensureToken, fetchCategoriasMap, processarPaginaFluxo, pausa, verificarExclusoes } from '@/lib/bling-server'
 
 // ─── Cron diário: sincroniza o fluxo (listagem) em segundo plano ─────────────
 // A Vercel chama esta rota no agendamento do vercel.json, autenticando com
@@ -60,6 +60,13 @@ export async function GET(request) {
       // próxima execução) e marcar ultima_sync_cron — antes o cursor ia só
       // dentro de ultimo_resultado e nunca era relido, deixando o cron preso
       // na mesma página final vazia (FACE travada em {fase:1,pagina:50}).
+      // Fatia diária de verificação de exclusões na origem (últimos 90 dias)
+      try {
+        const d90 = new Date(); d90.setDate(d90.getDate() - 90)
+        r.exclusoes = await verificarExclusoes(admin, integ, {
+          desde: d90.toISOString().split('T')[0], limite: 40, prazoMs: 8000 })
+      } catch { /* verificação é complementar: não derruba a sync */ }
+
       await admin.from('integracoes').update({
         contatos_cache: nomesContato,
         cron_cursor: { fase, pagina },

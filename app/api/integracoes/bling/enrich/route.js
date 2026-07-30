@@ -41,6 +41,7 @@ export async function POST(request) {
   const FILTRO = (q) => q
     .eq('empresa_id', integ.empresa_id)
     .like('doc_ref', 'bling:%')
+    .eq('origem_ausente', false)   // 404 permanente: excluído no Bling
     .or('descricao.like.Contato *,categoria.eq.Sem categoria,competencia.is.null,and(status.eq.pago,data_liquidacao.is.null)')
 
   try {
@@ -59,7 +60,7 @@ export async function POST(request) {
     // velocidade: fornecedores recorrentes só são consultados uma vez)
     const nomesCache = { ...(integ.contatos_cache || {}) }
     let escopoContatosOk = true
-    let processados = 0, erros = 0
+    let processados = 0, erros = 0, orfaos = 0
     const amostrasErro = []
     const motivos = {}  // { classe: contagem }
     const registraErro = (classe, doc, extra) => {
@@ -74,7 +75,22 @@ export async function POST(request) {
         try {
           const [, tipoRef, blingId] = row.doc_ref.split(':')
           const recurso = tipoRef === 'entrada' ? 'contas/receber' : 'contas/pagar'
-          const probe = await blingGet(integ, `${recurso}/${blingId}`)
+          let probe = await blingGet(integ, `${recurso}/${blingId}`)
+          // 404: pode ser tipo invertido no doc_ref — confere o outro recurso
+          if (probe.status === 404) {
+            const alt = tipoRef === 'entrada' ? 'contas/pagar' : 'contas/receber'
+            const probeAlt = await blingGet(integ, `${alt}/${blingId}`)
+            if (probeAlt.ok) probe = probeAlt
+            else {
+              // 404 nos dois: o título foi EXCLUÍDO no Bling. Marca para não
+              // ser reprocessado a cada passada (senão 'restantes' nunca zera
+              // e o job aborta ao encontrar um lote só de órfãos).
+              await admin.from('fluxo_caixa').update({ origem_ausente: true }).eq('id', row.id)
+              orfaos++
+              registraErro('origem_excluida_no_bling', row.doc_ref, { desc: (row.descricao || '').slice(0, 40) })
+              return
+            }
+          }
           const det = probe.ok ? (probe.body?.data || null) : null
           if (!det) {
             erros++
@@ -131,6 +147,8 @@ export async function POST(request) {
 
     // Sonda: se tudo falhou, capturar o HTTP real de UMA consulta de detalhe
     let sonda = null
+    // Só investiga falha sistêmica quando houve ERRO de verdade (401/403/5xx).
+    // Lote composto só de títulos excluídos no Bling não é falha do sistema.
     if (processados === 0 && erros > 0 && rows[0]) {
       const [, tRef, bId] = rows[0].doc_ref.split(':')
       const rc = tRef === 'entrada' ? 'contas/receber' : 'contas/pagar'
@@ -149,7 +167,7 @@ export async function POST(request) {
       sonda,
       motivos_erro: motivos,
       amostras_erro: amostrasErro,
-      processados, erros,
+      processados, erros, orfaos,
       restantes: restantes ?? 0,
       concluido: (restantes ?? 0) === 0,
       escopo_contatos: escopoContatosOk ? 'ok' : 'FALTANDO — habilite o escopo Contatos no app Bling para os nomes',

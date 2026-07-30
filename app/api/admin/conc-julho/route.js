@@ -40,6 +40,10 @@ export async function GET(request) {
   const porDia = {}
   itens.forEach(i => { const d = porDia[i.data] || (porDia[i.data]={entrada:0,saida:0,n:0}); d[i.tipo]+=i.valor; d.n++ })
   Object.values(porDia).forEach(d => { d.entrada=+d.entrada.toFixed(2); d.saida=+d.saida.toFixed(2) })
+  if (new URL(request.url).searchParams.get('fmt') === 'dia24') {
+    const alvo = all.filter(r => (r.data_liquidacao === '2026-07-24' || r.data === '2026-07-24'))
+    return Response.json({ dia24: alvo.map(r => ({ desc:(r.descricao||'').slice(0,30), cat:(r.categoria||'').slice(0,28), tipo:r.tipo, valor:r.valor, vl:r.valor_liquidado, status:r.status, venc:r.data, liq:r.data_liquidacao })) })
+  }
   if (new URL(request.url).searchParams.get('fmt') === 'csv') {
     const limpo = (t) => String(t || '').split('|').join(' ').split('\n').join(' ').slice(0, 28)
     const linhas = realizado.map(i => [i.data, i.valor.toFixed(2), i.tipo, limpo(i.desc)].join('|'))

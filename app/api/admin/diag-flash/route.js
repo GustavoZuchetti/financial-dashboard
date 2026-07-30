@@ -6,8 +6,8 @@ export async function GET(request) {
     return Response.json({ error: 'unauthorized' }, { status: 401 })
   const admin = getAdmin()
   const { data: lista } = await admin.from('fluxo_caixa')
-    .select('*').ilike('descricao','%FLASH%').order('data', { ascending: false }).limit(10)
-  const t = (lista||[]).find(x => Number(x.valor) >= 19000 && Number(x.valor) <= 23000) || (lista||[])[0]
+    .select('*').eq('data_liquidacao','2026-07-29').order('valor', { ascending: false }).limit(20)
+  const t = (lista||[]).find(x => /FLASH/i.test(x.descricao||'')) || (lista||[])[0]
   if (!t) return Response.json({ erro: 'titulo nao encontrado', encontrados: (lista||[]).length })
   const { data: integ0 } = await admin.from('integracoes').select('*').eq('empresa_id', t.empresa_id).single()
   const integ = await ensureToken(admin, integ0)
@@ -21,7 +21,7 @@ export async function GET(request) {
     bordero = b.body?.data || b.body
   }
   return Response.json({
-    outros_flash: (lista||[]).map(x=>({ desc:x.descricao, valor:x.valor, venc:x.data, status:x.status })),
+    liquidados_em_29_07: (lista||[]).map(x=>({ desc:x.descricao, valor:x.valor, venc:x.data, status:x.status })),
     NO_BANCO: { desc: t.descricao, valor: t.valor, valor_liquidado: t.valor_liquidado,
                 status: t.status, venc: t.data, liq: t.data_liquidacao },
     NO_BLING_titulo: { valor: d?.valor, saldo: d?.saldo, situacao: d?.situacao, vencimento: d?.vencimento },

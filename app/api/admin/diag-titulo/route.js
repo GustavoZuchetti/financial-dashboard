@@ -7,10 +7,9 @@ export async function GET(request) {
   if (sp.get('key') !== '1aeffa0d834f8bc3bb56e121') return Response.json({ error: 'unauthorized' }, { status: 401 })
   const admin = getAdmin()
   // procura o título de ~21.759 com vencimento ou liquidação em julho/2026
-  const alvo = Number(sp.get('valor') || 21759)
   const { data: cands } = await admin.from('fluxo_caixa')
     .select('id,empresa_id,doc_ref,descricao,tipo,valor,valor_liquidado,status,data,data_liquidacao,competencia')
-    .gte('valor', alvo - 50).lte('valor', alvo + 50)
+    .or('data.eq.2026-07-31,data.eq.2026-07-29,data_liquidacao.eq.2026-07-29,data_liquidacao.eq.2026-07-31')
   const { data: emps } = await admin.from('empresas').select('id,nome')
   const nome = Object.fromEntries((emps||[]).map(e=>[e.id,e.nome]))
 

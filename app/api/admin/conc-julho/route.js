@@ -27,11 +27,23 @@ export async function GET(request) {
       }
     }
   }
+  // REALIZADO = baixa efetiva (o que o Relatório de Caixa do Bling mostra)
+  const realizado = itens.filter(i => ['pago','parcial'].includes(i.status) && !i.aprox)
+  const projetado = itens.filter(i => !(['pago','parcial'].includes(i.status) && !i.aprox))
+  const somaR = (t) => +realizado.filter(i=>i.tipo===t).reduce((a,c)=>a+c.valor,0).toFixed(2)
+  const somaP = (t) => +projetado.filter(i=>i.tipo===t).reduce((a,c)=>a+c.valor,0).toFixed(2)
+  const diaR = {}
+  realizado.forEach(i => { const d = diaR[i.data] || (diaR[i.data]={e:0,s:0,n:0}); d[i.tipo==='entrada'?'e':'s']+=i.valor; d.n++ })
+  Object.values(diaR).forEach(d => { d.e=+d.e.toFixed(2); d.s=+d.s.toFixed(2) })
   const ent = itens.filter(i=>i.tipo==='entrada').reduce((a,c)=>a+c.valor,0)
   const sai = itens.filter(i=>i.tipo==='saida').reduce((a,c)=>a+c.valor,0)
   const porDia = {}
   itens.forEach(i => { const d = porDia[i.data] || (porDia[i.data]={entrada:0,saida:0,n:0}); d[i.tipo]+=i.valor; d.n++ })
   Object.values(porDia).forEach(d => { d.entrada=+d.entrada.toFixed(2); d.saida=+d.saida.toFixed(2) })
-  return Response.json({ total_itens: itens.length, entradas:+ent.toFixed(2), saidas:+sai.toFixed(2),
+  return Response.json({
+    REALIZADO: { itens: realizado.length, entradas: somaR('entrada'), saidas: somaR('saida'), por_dia: diaR },
+    PROJETADO: { itens: projetado.length, entradas: somaP('entrada'), saidas: somaP('saida'),
+                 amostra: projetado.slice(0,10).map(i=>({d:i.data,v:i.valor,t:i.tipo,desc:i.desc,st:i.status})) },
+    total_itens: itens.length, entradas:+ent.toFixed(2), saidas:+sai.toFixed(2),
     diferenca:+(ent-sai).toFixed(2), por_dia: porDia, itens })
 }

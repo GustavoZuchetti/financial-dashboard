@@ -7,8 +7,12 @@ import { getAuthProfile, ensureToken, fetchDetalhe, fetchCategoriasMap, fetchCon
 // body: { integracao_id, setup?: boolean }
 // Processa LOTE pequeno por chamada (timeout Vercel 10s); a UI itera até
 // restantes = 0. O filtro de "precisa enriquecer" torna o job retomável.
-const LOTE = 80           // máximo buscado por chamada
-const ORCAMENTO_MS = 8000 // processa até estourar o orçamento (timeout Vercel 10s)
+// Com o limitador de taxa (~2,6 req/s), a janela precisa ser maior: antes o
+// orçamento de 8s só cabia se as chamadas fossem em rajada — que era
+// justamente o que gerava os HTTP 429.
+export const maxDuration = 60
+const LOTE = 80            // máximo buscado por chamada
+const ORCAMENTO_MS = 45000 // ~2,6 req/s × 45s ≈ 115 chamadas por invocação
 
 export async function POST(request) {
   const auth = await getAuthProfile(request)
@@ -123,7 +127,6 @@ export async function POST(request) {
           processados++
         } catch (e) { erros++; registraErro('excecao', row.doc_ref, { msg: String(e.message || e).slice(0, 120) }) }
       }))
-      await pausa(250) // respeito ao rate limit do Bling
     }
 
     // Sonda: se tudo falhou, capturar o HTTP real de UMA consulta de detalhe

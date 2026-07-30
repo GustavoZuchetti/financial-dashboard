@@ -48,7 +48,7 @@ export async function POST(request) {
     integ = await ensureToken(admin, integ)
 
     const { data: rows } = await FILTRO(
-      admin.from('fluxo_caixa').select('id,doc_ref,tipo,valor,status,descricao,categoria')
+      admin.from('fluxo_caixa').select('id,doc_ref,tipo,valor,status,descricao,categoria,data')
     ).order('data', { ascending: false }).limit(LOTE)
 
     if (!rows?.length) {

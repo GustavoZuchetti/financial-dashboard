@@ -92,14 +92,34 @@ export default function IntegracoesTab({ empresas, showToast }) {
       `Recomendado: a API traz o histórico completo e evita duplicidade com importações antigas por CSV.\n\n` +
       `OK = substituir (remove os registros sem vínculo com a API antes de gravar)\nCancelar = manter e apenas adicionar/atualizar os vindos da API`)
     setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `Sincronizando ${modulo.toUpperCase()}...` } }))
-    let fase = 0, pagina = 1, total = 0, pend = 0, guarda = 0
+    // guarda: teto de iterações do laço. Era 60 — insuficiente, porque cobre as
+    // DUAS fases (contas/receber + contas/pagar) e agora também as repetições
+    // de página. A base já ultrapassa 29 páginas só em contas/pagar.
+    const MAX_ITER = 400
+    const MAX_RETRY_PAGINA = 5
+    let fase = 0, pagina = 1, total = 0, pend = 0, guarda = 0, retries = 0
     try {
-      while (guarda++ < 60) {
+      while (guarda++ < MAX_ITER) {
         const r = await authFetch('/api/integracoes/bling/sync', {
           method: 'POST',
           body: JSON.stringify({ integracao_id: integ.id, modulo, fase, pagina, limpar_origem_arquivo: limpar && fase === 0 && pagina === 1 }),
         })
         if (r.error) throw new Error(r.error)
+
+        // Bling indisponível: repetir a MESMA página, sem perder o acumulado
+        if (r.retryAvel) {
+          if (++retries > MAX_RETRY_PAGINA)
+            throw new Error(`Bling indisponível após ${MAX_RETRY_PAGINA} tentativas na página ${r.pagina}. `
+              + `${total} títulos já gravados foram preservados — execute a sincronização novamente mais tarde.`)
+          const espera = r.aguardar_ms || 8000
+          setSync(sx => ({ ...sx, [integ.id]: { rodando: true,
+            log: `Bling instável · pág. ${r.pagina} · tentativa ${retries}/${MAX_RETRY_PAGINA} em ${Math.round(espera / 1000)}s · ${total} gravados` } }))
+          await new Promise(res => setTimeout(res, espera))
+          fase = r.next.fase; pagina = r.next.pagina
+          continue
+        }
+
+        retries = 0
         total += r.gravados || 0; pend += r.total_pendencias || 0
         setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `${r.recurso} · pág. ${r.pagina} · ${total} gravados${pend ? ` · ${pend} pendências` : ''}` } }))
         if (!r.hasMore) break

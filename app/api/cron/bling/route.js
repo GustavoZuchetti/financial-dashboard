@@ -47,7 +47,18 @@ export async function GET(request) {
 
       while (Date.now() - inicio < janelaPorEnt && Date.now() - inicioGlobal < 55000) {
         const { recurso, tipoFluxo } = FASES[fase] || FASES[0]
-        const res = await processarPaginaFluxo(admin, integ, recurso, tipoFluxo, pagina, 50, categoriasMap, nomesContato)
+        let res
+        try {
+          res = await processarPaginaFluxo(admin, integ, recurso, tipoFluxo, pagina, 50, categoriasMap, nomesContato)
+        } catch (e) {
+          // Indisponibilidade do Bling: encerra a janela desta entidade SEM
+          // abortar, para que o cursor seja persistido logo abaixo e a próxima
+          // execução retome exatamente nesta página. Antes o erro subia direto
+          // ao catch externo, que fica ANTES do update do cron_cursor — e todo
+          // o avanço da execução era perdido.
+          if (e?.gateway) { r.interrompido = `Bling indisponível (HTTP ${e.status}) na página ${e.pagina ?? pagina}`; break }
+          throw e
+        }
         r.gravados += res.gravados
         r.paginas++
         if (res.paginaCheia) pagina++

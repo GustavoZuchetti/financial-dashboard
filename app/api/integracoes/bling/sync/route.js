@@ -5,6 +5,13 @@ import { getAuthProfile, ensureToken, fetchContas, fetchCategoriasMap, montarReg
 // body: { integracao_id, modulo: 'fluxo'|'dre', fase?: 0|1, pagina?: number, diag?: boolean }
 // Orçamento: 1 página (100 títulos) por chamada — a UI itera enquanto hasMore.
 // fase 0 = contas/receber (entrada) · fase 1 = contas/pagar (saída)
+// O comentário abaixo, em `const LIMITE`, já reconhecia o "timeout de 10s da
+// Vercel" — mas a rota nunca declarou maxDuration, então rodava mesmo com o
+// padrão de 10s enquanto o cron e o enrich usavam 60s. Com o retry de gateway
+// (que espera até 20s entre tentativas), 10s era garantia de falha.
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60
+
 const FASES = [
   { recurso: 'contas/receber', tipoFluxo: 'entrada' },
   { recurso: 'contas/pagar',   tipoFluxo: 'saida'   },
@@ -131,6 +138,30 @@ export async function POST(request) {
     return NextResponse.json({ ...resultado, hasMore: !!next, next })
   } catch (e) {
     console.error('Bling sync:', e)
+
+    // ═══ Indisponibilidade temporária do Bling ≠ falha da sincronização ═══
+    // 502/503/504 significam que a ORIGEM do Bling não respondeu — o cursor
+    // está íntegro, os dados estão íntegros, nada foi gravado pela metade
+    // (o upsert é por doc_ref e só ocorre depois da página inteira montada).
+    // Devolvemos 200 pedindo que a UI REPITA A MESMA PÁGINA após uma pausa.
+    // Antes, um 504 isolado na página 29 virava HTTP 502, a UI abortava o laço
+    // e o trabalho das 28 páginas anteriores era descartado.
+    if (e?.gateway) {
+      const pagFalha = e.pagina ?? pagina
+      return NextResponse.json({
+        modulo,
+        recurso: e.recurso || (FASES[fase] || FASES[0]).recurso,
+        pagina: pagFalha,
+        recebidos: 0, gravados: 0, pendencias: [], total_pendencias: 0,
+        retryAvel: true,
+        aguardar_ms: 8000,
+        aviso: `Bling temporariamente indisponível (HTTP ${e.status}) na página ${pagFalha}. `
+             + 'Nenhum dado foi perdido — a mesma página será repetida.',
+        hasMore: true,
+        next: { fase, pagina: pagFalha },   // MESMA página: o cursor não avança
+      })
+    }
+
     return NextResponse.json({ error: String(e.message || e) }, { status: 502 })
   }
 }

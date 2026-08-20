@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import IntegracoesTab from '@/components/IntegracoesTab'
+import SaldoAberturaTab from '@/components/SaldoAberturaTab'
 import { useOrg } from '@/lib/org-context'
 
 const inp = {
@@ -234,7 +235,10 @@ export default function ConfiguracoesPage() {
     { v: 'empresas',    l: 'Empresas',          icon: 'building'   },
     { v: 'usuarios',    l: 'Usuários',          icon: 'users'      },
     { v: 'identidade',  l: 'Identidade Visual', icon: 'paintBrush' },
-    ...(['org_admin','super_admin'].includes(myRole) ? [{ v: 'integracoes', l: 'Integrações (API)', icon: 'plug' }] : []),
+    ...(['org_admin','super_admin'].includes(myRole) ? [
+      { v: 'saldo_abertura', l: 'Saldo de Abertura', icon: 'bank' },
+      { v: 'integracoes',    l: 'Integrações (API)', icon: 'plug' },
+    ] : []),
   ]
 
   return (
@@ -467,6 +471,10 @@ export default function ConfiguracoesPage() {
       )}
 
       {/* ─── Tab: Identidade Visual ───────────────────────────── */}
+      {tab === 'saldo_abertura' && ['org_admin','super_admin'].includes(myRole) && (
+        <SaldoAberturaTab empresas={empresas} showToast={toast} />
+      )}
+
       {tab === 'integracoes' && ['org_admin','super_admin'].includes(myRole) && (
         <IntegracoesTab empresas={empresas} showToast={toast} />
       )}

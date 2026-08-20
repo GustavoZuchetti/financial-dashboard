@@ -249,7 +249,67 @@ teste('[TRAVA] saldo consolidado é NULO se qualquer entidade não tiver âncora
   eq(r.faltando.map(f => f.nome), ['JAM'], 'faltando: ')
 })
 
-// ─── 10. Leitura de valor digitado ───────────────────────────────────────────
+// ─── 10. Saldo de partida consolidado — o que as três telas consomem ─────────
+teste('saldo de partida consolidado soma as âncoras e o movimento até a véspera', () => {
+  const ents = [
+    { empresa_id: 'face', nome: 'FACE', ancoras: [ancora('2026-01-01', 60000)],
+      registros: [pago('entrada', '2026-03-10', 20000)] },
+    { empresa_id: 'jam', nome: 'JAM', ancoras: [ancora('2026-01-01', 10000)],
+      registros: [pago('saida', '2026-02-05', 4000)] },
+  ]
+  const r = S.saldoDePartidaConsolidado({ entidades: ents, inicioPeriodo: '2026-07-01', hoje: HOJE })
+  eq(r.ok, true, 'ok: '); eq(r.saldo, 86000, 'saldo: ')
+})
+
+teste('[TRAVA] partida consolidada é NULA se uma entidade não tiver âncora', () => {
+  const ents = [
+    { empresa_id: 'face', nome: 'FACE', ancoras: [ancora('2026-01-01', 60000)], registros: [] },
+    { empresa_id: 'jb',   nome: 'JB',   ancoras: [], registros: [] },
+  ]
+  const r = S.saldoDePartidaConsolidado({ entidades: ents, inicioPeriodo: '2026-07-01', hoje: HOJE })
+  eq(r.ok, false, 'ok: '); eq(r.saldo, null, 'saldo: ')
+  eq(r.faltando.map(f => f.nome), ['JB'], 'faltando: ')
+})
+
+teste('[TRAVA] cada entidade usa a PRÓPRIA âncora, nunca a de outra', () => {
+  // Se as âncoras vazassem entre entidades, FACE aplicaria a de JAM e o total
+  // continuaria "certo" por acaso — este teste separa os movimentos para pegar isso
+  const ents = [
+    { empresa_id: 'face', nome: 'FACE', ancoras: [ancora('2026-06-01', 1000)],
+      registros: [pago('saida', '2026-05-15', 999999)] },   // ANTES do corte da FACE: ignorado
+    { empresa_id: 'jam', nome: 'JAM', ancoras: [ancora('2026-05-01', 500)],
+      registros: [pago('saida', '2026-05-15', 100)] },      // DEPOIS do corte da JAM: conta
+  ]
+  const r = S.saldoDePartidaConsolidado({ entidades: ents, inicioPeriodo: '2026-07-01', hoje: HOJE })
+  eq(r.saldo, 1400, 'saldo: ')   // 1000 + (500 − 100)
+})
+
+teste('agruparPorEmpresa separa os registros de uma consulta única', () => {
+  const regs = [
+    { empresa_id: 'a', tipo: 'entrada', valor: 1, data: '2026-07-01', status: 'aberto' },
+    { empresa_id: 'b', tipo: 'saida',   valor: 2, data: '2026-07-01', status: 'aberto' },
+    { empresa_id: 'a', tipo: 'saida',   valor: 3, data: '2026-07-01', status: 'aberto' },
+    { tipo: 'saida', valor: 4, data: '2026-07-01', status: 'aberto' },   // sem empresa_id: descartado
+  ]
+  const m = S.agruparPorEmpresa(regs)
+  eq(Object.keys(m).sort(), ['a', 'b'], 'chaves: ')
+  eq(m.a.length, 2, 'a: '); eq(m.b.length, 1, 'b: ')
+})
+
+teste('montarEntidades entrega âncoras e registros já separados por entidade', () => {
+  const ents = S.montarEntidades({
+    empIds: ['a', 'b'],
+    nomes: { a: 'FACE', b: 'JAM' },
+    ancoras: [ancora('2026-07-01', 100), { ...ancora('2026-07-01', 200), empresa_id: 'a' }],
+    registros: [{ empresa_id: 'a', tipo: 'entrada', valor: 5, data: '2026-07-02', status: 'aberto' }],
+  })
+  eq(ents.map(e => e.nome), ['FACE', 'JAM'], 'nomes: ')
+  eq(ents[0].ancoras.length, 1, 'âncoras de a: ')
+  eq(ents[0].registros.length, 1, 'registros de a: ')
+  eq(ents[1].registros.length, 0, 'registros de b: ')
+})
+
+// ─── 11. Leitura de valor digitado ───────────────────────────────────────────
 teste('normalizarValor lê o formato brasileiro sem inverter milhar e decimal', () => {
   eq(S.normalizarValor('499.772,00'), 499772)
   eq(S.normalizarValor('R$ 1.234.567,89'), 1234567.89)
@@ -262,7 +322,7 @@ teste('normalizarValor lê o formato brasileiro sem inverter milhar e decimal', 
   eq(S.normalizarValor('abc'), null)
 })
 
-// ─── 11. Datas ───────────────────────────────────────────────────────────────
+// ─── 12. Datas ───────────────────────────────────────────────────────────────
 teste('diaAnterior e proximoDia atravessam mês, ano e ano bissexto', () => {
   eq(S.diaAnterior('2026-08-01'), '2026-07-31')
   eq(S.diaAnterior('2026-01-01'), '2025-12-31')

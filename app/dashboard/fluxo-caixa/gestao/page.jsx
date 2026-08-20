@@ -5,6 +5,8 @@ import { TableSkeleton } from '@/components/Skeleton'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import { getStatusInfo, efeitosCaixa, dataEfetiva } from '@/lib/fluxo-status'
+import { saldoDePartidaConsolidado, montarEntidades } from '@/lib/saldo-abertura'
+import { useAncoras, motivoIndisponivel } from '@/lib/usar-ancoras'
 import { useOrg } from '@/lib/org-context'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 
@@ -149,6 +151,9 @@ export default function GestaoFluxoCaixaPage() {
   const [empresaId,  setEmpresaId]  = useState(null)
   const [empNome,    setEmpNome]    = useState('')
   const [isConsol,   setIsConsol]   = useState(false)
+  const [empIdsSel,  setEmpIdsSel]  = useState([])
+  const [partidaInfo, setPartidaInfo] = useState(null)
+  const { ancoras } = useAncoras(empIdsSel)
 
   const [registros,  setRegistros]  = useState([])
   const [total,      setTotal]      = useState(0)
@@ -167,11 +172,6 @@ export default function GestaoFluxoCaixaPage() {
   const [selected,   setSelected]   = useState(new Set())
 
   // Saldo inicial
-  const [saldoInicial,    setSaldoInicial]    = useState('')
-  const [saldoInicialDB,  setSaldoInicialDB]  = useState(0)
-  const [editSaldo,       setEditSaldo]       = useState(false)
-  const [entidadesInfo,   setEntidadesInfo]   = useState([]) // [{id, nome, saldo}]
-  const [editEntidadeId,  setEditEntidadeId]  = useState(null) // qual entidade está sendo editada
 
   // Totais globais (sem filtro de período)
   const [totalGlobalE,    setTotalGlobalE]    = useState(0)
@@ -210,6 +210,7 @@ export default function GestaoFluxoCaixaPage() {
     setLoading(true)
     try {
       let empIds = await getSelectedEntidadeIds()
+      setEmpIdsSel(empIds)
       if (isConsol || empIds.length > 1) {
         setEmpNome('')
       } else if (empIds.length === 1) {
@@ -297,38 +298,37 @@ export default function GestaoFluxoCaixaPage() {
       // Saldo de PARTIDA do período em CAIXA EFETIVO: efeitos (liquidações e
       // vencimentos futuros — na prática só liquidações) anteriores ao início.
       // Busca por venc OU liquidação antes do início e filtra pelos efeitos.
-      let base = 0, aPage = 0, aDone = false
-      while (!aDone) {
+      // Registros anteriores ao início — a lib aplica o recorte pela âncora de
+      // cada entidade. Paginação SEMPRE com order estável: sem ORDER BY o
+      // PostgREST não garante consistência entre páginas e o .range() pode
+      // repetir ou pular linhas silenciosamente.
+      let anteriores = [], aPage = 0
+      while (aPage < 60) {
         let qA = supabase.from('fluxo_caixa')
-          .select('tipo,valor,data,status,valor_liquidado,data_liquidacao')
+          .select('empresa_id,tipo,valor,data,status,valor_liquidado,data_liquidacao')
           .or(`data.lt.${startDate},data_liquidacao.lt.${startDate}`)
+          .order('id', { ascending: true })
           .range(aPage * 1000, (aPage + 1) * 1000 - 1)
         qA = isConsol ? qA.in('empresa_id', empIds) : qA.eq('empresa_id', empIds[0])
         const { data: aBatch = [] } = await qA
         if (!aBatch || aBatch.length === 0) break
-        aBatch.forEach(r => {
-          efeitosCaixa(r).filter(e => e.data < startDate).forEach(e => {
-            base += r.tipo === 'entrada' ? e.valor : -e.valor
-          })
-        })
-        if (aBatch.length < 1000) aDone = true
+        anteriores = anteriores.concat(aBatch)
+        if (aBatch.length < 1000) break
         aPage++
       }
-      setSaldoAnterior(base)
 
-      // Saldo inicial: soma das entidades selecionadas (consolidado soma todas)
-      const { data: cfgs } = await supabase.from('empresa_config')
-        .select('empresa_id,valor').in('empresa_id', empIds).eq('chave', 'saldo_inicial')
-      const somaSaldo = (cfgs || []).reduce((a, c) => a + (Number(c.valor) || 0), 0)
-      setSaldoInicialDB(somaSaldo)
-      // Nomes + saldo por entidade (para o seletor de edição no consolidado)
-      const { data: empsInfo } = await supabase.from('empresas').select('id,nome').in('id', empIds)
-      const saldoDe = (id) => Number((cfgs || []).find(c => c.empresa_id === id)?.valor || 0)
-      setEntidadesInfo((empsInfo || []).map(e => ({ id: e.id, nome: e.nome, saldo: saldoDe(e.id) })))
-      // No campo editável: no modo 1 entidade mostra o valor dela; no consolidado
-      // fica vazio (edição bloqueada — ver handleSaveSaldo)
-      const daEntidade = (cfgs || []).find(c => c.empresa_id === empIds[0])
-      setSaldoInicial(!isConsol && daEntidade ? daEntidade.valor : '')
+      // ── SALDO DE PARTIDA — âncora por entidade (lib/saldo-abertura) ───────
+      // Antes: saldoInicialDB (soma de empresa_config) + soma do histórico
+      // INTEIRO. Contava em dobro o que a âncora já embute e trazia o buraco
+      // da base pré-2026 incompleta para dentro do saldo do extrato.
+      const { data: nomesRows } = await supabase.from('empresas').select('id,nome').in('id', empIds)
+      const nomesG = Object.fromEntries((nomesRows || []).map(e => [e.id, e.nome]))
+      const partida = saldoDePartidaConsolidado({
+        entidades: montarEntidades({ empIds, nomes: nomesG, ancoras: ancoras || [], registros: anteriores }),
+        inicioPeriodo: startDate,
+      })
+      setPartidaInfo(partida)
+      setSaldoAnterior(partida.ok ? partida.saldo : null)   // null = indisponível
 
     } catch(e) { console.error('GestaoFluxo:', e); showToast('Erro ao carregar dados', 'error') }
     finally { setLoading(false) }
@@ -426,7 +426,7 @@ export default function GestaoFluxoCaixaPage() {
         ['Entradas (R$)', Number(entradas.toFixed(2))],
         ['Saídas (R$)', Number(saidas.toFixed(2))],
         ['Resultado do período (R$)', Number((entradas - saidas).toFixed(2))],
-        ['Saldo inicial configurado (R$)', Number(Number(saldoInicialDB).toFixed(2))],
+        ['Saldo de partida do periodo (R$)', saldoAnterior == null ? 'INDISPONIVEL - sem saldo de abertura' : Number(Number(saldoAnterior).toFixed(2))],
       ]
 
       // Aba 2 — Extrato com saldo acumulado (partindo do saldo inicial)
@@ -444,7 +444,7 @@ export default function GestaoFluxoCaixaPage() {
       linhas.sort((a, b) => a.dExib > b.dExib ? 1 : a.dExib < b.dExib ? -1 : 0)
 
       const extratoAoa = [['Data Efetiva', 'Vencimento', 'Descrição', 'Categoria', 'Tipo', 'Situação', 'Dias em Atraso', 'Entrada (R$)', 'Saída (R$)', 'Saldo Acumulado (R$)']]
-      let acum = (Number(saldoInicialDB) || 0) + (Number(saldoAnterior) || 0)
+      let acum = Number(saldoAnterior) || 0   // já inclui a âncora (lib/saldo-abertura)
       linhas.forEach(({ r, dExib, efeitoTotal, foraDoCaixa }) => {
         if (!foraDoCaixa) acum += r.tipo === 'entrada' ? efeitoTotal : -efeitoTotal
         const stX = getStatusInfo(r)
@@ -487,35 +487,11 @@ export default function GestaoFluxoCaixaPage() {
   }
 
   // ─── Salvar saldo inicial ───────────────────────────────────────────────────
-  const abrirEditSaldo = () => {
-    // Entidade padrão a editar: no consolidado, a primeira; senão, a única
-    const alvo = isConsol ? (editEntidadeId || empIds[0]) : empresaId
-    setEditEntidadeId(alvo)
-    const atual = entidadesInfo.find(e => e.id === alvo)
-    setSaldoInicial(atual && atual.saldo ? String(atual.saldo) : '')
-    setEditSaldo(true)
-  }
-  const trocarEntidadeEdit = (id) => {
-    setEditEntidadeId(id)
-    const atual = entidadesInfo.find(e => e.id === id)
-    setSaldoInicial(atual && atual.saldo ? String(atual.saldo) : '')
-  }
-  const handleSaveSaldo = async () => {
-    const alvo = isConsol ? editEntidadeId : empresaId
-    if (!alvo) { showToast('Selecione a entidade para editar o saldo inicial.', 'error'); return }
-    const val = parseFloat(String(saldoInicial).replace(',', '.')) || 0
-    const { error } = await supabase.from('empresa_config')
-      .upsert({ empresa_id: alvo, chave: 'saldo_inicial', valor: String(val), updated_at: new Date().toISOString() },
-              { onConflict: 'empresa_id,chave' })
-    if (error) { showToast('Erro ao salvar saldo inicial: ' + error.message, 'error'); return }
-    // Atualiza o mapa local e recomputa a soma exibida
-    const novos = entidadesInfo.map(e => e.id === alvo ? { ...e, saldo: val } : e)
-    setEntidadesInfo(novos)
-    setSaldoInicialDB(novos.reduce((a, e) => a + (Number(e.saldo) || 0), 0))
-    setEditSaldo(false)
-    const nome = novos.find(e => e.id === alvo)?.nome || ''
-    showToast(`Saldo inicial de ${nome} salvo com sucesso!`, 'success')
-  }
+  // Os handlers de edição do saldo inicial legado foram REMOVIDOS: gravavam em
+  // empresa_config.saldo_inicial, tabela que nenhuma tela lê mais desde que a
+  // composição passou para as âncoras de saldos_abertura. Um campo editável que
+  // não altera nada é divergência silenciosa — exatamente o que este módulo
+  // existe para eliminar. A edição vive em Configurações › Saldo de Abertura.
 
   // ─── Inserir novo lançamento manual ──────────────────────────────────────────
   const handleNovoLancamento = async () => {
@@ -604,7 +580,7 @@ export default function GestaoFluxoCaixaPage() {
     // Saldo acumulado calculado em ordem CRONOLÓGICA (asc) — único jeito de o
     // acumulado fazer sentido — e depois EXIBIDO em ordem decrescente (mais
     // recente no topo), coerente com a paginação por data efetiva desc.
-    let saldoAcum = saldoInicialDB + saldoAnterior
+    let saldoAcum = saldoAnterior ?? 0   // já inclui a âncora (lib/saldo-abertura)
     const porData = {}
     Object.keys(porDia).sort().forEach(data => {   // asc: calcula o saldo do dia
       const lancamentos = porDia[data]
@@ -890,47 +866,31 @@ export default function GestaoFluxoCaixaPage() {
           </div>
         </div>
 
-        {/* Saldo inicial configurável */}
-        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 18px', flex:1, minWidth:220 }}>
+        {/* Saldo de partida — âncora por entidade (Configurações › Saldo de Abertura) */}
+        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 18px', flex:1, minWidth:240 }}>
           <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:6 }}>
-            <span style={{display:'flex',alignItems:'center',gap:7}}><SvgIcon name="bank" size={14} color="var(--fs-brand)" />Saldo Inicial</span>
+            <span style={{display:'flex',alignItems:'center',gap:7}}><SvgIcon name="bank" size={14} color="var(--fs-brand)" />Saldo de Partida</span>
           </div>
-          {editSaldo ? (
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              {/* No consolidado: escolher QUAL entidade editar */}
-              {isConsol && (
-                <select
-                  value={editEntidadeId || ''}
-                  onChange={e => trocarEntidadeEdit(e.target.value)}
-                  style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:7, color:'var(--fs-text-1)', padding:'6px 10px', fontSize:12.5, outline:'none' }}
-                >
-                  {entidadesInfo.map(e => (
-                    <option key={e.id} value={e.id}>{e.nome} — atual: {fC(e.saldo)}</option>
-                  ))}
-                </select>
-              )}
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <input
-                  value={saldoInicial}
-                  onChange={e=>setSaldoInicial(e.target.value)}
-                  placeholder="Ex: 50000,00"
-                  style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:7, color:'var(--fs-text-1)', padding:'6px 10px', fontSize:13, outline:'none', flex:1 }}
-                  onKeyDown={e => e.key === 'Enter' && handleSaveSaldo()}
-                  autoFocus
-                />
-                <button onClick={handleSaveSaldo} style={{ background:'var(--fs-brand)', border:'none', color:'#fff', borderRadius:7, padding:'6px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>Salvar</button>
-                <button onClick={()=>setEditSaldo(false)} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:7, padding:'6px 10px', fontSize:12, cursor:'pointer' }}>✕</button>
+          {saldoAnterior == null ? (
+            <div>
+              <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-warning)' }} className="fs-num">—</div>
+              <div style={{ fontSize:10.5, color:'var(--fs-text-4)', marginTop:4, lineHeight:1.5 }}>
+                {motivoIndisponivel(partidaInfo?.faltando || [])}
               </div>
             </div>
           ) : (
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)' }} className="fs-num">{fC(saldoInicialDB) || 'R$ 0'}</div>
-              <button onClick={abrirEditSaldo} style={{ background:'transparent', border:'1px solid var(--fs-border)', color:'var(--fs-text-3)', borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:600, cursor:'pointer' }}>
-                Editar
-              </button>
-              {isConsol && <span style={{ fontSize:10.5, color:'var(--fs-text-4)' }}>(soma das entidades)</span>}
+            <div>
+              <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)' }} className="fs-num">{fC(saldoAnterior)}</div>
+              <div style={{ fontSize:10.5, color:'var(--fs-text-4)', marginTop:4, lineHeight:1.5 }}>
+                {(partidaInfo?.linhas || []).length > 1
+                  ? `soma de ${partidaInfo.linhas.length} entidades · âncora + movimento até a véspera`
+                  : `âncora de ${(partidaInfo?.linhas?.[0]?.ancora?.data_corte || '').split('-').reverse().join('/')} + movimento até a véspera`}
+              </div>
             </div>
           )}
+          <a href="/dashboard/configuracoes?tab=saldo_abertura" style={{ display:'inline-block', marginTop:8, fontSize:11, fontWeight:600, color:'var(--fs-brand)', textDecoration:'none' }}>
+            Configurar saldo de abertura
+          </a>
         </div>
       </div>
 

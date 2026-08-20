@@ -180,7 +180,76 @@ teste('tipo desconhecido é CONTADO e nunca somado', () => {
   eq(r.saldo, 1000, 'saldo: '); eq(r.semSinal, 1, 'semSinal: ')
 })
 
-// ─── 9. Leitura de valor digitado ────────────────────────────────────────────
+// ─── 9. Consolidação — o consolidado é soma, nunca âncora única ──────────────
+const grupo = (fa, ja, jb) => [
+  { empresa_id: 'face', nome: 'FACE', ancoras: fa },
+  { empresa_id: 'jam',  nome: 'JAM',  ancoras: ja },
+  { empresa_id: 'jb',   nome: 'JB',   ancoras: jb },
+]
+
+teste('consolidado é a soma das âncoras vigentes por entidade', () => {
+  const c = S.consolidarAncoras({
+    entidades: grupo([ancora('2026-07-01', 380000)], [ancora('2026-07-01', 89772)], [ancora('2026-07-01', 30000)]),
+    data: '2026-07-01',
+  })
+  eq(c.ok, true, 'ok: '); eq(c.total, 499772, 'total: ')
+})
+
+teste('[TRAVA] uma entidade sem âncora anula o consolidado inteiro', () => {
+  // Consolidado parcial subestima o caixa — nunca pode chegar a investidor
+  const c = S.consolidarAncoras({
+    entidades: grupo([ancora('2026-07-01', 380000)], [], [ancora('2026-07-01', 30000)]),
+    data: '2026-07-01',
+  })
+  eq(c.ok, false, 'ok: '); eq(c.total, null, 'total: ')
+  eq(c.faltando.map(f => f.nome), ['JAM'], 'faltando: ')
+})
+
+teste('consolidação sinaliza âncoras ainda não certificadas', () => {
+  const c = S.consolidarAncoras({
+    entidades: grupo(
+      [ancora('2026-07-01', 380000, { conciliado_em: '2026-08-12T10:00:00Z' })],
+      [ancora('2026-07-01', 89772)],
+      [ancora('2026-07-01', 30000, { conciliado_em: '2026-08-12T10:00:00Z' })]),
+    data: '2026-07-01',
+  })
+  eq(c.naoCertificadas, ['JAM'], 'não certificadas: ')
+})
+
+teste('a soma das entidades tem de bater com o consolidado declarado', () => {
+  const c = S.consolidarAncoras({
+    entidades: grupo([ancora('2026-07-01', 380000)], [ancora('2026-07-01', 80000)], [ancora('2026-07-01', 30000)]),
+    data: '2026-07-01',
+  })
+  const check = S.conferir({ calculado: c.total, declarado: 499772 })
+  eq(check.fecha, false, 'fecha: '); eq(check.diferenca, -9772, 'diferença: ')
+})
+
+teste('saldo consolidado numa data soma os saldos por entidade', () => {
+  const ents = [
+    { empresa_id: 'face', nome: 'FACE', ancoras: [ancora('2026-07-01', 380000)],
+      registros: [pago('saida', '2026-07-15', 200000)] },
+    { empresa_id: 'jam', nome: 'JAM', ancoras: [ancora('2026-07-01', 89772)],
+      registros: [pago('saida', '2026-07-18', 70000)] },
+    { empresa_id: 'jb', nome: 'JB', ancoras: [ancora('2026-07-01', 30000)],
+      registros: [pago('saida', '2026-07-22', 20145)] },
+  ]
+  const r = S.saldoConsolidadoEm({ entidades: ents, data: '2026-07-31', hoje: HOJE })
+  eq(r.ok, true, 'ok: '); eq(r.saldo, 209627, 'saldo: ')
+  eq(S.conferir({ calculado: r.saldo, declarado: 209627 }).fecha, true, 'fecha com o extrato: ')
+})
+
+teste('[TRAVA] saldo consolidado é NULO se qualquer entidade não tiver âncora', () => {
+  const ents = [
+    { empresa_id: 'face', nome: 'FACE', ancoras: [ancora('2026-07-01', 380000)], registros: [] },
+    { empresa_id: 'jam',  nome: 'JAM',  ancoras: [], registros: [pago('saida', '2026-07-18', 70000)] },
+  ]
+  const r = S.saldoConsolidadoEm({ entidades: ents, data: '2026-07-31', hoje: HOJE })
+  eq(r.ok, false, 'ok: '); eq(r.saldo, null, 'saldo: ')
+  eq(r.faltando.map(f => f.nome), ['JAM'], 'faltando: ')
+})
+
+// ─── 10. Leitura de valor digitado ───────────────────────────────────────────
 teste('normalizarValor lê o formato brasileiro sem inverter milhar e decimal', () => {
   eq(S.normalizarValor('499.772,00'), 499772)
   eq(S.normalizarValor('R$ 1.234.567,89'), 1234567.89)
@@ -193,7 +262,7 @@ teste('normalizarValor lê o formato brasileiro sem inverter milhar e decimal', 
   eq(S.normalizarValor('abc'), null)
 })
 
-// ─── 10. Datas ───────────────────────────────────────────────────────────────
+// ─── 11. Datas ───────────────────────────────────────────────────────────────
 teste('diaAnterior e proximoDia atravessam mês, ano e ano bissexto', () => {
   eq(S.diaAnterior('2026-08-01'), '2026-07-31')
   eq(S.diaAnterior('2026-01-01'), '2025-12-31')

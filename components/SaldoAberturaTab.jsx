@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { fetchAllRows } from '@/lib/supabase-paginated'
 import {
   ancoraVigente, saldoEm, resumoMensal, conferir, excluidoPeloCorte,
-  normalizarValor, ORIGENS,
+  consolidarAncoras, normalizarValor, ORIGENS,
 } from '@/lib/saldo-abertura'
 import SvgIcon from './SvgIcon'
 import EmptyState from './EmptyState'
@@ -48,6 +48,8 @@ export default function SaldoAberturaTab({ empresas = [], showToast }) {
   const [carregandoMov, setCarregandoMov] = useState(false)
   const [declarado, setDeclarado] = useState('')
   const [dataProva, setDataProva] = useState(hojeISO())
+  const [grupoDeclarado, setGrupoDeclarado] = useState('')
+  const [dataGrupo, setDataGrupo] = useState(hojeISO())
 
   const [form, setForm] = useState({
     data_corte: '', valor: '', origem: 'extrato_bancario', observacao: '', conciliado: true,
@@ -83,6 +85,18 @@ export default function SaldoAberturaTab({ empresas = [], showToast }) {
   const daEntidade = (ancoras || []).filter(a => a.empresa_id === empresaId)
   const vigente    = ancoraVigente(daEntidade, dataProva)
   const nomeDe     = (id) => empresas.find(e => e.id === id)?.nome || '—'
+
+  // Consolidado: soma das âncoras vigentes de TODAS as entidades da organização
+  const consol = consolidarAncoras({
+    entidades: empresas.map(e => ({
+      empresa_id: e.id, nome: e.nome,
+      ancoras: (ancoras || []).filter(a => a.empresa_id === e.id),
+    })),
+    data: dataGrupo,
+  })
+  const checkGrupo = consol.ok && normalizarValor(grupoDeclarado) !== null
+    ? conferir({ calculado: consol.total, declarado: normalizarValor(grupoDeclarado) })
+    : null
 
   const salvar = async () => {
     if (!empresaId) return showToast?.('Selecione a entidade', 'error')
@@ -140,6 +154,87 @@ export default function SaldoAberturaTab({ empresas = [], showToast }) {
           <br /><br />
           Cada fechamento mensal é uma nova âncora. A vigente para uma data é sempre a de data de corte mais recente que não a ultrapassa.
         </div>
+      </div>
+
+      {/* ── Consolidado do grupo ─────────────────────────────────────────── */}
+      <div style={card}>
+        <div style={cardTitle}>Consolidado do grupo</div>
+        <div style={hint}>
+          O consolidado é a <strong>soma das âncoras certificadas de cada entidade</strong> — nunca uma âncora única
+          gravada no grupo. Gravar um saldo consolidado numa entidade infla a tela dela e zera as demais.
+          Informe abaixo o saldo consolidado do extrato e confira se as entidades somam exatamente esse valor.
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 16 }}>
+          <div>
+            <label style={label}>Conferir na data</label>
+            <input type="date" style={input} value={dataGrupo} onChange={e => setDataGrupo(e.target.value)} />
+          </div>
+          <div>
+            <label style={label}>Consolidado do extrato (R$)</label>
+            <input style={input} placeholder="499.772,00" value={grupoDeclarado} inputMode="decimal"
+              onChange={e => setGrupoDeclarado(e.target.value)} />
+          </div>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr>
+              <th style={th}>Entidade</th><th style={th}>Data de corte</th>
+              <th style={{ ...th, textAlign: 'right' }}>Saldo de abertura</th><th style={th}>Certificação</th>
+            </tr></thead>
+            <tbody>
+              {consol.linhas.map(l => (
+                <tr key={l.empresa_id}>
+                  <td style={td}>{l.nome}</td>
+                  <td style={td}>{l.ancora ? fData(l.ancora.data_corte) : '—'}</td>
+                  <td style={num}>
+                    {l.ancora ? fBRL(l.valor)
+                      : <span style={{ color: 'var(--fs-warning)' }}>sem âncora</span>}
+                  </td>
+                  <td style={td}>
+                    {!l.ancora ? '—'
+                      : l.ancora.conciliado_em
+                        ? <span style={{ color: 'var(--fs-success)' }}>Conferido</span>
+                        : <span style={{ color: 'var(--fs-warning)' }}>Provisório</span>}
+                  </td>
+                </tr>
+              ))}
+              <tr>
+                <td style={{ ...td, fontWeight: 700, color: 'var(--fs-text-1)' }} colSpan={2}>Soma das entidades</td>
+                <td style={{ ...num, fontWeight: 700, color: 'var(--fs-text-1)', fontSize: 15 }}>
+                  {consol.ok ? fBRL(consol.total) : <span style={{ color: 'var(--fs-warning)', fontSize: 13 }}>indisponível</span>}
+                </td>
+                <td style={td}></td>
+              </tr>
+              {checkGrupo?.ok && (
+                <tr>
+                  <td style={{ ...td, fontWeight: 700, color: checkGrupo.fecha ? 'var(--fs-success)' : 'var(--fs-danger)' }} colSpan={2}>
+                    {checkGrupo.fecha ? 'Fecha com o consolidado declarado' : 'Diferença contra o consolidado declarado'}
+                  </td>
+                  <td style={{ ...num, fontWeight: 700, color: checkGrupo.fecha ? 'var(--fs-success)' : 'var(--fs-danger)' }}>
+                    {fBRL(checkGrupo.diferenca)}
+                  </td>
+                  <td style={td}></td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {!consol.ok && consol.faltando.length > 0 && (
+          <div style={{ marginTop: 14, border: '1px solid var(--fs-warning)', borderRadius: 8, padding: 14, background: 'rgba(var(--fs-warning-rgb),0.06)' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--fs-warning)', marginBottom: 6 }}>Consolidado indisponível</div>
+            <div style={{ fontSize: 12, color: 'var(--fs-text-3)', lineHeight: 1.7 }}>
+              Sem âncora vigente em {fData(dataGrupo)} para: <strong>{consol.faltando.map(f => f.nome).join(', ')}</strong>.
+              Um consolidado parcial subestima o caixa do grupo — por isso o total fica indisponível até que
+              todas as entidades tenham saldo de abertura registrado.
+            </div>
+          </div>
+        )}
+        {consol.ok && consol.naoCertificadas.length > 0 && (
+          <div style={{ marginTop: 14, fontSize: 12, color: 'var(--fs-warning)' }}>
+            Ainda não conferidas contra extrato: <strong>{consol.naoCertificadas.join(', ')}</strong>.
+            O consolidado é provisório enquanto houver âncora não certificada.
+          </div>
+        )}
       </div>
 
       {/* ── Entidade ─────────────────────────────────────────────────────── */}

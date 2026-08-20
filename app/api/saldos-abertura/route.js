@@ -50,7 +50,23 @@ export async function GET(request) {
   const { data: todas, error } = await ctx.db.from('saldos_abertura')
     .select('id, empresa_id, data_corte, valor, origem, observacao, conciliado_em, conciliado_por, updated_at')
     .order('data_corte', { ascending: false })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // A migração 20260812_saldos_abertura.sql roda MANUALMENTE no SQL Editor do
+  // Supabase, então o deploy do código pode chegar antes dela. Nesse intervalo
+  // a tabela não existe: devolvemos 200 com a bandeira migracao_pendente para
+  // que as telas expliquem o motivo, em vez de acusarem "sem saldo de abertura"
+  // e mandarem o Controller configurar algo que ainda não tem onde ser gravado.
+  if (error) {
+    const ausente = error.code === '42P01' || error.code === 'PGRST205'
+      || /does not exist|schema cache/i.test(error.message || '')
+    if (ausente) {
+      return NextResponse.json({
+        ancoras: [], migracao_pendente: true,
+        empresas: ctx.minhas.map(e => ({ id: e.id, nome: e.nome })),
+      })
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   const permitido = new Set(alvo)
   const ancoras = (todas || [])

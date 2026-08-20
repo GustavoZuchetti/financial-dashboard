@@ -153,7 +153,7 @@ export default function GestaoFluxoCaixaPage() {
   const [isConsol,   setIsConsol]   = useState(false)
   const [empIdsSel,  setEmpIdsSel]  = useState([])
   const [partidaInfo, setPartidaInfo] = useState(null)
-  const { ancoras } = useAncoras(empIdsSel)
+  const { ancoras, migracaoPendente } = useAncoras(empIdsSel)
 
   const [registros,  setRegistros]  = useState([])
   const [total,      setTotal]      = useState(0)
@@ -875,7 +875,7 @@ export default function GestaoFluxoCaixaPage() {
             <div>
               <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-warning)' }} className="fs-num">—</div>
               <div style={{ fontSize:10.5, color:'var(--fs-text-4)', marginTop:4, lineHeight:1.5 }}>
-                {motivoIndisponivel(partidaInfo?.faltando || [])}
+                {motivoIndisponivel(partidaInfo?.faltando || [], migracaoPendente)}
               </div>
             </div>
           ) : (

@@ -308,7 +308,7 @@ export default function OverviewPage() {
   const [empIdsSel, setEmpIdsSel] = useState([])
   const [nomesEmp,  setNomesEmp]  = useState({})
   const [partidaInfo, setPartidaInfo] = useState(null)
-  const { ancoras } = useAncoras(empIdsSel)
+  const { ancoras, migracaoPendente } = useAncoras(empIdsSel)
   const [empNome,   setEmpNome]   = useState('')
 
   const [kpis,     setKpis]     = useState(null)
@@ -634,7 +634,7 @@ export default function OverviewPage() {
             <KCard label="EBITDA"          value={fC(kpis.ebt)} info="Lucro antes de juros, impostos, depreciação e amortização. Aqui: Receita Líquida − Custos Variáveis − Despesas Fixas. Mede a geração de caixa operacional."                   pct={kpis.ebtPct} pctLabel="vs anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="var(--fs-brand)" />
             <KCard label="Margem Bruta"    value={`${kpis.margBruta.toFixed(1)}%`} info="Lucro Bruto ÷ Receita Bruta × 100. Eficiência da operação ANTES das despesas fixas — quanto sobra após custos variáveis e deduções. Variação em pontos percentuais (p.p.)." pct={kpis.margBrutaDiff} pctLabel="p.p. vs ant." sparkData={monthly} sparkKey="lucroBruto" sparkColor="var(--fs-teal)" />
             <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`} info="Resultado Líquido ÷ Receita Bruta × 100. Quanto sobra de cada R$ 1 faturado após todos os custos, despesas e resultados financeiros. Variação em pontos percentuais (p.p.)."     pct={kpis.margDiff} pctLabel="p.p. vs ant."  sparkData={monthly} sparkKey="resLiq" sparkColor="var(--fs-purple)" />
-            <KCard label="Caixa Disponível" sparkBelow value={kpis.caixa == null ? '—' : fC(kpis.caixa)} info={kpis.caixa == null ? motivoIndisponivel(partidaInfo?.faltando || []) : "Saldo de abertura certificado de cada entidade + movimento efetivo (entradas − saídas) até hoje, em regime de caixa. Nada anterior à data de corte é somado."} pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
+            <KCard label="Caixa Disponível" sparkBelow value={kpis.caixa == null ? '—' : fC(kpis.caixa)} info={kpis.caixa == null ? motivoIndisponivel(partidaInfo?.faltando || [], migracaoPendente) : "Saldo de abertura certificado de cada entidade + movimento efetivo (entradas − saídas) até hoje, em regime de caixa. Nada anterior à data de corte é somado."} pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
           </div>
 
           {/* ── KPIs secundários ────────────────────────────────────────────── */}

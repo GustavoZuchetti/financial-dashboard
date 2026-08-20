@@ -42,6 +42,7 @@ const num = { ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }
 
 export default function SaldoAberturaTab({ empresas = [], showToast }) {
   const [ancoras, setAncoras]   = useState(null)
+  const [migracaoPendente, setMigracaoPendente] = useState(false)
   const [empresaId, setEmpresaId] = useState(empresas[0]?.id || '')
   const [salvando, setSalvando] = useState(false)
   const [registros, setRegistros] = useState(null)   // fluxo_caixa da entidade
@@ -58,6 +59,7 @@ export default function SaldoAberturaTab({ empresas = [], showToast }) {
   const carregar = useCallback(async () => {
     const r = await authFetch('/api/saldos-abertura')
     if (r.error) { showToast?.(r.error, 'error'); setAncoras([]); return }
+    setMigracaoPendente(!!r.migracao_pendente)
     setAncoras(r.ancoras || [])
   }, [showToast])
   useEffect(() => { carregar() }, [carregar])
@@ -138,6 +140,19 @@ export default function SaldoAberturaTab({ empresas = [], showToast }) {
 
   if (ancoras === null) return <div style={{ padding: 40, color: 'var(--fs-text-4)', fontSize: 13 }}>Carregando...</div>
   if (!empresas.length) return <EmptyState icon="building" title="Nenhuma entidade cadastrada">Cadastre uma empresa antes de definir o saldo de abertura.</EmptyState>
+  if (migracaoPendente) return (
+    <div style={{ ...card, border: '1px solid var(--fs-warning)' }}>
+      <div style={{ ...cardTitle, color: 'var(--fs-warning)' }}>Migração pendente</div>
+      <div style={{ ...hint, marginBottom: 0 }}>
+        A tabela <code>saldos_abertura</code> ainda não existe no banco. Execute
+        <strong> supabase/migrations/20260812_saldos_abertura.sql</strong> no SQL Editor do Supabase
+        e recarregue esta página.
+        <br /><br />
+        Até lá os saldos das telas de caixa ficam indisponíveis — por decisão de projeto, o sistema
+        não exibe um número que não consegue certificar.
+      </div>
+    </div>
+  )
 
   return (
     <div>

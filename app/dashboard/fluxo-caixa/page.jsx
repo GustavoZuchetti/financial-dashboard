@@ -142,7 +142,7 @@ export default function FluxoCaixaPage() {
   const [isConsol,     setIsConsol]     = useState(false)
   const [empIdsSel,    setEmpIdsSel]    = useState([])
   const [partidaInfo,  setPartidaInfo]  = useState(null)
-  const { ancoras } = useAncoras(empIdsSel)
+  const { ancoras, migracaoPendente } = useAncoras(empIdsSel)
   const [empNome,      setEmpNome]      = useState('')
   const [startDate,    setStartDate]    = useState(`${curYear - 2}-01-01`)
   const [endDate,      setEndDate]      = useState(today)

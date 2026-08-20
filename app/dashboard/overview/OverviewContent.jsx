@@ -4,7 +4,9 @@ import EmptyState from '@/components/EmptyState'
 import SvgIcon from '@/components/SvgIcon'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE } from '@/lib/dre-calc'
-import { efeitosCaixa } from '@/lib/fluxo-status'
+import { efeitosCaixa, ENTRADA_TIPOS } from '@/lib/fluxo-status'
+import { saldoDePartidaConsolidado, montarEntidades } from '@/lib/saldo-abertura'
+import { useAncoras, motivoIndisponivel } from '@/lib/usar-ancoras'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import {
   ComposedChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -303,6 +305,10 @@ export default function OverviewPage() {
   const [firstLoad, setFirstLoad] = useState(true)
   const [empresaId, setEmpresaId] = useState(null)
   const [isConsol,  setIsConsol]  = useState(false)
+  const [empIdsSel, setEmpIdsSel] = useState([])
+  const [nomesEmp,  setNomesEmp]  = useState({})
+  const [partidaInfo, setPartidaInfo] = useState(null)
+  const { ancoras, migracaoPendente } = useAncoras(empIdsSel)
   const [empNome,   setEmpNome]   = useState('')
 
   const [kpis,     setKpis]     = useState(null)
@@ -381,6 +387,10 @@ export default function OverviewPage() {
         setEmpNome(e?.nome || '')
       }
       if (!empIds.length) { setLoading(false); return }
+      setEmpIdsSel(empIds)
+      const { data: nomesRows } = await supabase.from('empresas').select('id,nome').in('id', empIds)
+      const nomesEmpLocal = Object.fromEntries((nomesRows || []).map(e => [e.id, e.nome]))
+      setNomesEmp(nomesEmpLocal)
 
       const next30    = new Date(); next30.setDate(next30.getDate() + 30)
       const next30str = next30.toISOString().split('T')[0]
@@ -391,7 +401,7 @@ export default function OverviewPage() {
 
       // fetchAll: Supabase corta em 1000 linhas/request — a FACE sozinha já
       // ultrapassa esse limite, o que distorcia KPIs e gráficos
-      const [curLanc, prevLanc, fcAll, fcProximos30, fcAnterior, planoContas, cfgRows] = await Promise.all([
+      const [curLanc, prevLanc, fcAll, fcProximos30, fcAnterior, planoContas] = await Promise.all([
         fetchAll(buildQ('lancamentos', 'id,tipo,valor,data,descricao,categoria,conta_id')
           .gte('data', dr.start).lte('data', dr.end)),
         fetchAll(buildQ('lancamentos', 'tipo,valor,data')
@@ -403,32 +413,25 @@ export default function OverviewPage() {
         fetchAll(buildQ('fluxo_caixa', 'tipo,valor,data,status,valor_liquidado')
           .in('status', ['aberto','parcial']).gt('data', today).lte('data', next30str)),
         // Movimentos ANTERIORES ao período — compõem o saldo de partida
-        fetchAll(buildQ('fluxo_caixa', 'tipo,valor,data,status,valor_liquidado,data_liquidacao')
+        fetchAll(buildQ('fluxo_caixa', 'empresa_id,tipo,valor,data,status,valor_liquidado,data_liquidacao')
           .or(`data.lt.${dr.start},data_liquidacao.lt.${dr.start}`)),
         fetchAll(supabase.from('plano_contas').select('id,nome,tipo,codigo')
           .eq('empresa_id', isConsol ? empIds[0] : empresaId)),
-        // Saldo inicial configurado (soma das entidades selecionadas)
-        fetchAll(supabase.from('empresa_config').select('valor')
-          .eq('chave', 'saldo_inicial')
-          .in('empresa_id', isConsol ? empIds : [empresaId])),
       ])
 
-      const ENTRADA_TIPOS = ['entrada','fluxo_entrada','receita','receita_financeira']
-      const saldoInicial = (cfgRows || []).reduce((a, r) => a + (Number(r.valor) || 0), 0)
-      // CAIXA EFETIVO: só efeitos (liquidações/vencimentos válidos) < início.
-      // ATENÇÃO: a base histórica pré-período pode estar incompleta (títulos
-      // antigos não sincronizados, aportes não classificados como entrada),
-      // gerando um "buraco" artificial que não é caixa real. Por isso o caixa
-      // parte do SALDO INICIAL configurado + movimento do período — mesma base
-      // da tela de Gestão, evitando reconstruir o caixa desde 2024 com dados
-      // incompletos. netAnterior fica disponível para diagnóstico, mas não
-      // entra no saldo base exibido.
-      const netAnterior  = (fcAnterior || []).reduce((a, f) => {
-        let s0 = 0
-        efeitosCaixa(f).forEach(e => { if (e.data < dr.start) s0 += e.valor })
-        return a + (ENTRADA_TIPOS.includes(f.tipo) ? s0 : -s0)
-      }, 0)
-      const saldoBase = saldoInicial
+      // ── SALDO DE PARTIDA — âncora por entidade (lib/saldo-abertura) ───────
+      // Antes: saldoBase = soma de empresa_config.saldo_inicial, um número fixo
+      // que ignorava todo movimento entre a data de referência e o início do
+      // período. Agora cada entidade tem sua própria âncora certificada e o
+      // consolidado é a SOMA delas — nunca uma âncora única rateada.
+      const partida = saldoDePartidaConsolidado({
+        entidades: montarEntidades({ empIds, nomes: nomesEmpLocal, ancoras: ancoras || [], registros: fcAnterior || [] }),
+        inicioPeriodo: dr.start,
+      })
+      setPartidaInfo(partida)
+      // REGRA DE SILÊNCIO: sem âncora em alguma entidade o saldo é NULO — o
+      // gráfico e o KPI exibem indisponível, jamais zero.
+      const saldoBase = partida.ok ? partida.saldo : null
 
       const planMap = Object.fromEntries((planoContas||[]).map(p=>[p.id,p.nome]))
       const vCur    = calcDRE(curLanc  || [])
@@ -476,7 +479,8 @@ export default function OverviewPage() {
       })
       // Saldo acumulado REAL: parte do saldo inicial + histórico anterior e
       // preserva valores negativos — truncar em zero mascara ruptura de caixa
-      let saldo = saldoBase
+      let saldo = saldoBase ?? 0
+      const semAncora = saldoBase === null
       const temFluxo = (fcAll || []).length > 0
       const fcChart = monthRange.map(i => {
         if (!temFluxo) {
@@ -529,9 +533,11 @@ export default function OverviewPage() {
 
       // ── Métricas auxiliares ───────────────────────────────────────────────
       const burnRate = dr.nMonths > 0 ? Math.max(0, (vCur.cv + vCur.df) / dr.nMonths) : 0
-      const caixa    = fcChart.length>0 ? fcChart[fcChart.length-1].saldo : (vCur.rb-vCur.cv-vCur.df)
-      const runway   = (burnRate>0 && caixa>0) ? caixa/burnRate : null
-      const runwayMotivo = caixa<=0 ? 'caixa negativo' : (burnRate<=0 ? 'sem burn' : null)
+      const caixa    = semAncora ? null
+        : (fcChart.length>0 ? fcChart[fcChart.length-1].saldo : (vCur.rb-vCur.cv-vCur.df))
+      const runway   = (burnRate>0 && caixa!=null && caixa>0) ? caixa/burnRate : null
+      const runwayMotivo = caixa==null ? 'saldo de abertura não configurado'
+        : caixa<=0 ? 'caixa negativo' : (burnRate<=0 ? 'sem burn' : null)
       // A Receber/A Pagar próximos 30 dias — títulos a vencer (aberto/parcial),
       // restante não liquidado no caso de parcial
       const restante = (f) => {
@@ -553,7 +559,7 @@ export default function OverviewPage() {
 
     } catch(e) { console.error('Overview:', e) }
     finally { setLoading(false); setFirstLoad(false) }
-  }, [empresaId, isConsol, getRange, today])
+  }, [empresaId, isConsol, getRange, today, ancoras])
 
   useEffect(() => {
     if (empresaId === null) return
@@ -628,7 +634,7 @@ export default function OverviewPage() {
             <KCard label="EBITDA"          value={fC(kpis.ebt)} info="Lucro antes de juros, impostos, depreciação e amortização. Aqui: Receita Líquida − Custos Variáveis − Despesas Fixas. Mede a geração de caixa operacional."                   pct={kpis.ebtPct} pctLabel="vs anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="var(--fs-brand)" />
             <KCard label="Margem Bruta"    value={`${kpis.margBruta.toFixed(1)}%`} info="Lucro Bruto ÷ Receita Bruta × 100. Eficiência da operação ANTES das despesas fixas — quanto sobra após custos variáveis e deduções. Variação em pontos percentuais (p.p.)." pct={kpis.margBrutaDiff} pctLabel="p.p. vs ant." sparkData={monthly} sparkKey="lucroBruto" sparkColor="var(--fs-teal)" />
             <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`} info="Resultado Líquido ÷ Receita Bruta × 100. Quanto sobra de cada R$ 1 faturado após todos os custos, despesas e resultados financeiros. Variação em pontos percentuais (p.p.)."     pct={kpis.margDiff} pctLabel="p.p. vs ant."  sparkData={monthly} sparkKey="resLiq" sparkColor="var(--fs-purple)" />
-            <KCard label="Caixa Disponível" sparkBelow value={fC(kpis.caixa)} info="Saldo inicial das entidades + todo o movimento efetivo (entradas − saídas) até hoje, em regime de caixa. Negativo indica posição devedora ou saldo inicial não configurado." pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
+            <KCard label="Caixa Disponível" sparkBelow value={kpis.caixa == null ? '—' : fC(kpis.caixa)} info={kpis.caixa == null ? motivoIndisponivel(partidaInfo?.faltando || [], migracaoPendente) : "Saldo de abertura certificado de cada entidade + movimento efetivo (entradas − saídas) até hoje, em regime de caixa. Nada anterior à data de corte é somado."} pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
           </div>
 
           {/* ── KPIs secundários ────────────────────────────────────────────── */}

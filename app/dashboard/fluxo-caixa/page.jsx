@@ -4,6 +4,8 @@ import EmptyState from '@/components/EmptyState'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import SvgIcon from '@/components/SvgIcon'
 import { efeitosCaixa } from '@/lib/fluxo-status'
+import { saldoDePartidaConsolidado, montarEntidades } from '@/lib/saldo-abertura'
+import { useAncoras, motivoIndisponivel } from '@/lib/usar-ancoras'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 import {
   ComposedChart, BarChart, Bar, Line, AreaChart, Area,
@@ -138,6 +140,9 @@ export default function FluxoCaixaPage() {
   const [loading,      setLoading]      = useState(true)
   const [empresaId,    setEmpresaId]    = useState(null)
   const [isConsol,     setIsConsol]     = useState(false)
+  const [empIdsSel,    setEmpIdsSel]    = useState([])
+  const [partidaInfo,  setPartidaInfo]  = useState(null)
+  const { ancoras, migracaoPendente } = useAncoras(empIdsSel)
   const [empNome,      setEmpNome]      = useState('')
   const [startDate,    setStartDate]    = useState(`${curYear - 2}-01-01`)
   const [endDate,      setEndDate]      = useState(today)
@@ -151,7 +156,7 @@ export default function FluxoCaixaPage() {
 
   const [raw,          setRaw]          = useState([])
   const [vencidos,     setVencidos]     = useState({ e:0, s:0, aE:0, aS:0 })    // todos os registros do período
-  const [saldoBase,    setSaldoBase]    = useState(0)  // saldo inicial + histórico anterior ao período
+  const [saldoBase,    setSaldoBase]    = useState(null)  // null = sem âncora; ver lib/saldo-abertura
   const [rawPrev,      setRawPrev]      = useState([])    // período anterior (para % variação)
   const [efeitos,      setEfeitos]      = useState([])    // CAIXA EFETIVO: efeitos no período
   const [efeitosPrev,  setEfeitosPrev]  = useState([])    // efeitos no período anterior
@@ -170,6 +175,7 @@ export default function FluxoCaixaPage() {
     setLoading(true)
     try {
       let empIds = await getSelectedEntidadeIds()
+      setEmpIdsSel(empIds)
       if (isConsol || empIds.length > 1) {
         setEmpNome('')
       } else if (empIds.length === 1) {
@@ -221,9 +227,8 @@ export default function FluxoCaixaPage() {
       const [fc, fcPrev, fcAll, cfgRes] = await Promise.all([
         fetchAll('id,tipo,valor,data,descricao,categoria,status,valor_liquidado,data_liquidacao', debStart, debEnd, true),
         fetchAll('tipo,valor,data,status,valor_liquidado,data_liquidacao', prevStartStr, prevEndStr, true),
-        fetchAll('tipo,valor,data,status,valor_liquidado,data_liquidacao', '2020-01-01', null),
-        supabase.from('empresa_config').select('valor').eq('chave', 'saldo_inicial')
-          .in('empresa_id', empIds),
+        fetchAll('empresa_id,tipo,valor,data,status,valor_liquidado,data_liquidacao', '2020-01-01', null),
+        supabase.from('empresas').select('id,nome').in('id', empIds),
       ])
 
       setRaw(fc || [])
@@ -231,18 +236,17 @@ export default function FluxoCaixaPage() {
       setEfeitos(expandirEfeitos(fc, debStart, debEnd))
       setEfeitosPrev(expandirEfeitos(fcPrev, prevStartStr, prevEndStr))
 
-      // Saldo de partida do acumulado: saldo inicial configurado + movimentos
-      // anteriores ao período (fcAll já cobre o histórico completo)
-      const saldoIni = (cfgRes.data || []).reduce((a, r) => a + (Number(r.valor) || 0), 0)
-      const ENTR = ['entrada','fluxo_entrada','receita','receita_financeira']
-      // CAIXA EFETIVO: histórico anterior = efeitos (liquidações/vencimentos)
-      // com data efetiva antes do início do período
-      const netAnt = (fcAll || []).reduce((a, f) => {
-        let s0 = 0
-        efeitosCaixa(f).forEach(e => { if (e.data < debStart) s0 += e.valor })
-        return a + (ENTR.includes(f.tipo) ? s0 : -s0)
-      }, 0)
-      setSaldoBase(saldoIni + netAnt)
+      // ── SALDO DE PARTIDA — âncora por entidade (lib/saldo-abertura) ───────
+      // Antes: saldo_inicial somado ao histórico INTEIRO desde 2020, o que
+      // contava em dobro tudo o que a âncora já embutia e arrastava o buraco
+      // da base pré-2026 incompleta para dentro do saldo exibido.
+      const nomes = Object.fromEntries((cfgRes.data || []).map(e => [e.id, e.nome]))
+      const partida = saldoDePartidaConsolidado({
+        entidades: montarEntidades({ empIds, nomes, ancoras: ancoras || [], registros: fcAll || [] }),
+        inicioPeriodo: debStart,
+      })
+      setPartidaInfo(partida)
+      setSaldoBase(partida.ok ? partida.saldo : null)   // null = indisponível, nunca zero
 
       // Lançamentos recentes
       const lRecentes = [...(fc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,20)
@@ -261,7 +265,7 @@ export default function FluxoCaixaPage() {
 
     } catch(e) { console.error('FluxoCaixa:', e) }
     finally { setLoading(false) }
-  }, [empresaId, isConsol, debStart, debEnd])
+  }, [empresaId, isConsol, debStart, debEnd, ancoras])
 
   useEffect(() => { if (empresaId !== null) load() }, [load, empresaId])
 
@@ -319,7 +323,7 @@ export default function FluxoCaixaPage() {
   const presentes = Object.keys(chartMap).sort()
   const chartData = []
   if (presentes.length) {
-    let running = saldoBase
+    let running = saldoBase ?? 0
     let k = presentes[0]
     const fim = presentes[presentes.length - 1]
     let guarda = 0

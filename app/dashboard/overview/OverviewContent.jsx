@@ -373,13 +373,26 @@ export default function OverviewPage() {
     return () => window.removeEventListener('storage', h)
   }, [])
 
+
+  // Resolve as entidades selecionadas antes do carregamento pesado, para que as
+  // âncoras já estejam sendo buscadas quando o load rodar (evita carregar duas vezes).
+  useEffect(() => {
+    if (!empresaId) return
+    let vivo = true
+    getSelectedEntidadeIds().then(ids => { if (vivo) setEmpIdsSel(ids) })
+    return () => { vivo = false }
+  }, [empresaId, isConsol])
+
   const load = useCallback(async () => {
+    // AGUARDA as âncoras: compor o saldo com a lista vazia produziria
+    // "sem saldo de abertura" mesmo com as âncoras já cadastradas.
+    if (ancoras === null) { setLoading(true); return }
     if (!empresaId) { setLoading(false); return }
     setLoading(true)
     try {
       const dr = getRange()
 
-      let empIds = await getSelectedEntidadeIds()
+      let empIds = empIdsSel.length ? empIdsSel : await getSelectedEntidadeIds()
       if (isConsol || empIds.length > 1) {
         setEmpNome('')
       } else if (empIds.length === 1) {
@@ -387,7 +400,6 @@ export default function OverviewPage() {
         setEmpNome(e?.nome || '')
       }
       if (!empIds.length) { setLoading(false); return }
-      setEmpIdsSel(empIds)
       const { data: nomesRows } = await supabase.from('empresas').select('id,nome').in('id', empIds)
       const nomesEmpLocal = Object.fromEntries((nomesRows || []).map(e => [e.id, e.nome]))
       setNomesEmp(nomesEmpLocal)
@@ -559,7 +571,7 @@ export default function OverviewPage() {
 
     } catch(e) { console.error('Overview:', e) }
     finally { setLoading(false); setFirstLoad(false) }
-  }, [empresaId, isConsol, getRange, today, ancoras])
+  }, [empresaId, isConsol, getRange, today, ancoras, empIdsSel])
 
   useEffect(() => {
     if (empresaId === null) return

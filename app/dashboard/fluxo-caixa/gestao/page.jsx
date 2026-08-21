@@ -205,12 +205,24 @@ export default function GestaoFluxoCaixaPage() {
     return () => window.removeEventListener('storage', h)
   }, [])
 
+  // Resolve as entidades selecionadas antes do carregamento pesado, para que as
+  // âncoras já estejam sendo buscadas quando o load rodar (evita carregar duas vezes).
+  useEffect(() => {
+    if (!empresaId) return
+    let vivo = true
+    getSelectedEntidadeIds().then(ids => { if (vivo) setEmpIdsSel(ids) })
+    return () => { vivo = false }
+  }, [empresaId, isConsol])
+
   const load = useCallback(async () => {
     if (!empresaId) { setLoading(false); return }
+    // AGUARDA as âncoras. Sem esta guarda a tela compunha o saldo com a lista
+    // vazia e, como `ancoras` não estava nas dependências abaixo, NUNCA
+    // recalculava quando elas chegavam — era este o defeito.
+    if (ancoras === null) { setLoading(true); return }
     setLoading(true)
     try {
-      let empIds = await getSelectedEntidadeIds()
-      setEmpIdsSel(empIds)
+      let empIds = empIdsSel.length ? empIdsSel : await getSelectedEntidadeIds()
       if (isConsol || empIds.length > 1) {
         setEmpNome('')
       } else if (empIds.length === 1) {
@@ -332,7 +344,7 @@ export default function GestaoFluxoCaixaPage() {
 
     } catch(e) { console.error('GestaoFluxo:', e); showToast('Erro ao carregar dados', 'error') }
     finally { setLoading(false) }
-  }, [empresaId, isConsol, startDate, endDate, tipoFiltro, statusFiltro, busca, page])
+  }, [empresaId, isConsol, startDate, endDate, tipoFiltro, statusFiltro, busca, page, ancoras, empIdsSel])
 
   useEffect(() => { if (empresaId !== null) load() }, [load, empresaId])
 

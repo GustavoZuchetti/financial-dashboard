@@ -6,6 +6,7 @@ import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import { getStatusInfo, efeitosCaixa, dataEfetiva } from '@/lib/fluxo-status'
 import { saldoDePartidaConsolidado, montarEntidades } from '@/lib/saldo-abertura'
+import { agregarPeriodo, ROTULOS } from '@/lib/fluxo-agregados'
 import { useAncoras, motivoIndisponivel } from '@/lib/usar-ancoras'
 import { useOrg } from '@/lib/org-context'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
@@ -174,11 +175,10 @@ export default function GestaoFluxoCaixaPage() {
   // Saldo inicial
 
   // Totais globais (sem filtro de período)
-  const [totalGlobalE,    setTotalGlobalE]    = useState(0)
-  const [totalGlobalS,    setTotalGlobalS]    = useState(0)
   const [totalPeriodo,    setTotalPeriodo]    = useState(0)  // registros no período (todos, não só a página)
   const [saldoAnterior,   setSaldoAnterior]   = useState(0)  // saldo de partida (antes do período)
   const [indicadores,     setIndicadores]     = useState({ recebido:0, aReceber:0, atrasoReceber:0, pago:0, aPagar:0, atrasoPagar:0 })
+  const [agregado,        setAgregado]        = useState(null)  // realizado x projetado (lib/fluxo-agregados)
 
   // Modal edição
   const [editItem,     setEditItem]     = useState(null)   // registro sendo editado
@@ -284,7 +284,14 @@ export default function GestaoFluxoCaixaPage() {
       setSelected(new Set())
 
       // Totais/indicadores do período (sobre o conjunto completo já carregado)
-      let gEntradas = 0, gSaidas = 0, gCount = 0
+      // ── TOTAIS DO PERÍODO em caixa efetivo, separando realizado de projetado.
+      // Antes somava-se `r.valor` (valor do TÍTULO) para todo status, enquanto o
+      // extrato logo abaixo usava efeitosCaixa (valor do borderô). Duas bases na
+      // mesma tela — Causa 1 da auditoria de 13/08.
+      const ag = agregarPeriodo(visiveis, { de: startDate, ate: endDate, hoje: hojeP })
+      setAgregado(ag)
+
+      let gCount = 0
       const ind = { recebido:0, aReceber:0, atrasoReceber:0, pago:0, aPagar:0, atrasoPagar:0 }
       {
         visiveis.forEach(r => {
@@ -294,20 +301,16 @@ export default function GestaoFluxoCaixaPage() {
           const st = r.status || 'aberto'
           const vencido = ['aberto','parcial'].includes(st) && r.data < hojeP
           if (r.tipo === 'entrada') {
-            gEntradas += v
             if (st === 'pago') ind.recebido += v
             else if (st === 'parcial') { ind.recebido += liq; ind.aReceber += (v - liq); if (vencido) ind.atrasoReceber += (v - liq) }
             else if (st === 'aberto') { ind.aReceber += v; if (vencido) ind.atrasoReceber += v }
           } else {
-            gSaidas += v
             if (st === 'pago') ind.pago += v
             else if (st === 'parcial') { ind.pago += liq; ind.aPagar += (v - liq); if (vencido) ind.atrasoPagar += (v - liq) }
             else if (st === 'aberto') { ind.aPagar += v; if (vencido) ind.atrasoPagar += v }
           }
         })
       }
-      setTotalGlobalE(gEntradas)
-      setTotalGlobalS(gSaidas)
       setTotalPeriodo(gCount)
       setIndicadores(ind)
 
@@ -430,8 +433,12 @@ export default function GestaoFluxoCaixaPage() {
         (r.descricao || '').toLowerCase().includes(termo) || (r.categoria || '').toLowerCase().includes(termo))
 
       // Aba 1 — Resumo
-      const entradas = rows.filter(r => r.tipo === 'entrada').reduce((a, r) => a + Number(r.valor), 0)
-      const saidas   = rows.filter(r => r.tipo === 'saida').reduce((a, r) => a + Number(r.valor), 0)
+      // MESMA função da tela (lib/fluxo-agregados). Antes o export somava
+      // r.valor e a tela somava outra coisa: 26 títulos e R$ 387.545 de
+      // divergência medidos na auditoria de 13/08 — Causa 4. Como este arquivo
+      // vai a CEO e investidores, ele é o pior lugar para uma base própria.
+      const agX = agregarPeriodo(rows, { de: startDate, ate: endDate, hoje })
+      const n2 = (v) => Number(Number(v).toFixed(2))
       const resumoAoa = [
         ['Extrato — Fluxo de Caixa', ''],
         ['Entidade', empNome || 'Consolidado'],
@@ -439,10 +446,21 @@ export default function GestaoFluxoCaixaPage() {
         ['Filtro de tipo', tipoFiltro === 'todos' ? 'Todos' : tipoFiltro],
         ['Registros exportados', rows.length],
         ['', ''],
-        ['Entradas (R$)', Number(entradas.toFixed(2))],
-        ['Saídas (R$)', Number(saidas.toFixed(2))],
-        ['Resultado do período (R$)', Number((entradas - saidas).toFixed(2))],
-        ['Saldo de partida do periodo (R$)', saldoAnterior == null ? 'INDISPONIVEL - sem saldo de abertura' : Number(Number(saldoAnterior).toFixed(2))],
+        ['REALIZADO — movimentou caixa (concilia com extrato)', ''],
+        ['Entradas realizadas (R$)', n2(agX.realizado.entradas)],
+        ['Saídas realizadas (R$)', n2(agX.realizado.saidas)],
+        ['Resultado realizado (R$)', n2(agX.realizado.liquido)],
+        ['', ''],
+        ['PROJETADO — a vencer, ainda não movimentou caixa', ''],
+        ['Entradas projetadas (R$)', n2(agX.projetado.entradas)],
+        ['Saídas projetadas (R$)', n2(agX.projetado.saidas)],
+        ['Resultado projetado (R$)', n2(agX.projetado.liquido)],
+        ['', ''],
+        ['Saldo de partida do periodo (R$)', saldoAnterior == null ? 'INDISPONIVEL - sem saldo de abertura' : n2(saldoAnterior)],
+        ['Saldo apos o realizado (R$)', saldoAnterior == null ? 'INDISPONIVEL' : n2(saldoAnterior + agX.realizado.liquido)],
+        ['', ''],
+        ['Efeitos com data aproximada (sem data de liquidacao)', agX.aproximados],
+        ['Registros de tipo nao reconhecido (fora da soma)', agX.semSinal],
       ]
 
       // Aba 2 — Extrato com saldo acumulado (partindo do saldo inicial)
@@ -845,15 +863,26 @@ export default function GestaoFluxoCaixaPage() {
 
       {/* ── Totalizadores ─────────────────────────────────────────────────────── */}
       <div style={{ display:'flex', gap:10, marginBottom:10, flexWrap:'wrap' }}>
+        {/* REALIZADO em destaque, PROJETADO como segunda linha. Um "Entradas do
+            período" que embute carteira a receber induz leitura otimista — e é
+            o realizado que se concilia com extrato bancário. */}
         {[
-          { label:'Total de registros', value: String(total),                     color:'var(--fs-text-1)' },
-          { label:'Entradas (período)', value: fC(totalGlobalE),                   color:'var(--fs-success)' },
-          { label:'Saídas (período)',   value: fC(totalGlobalS),                   color:'var(--fs-danger)' },
-          { label:'Saldo (período)',    value: fC(totalGlobalE - totalGlobalS),    color: totalGlobalE >= totalGlobalS ? 'var(--fs-success)' : 'var(--fs-danger)' },
+          { label:'Total de registros', value: String(total), color:'var(--fs-text-1)', sub:null },
+          { label:'Entradas · realizado', value: fC(agregado?.realizado.entradas ?? 0), color:'var(--fs-success)',
+            sub: agregado?.projetado.entradas ? `+ ${fC(agregado.projetado.entradas)} projetado` : null,
+            ajuda: ROTULOS.realizadoAjuda },
+          { label:'Saídas · realizado', value: fC(agregado?.realizado.saidas ?? 0), color:'var(--fs-danger)',
+            sub: agregado?.projetado.saidas ? `+ ${fC(agregado.projetado.saidas)} projetado` : null,
+            ajuda: ROTULOS.realizadoAjuda },
+          { label:'Saldo · realizado', value: fC(agregado?.realizado.liquido ?? 0),
+            color: (agregado?.realizado.liquido ?? 0) >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)',
+            sub: agregado?.projetado.liquido ? `${agregado.projetado.liquido >= 0 ? '+' : ''}${fC(agregado.projetado.liquido)} projetado` : null,
+            ajuda: 'Movimento efetivo de caixa no período. O projetado ao lado ainda não movimentou.' },
         ].map(k => (
-          <div key={k.label} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'10px 16px', flex:1, minWidth:140 }}>
+          <div key={k.label} title={k.ajuda || ''} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'10px 16px', flex:1, minWidth:150 }}>
             <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>{k.label}</div>
             <div style={{ fontSize:18, fontWeight:800, color:k.color }}>{k.value}</div>
+            {k.sub && <div style={{ fontSize:10.5, color:'var(--fs-text-4)', marginTop:3 }}>{k.sub}</div>}
           </div>
         ))}
       </div>

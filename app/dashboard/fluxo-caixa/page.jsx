@@ -170,12 +170,24 @@ export default function FluxoCaixaPage() {
     return () => window.removeEventListener('storage', h)
   }, [])
 
+
+  // Resolve as entidades selecionadas antes do carregamento pesado, para que as
+  // âncoras já estejam sendo buscadas quando o load rodar (evita carregar duas vezes).
+  useEffect(() => {
+    if (!empresaId) return
+    let vivo = true
+    getSelectedEntidadeIds().then(ids => { if (vivo) setEmpIdsSel(ids) })
+    return () => { vivo = false }
+  }, [empresaId, isConsol])
+
   const load = useCallback(async () => {
+    // AGUARDA as âncoras: compor o saldo com a lista vazia produziria
+    // "sem saldo de abertura" mesmo com as âncoras já cadastradas.
+    if (ancoras === null) { setLoading(true); return }
     if (!empresaId) { setLoading(false); return }
     setLoading(true)
     try {
-      let empIds = await getSelectedEntidadeIds()
-      setEmpIdsSel(empIds)
+      let empIds = empIdsSel.length ? empIdsSel : await getSelectedEntidadeIds()
       if (isConsol || empIds.length > 1) {
         setEmpNome('')
       } else if (empIds.length === 1) {
@@ -265,7 +277,7 @@ export default function FluxoCaixaPage() {
 
     } catch(e) { console.error('FluxoCaixa:', e) }
     finally { setLoading(false) }
-  }, [empresaId, isConsol, debStart, debEnd, ancoras])
+  }, [empresaId, isConsol, debStart, debEnd, ancoras, empIdsSel])
 
   useEffect(() => { if (empresaId !== null) load() }, [load, empresaId])
 

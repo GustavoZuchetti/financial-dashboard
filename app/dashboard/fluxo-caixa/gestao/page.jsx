@@ -197,6 +197,10 @@ export default function GestaoFluxoCaixaPage() {
 
   const showToast = (msg, type = 'info') => setToast({ msg, type })
 
+  // Parcelas do saldo de partida, para exibir a composição no cartão
+  const ancoraSoma   = (partidaInfo?.linhas || []).reduce((a, l) => a + (Number(l.ancora?.valor) || 0), 0)
+  const movAteVespera = (partidaInfo?.linhas || []).reduce((a, l) => a + (Number(l.liquido) || 0), 0)
+
   useEffect(() => {
     const id = localStorage.getItem('empresa_id') || ''
     setEmpresaId(id); setIsConsol(id === 'todas')
@@ -893,10 +897,15 @@ export default function GestaoFluxoCaixaPage() {
           ) : (
             <div>
               <div style={{ fontSize:18, fontWeight:800, color:'var(--fs-text-1)' }} className="fs-num">{fC(saldoAnterior)}</div>
-              <div style={{ fontSize:10.5, color:'var(--fs-text-4)', marginTop:4, lineHeight:1.5 }}>
-                {(partidaInfo?.linhas || []).length > 1
-                  ? `soma de ${partidaInfo.linhas.length} entidades · âncora + movimento até a véspera`
-                  : `âncora de ${(partidaInfo?.linhas?.[0]?.ancora?.data_corte || '').split('-').reverse().join('/')} + movimento até a véspera`}
+              {/* Composição explícita: saldo de partida NÃO é a âncora — é a
+                  âncora rolada até a véspera do período. Sem mostrar as duas
+                  parcelas, o número parece mudar sozinho ao trocar o período. */}
+              <div style={{ fontSize:10.5, color:'var(--fs-text-4)', marginTop:6, lineHeight:1.7 }}>
+                <div>Âncora de {(partidaInfo?.linhas?.[0]?.ancora?.data_corte || '').split('-').reverse().join('/')}
+                  {(partidaInfo?.linhas || []).length > 1 ? ` · ${partidaInfo.linhas.length} entidades` : ''}
+                  : <span className="fs-num" style={{ color:'var(--fs-text-2)' }}>{fC(ancoraSoma)}</span></div>
+                <div>Movimento até {new Date(startDate + 'T12:00:00Z').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', timeZone:'UTC' })}
+                  {' '}(véspera): <span className="fs-num" style={{ color: movAteVespera >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)' }}>{fC(movAteVespera)}</span></div>
               </div>
             </div>
           )}

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
+import { efeitosCaixa } from '@/lib/fluxo-status'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
@@ -53,10 +54,13 @@ export default function FluxoComparativo() {
     if (!empresaId) return []
     let empIds = await getSelectedEntidadeIds()
     if (!empIds.length) return []
-    let q = supabase.from('fluxo_caixa').select('tipo,valor,data').gte('data', start).lte('data', end)
+    let q = supabase.from('fluxo_caixa').select('tipo,valor,data,status,valor_liquidado,data_liquidacao')
+      .or(`and(data.gte.${start},data.lte.${end}),and(data_liquidacao.gte.${start},data_liquidacao.lte.${end})`)
     q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
-    const data = await fetchAll(q)
-    return data || []
+    const raw = await fetchAll(q)
+    return (raw || []).flatMap(r => efeitosCaixa(r)
+      .filter(e => e.data >= start && e.data <= end)
+      .map(e => ({ ...r, valor: e.valor, data: e.data, data_original: r.data })))
   }, [empresaId, isConsol])
 
   const load = useCallback(async () => {

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 import { supabase, getSelectedEntidadeIds, fetchAll } from '@/lib/supabase'
+import { efeitosCaixa } from '@/lib/fluxo-status'
 import { CHART_PALETTE, COLORS } from '@/lib/design-tokens'
 
 const fmtFull    = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
@@ -52,15 +53,20 @@ export default function FluxoCaixaAnalise() {
     const fetchData = async () => {
       setLoading(true)
       try {
-        let query = supabase.from('fluxo_caixa').select('*').gte('data', debStart).lte('data', debEnd)
+        let query = supabase.from('fluxo_caixa').select('*')
+          .or(`and(data.gte.${debStart},data.lte.${debEnd}),and(data_liquidacao.gte.${debStart},data_liquidacao.lte.${debEnd})`)
         {
           const ids = await getSelectedEntidadeIds()
           if (ids.length) query = query.in('empresa_id', ids)
         }
         // fetchAll: sem paginar, o Supabase corta em 1000 linhas e os totais
         // (Total Recebido/Pago, composição) ficavam subestimados em silêncio.
-        const fluxo = await fetchAll(query)
-        setData(fluxo || [])
+        // Expandimos pelo efeito efetivo: pago/recebido usa liquidação; aberto usa vencimento.
+        const fluxoRaw = await fetchAll(query)
+        const fluxo = (fluxoRaw || []).flatMap(r => efeitosCaixa(r)
+          .filter(e => e.data >= debStart && e.data <= debEnd)
+          .map(e => ({ ...r, valor: e.valor, data: e.data, data_original: r.data })))
+        setData(fluxo)
       } catch (e) {
         console.error(e)
       } finally {

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
+import { efeitosCaixa } from '@/lib/fluxo-status'
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts'
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -62,21 +63,24 @@ export default function FluxoProjecao() {
       const baseStart = new Date(yr, mo - mesesBase, 1)
       const baseEnd   = new Date(yr, mo, 0) // último dia do mês anterior
 
-      let q = supabase.from('fluxo_caixa').select('tipo,valor,data')
-        .gte('data', baseStart.toISOString().split('T')[0])
-        .lte('data', baseEnd.toISOString().split('T')[0])
+      const startIso = baseStart.toISOString().split('T')[0]
+      const endIso   = baseEnd.toISOString().split('T')[0]
+      let q = supabase.from('fluxo_caixa').select('tipo,valor,data,status,valor_liquidado,data_liquidacao')
+        .or(`and(data.gte.${startIso},data.lte.${endIso}),and(data_liquidacao.gte.${startIso},data_liquidacao.lte.${endIso})`)
       q = isConsol ? q.in('empresa_id', empIds) : q.eq('empresa_id', empIds[0])
       const hist = await fetchAll(q)
 
-      // Agrupar por mês
+      // Agrupar por efeitos de caixa: liquidados na data efetiva; abertos no vencimento.
       const byMonth = {}
       ;(hist||[]).forEach(r => {
-        const dt = new Date(r.data + 'T00:00:00')
-        const k  = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`
-        if (!byMonth[k]) byMonth[k] = { e:0, s:0 }
-        const v = Math.abs(Number(r.valor))
-        if (['entrada','receita','receita_financeira','fluxo_entrada'].includes(r.tipo)) byMonth[k].e += v
-        else byMonth[k].s += v
+        efeitosCaixa(r).filter(e => e.data >= startIso && e.data <= endIso).forEach(e => {
+          const dt = new Date(e.data + 'T00:00:00')
+          const k  = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`
+          if (!byMonth[k]) byMonth[k] = { e:0, s:0 }
+          const v = Math.abs(Number(e.valor) || 0)
+          if (['entrada','receita','receita_financeira','fluxo_entrada'].includes(r.tipo)) byMonth[k].e += v
+          else byMonth[k].s += v
+        })
       })
 
       const histMeses = Object.entries(byMonth).sort().map(([k, v]) => {

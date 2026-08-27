@@ -84,29 +84,49 @@ export default function IntegracoesTab({ empresas, showToast }) {
     carregar()
   }
 
-  const sincronizar = async (integ, modulo) => {
-    // Anti-duplicidade título CSV × título API: oferecer substituição dos
-    // registros de origem arquivo (sem doc_ref) desta entidade
-    const limpar = window.confirm(
+  const sincronizar = async (integ, modulo, opcoes = {}) => {
+    const historico = opcoes.escopo === 'historico'
+    const dataInicio = opcoes.data_inicio || '2023-01-01'
+    const dataFim = opcoes.data_fim || new Date().toISOString().split('T')[0]
+
+    // A carga histórica não remove os CSVs: primeiro comparamos API × arquivo.
+    // A substituição continua disponível somente no fluxo incremental manual.
+    const limpar = historico ? false : window.confirm(
       `Substituir os registros de ${modulo === 'dre' ? 'DRE' : 'Fluxo de Caixa'} importados por ARQUIVO desta entidade pelos dados da API?\n\n` +
       `Recomendado: a API traz o histórico completo e evita duplicidade com importações antigas por CSV.\n\n` +
       `OK = substituir (remove os registros sem vínculo com a API antes de gravar)\nCancelar = manter e apenas adicionar/atualizar os vindos da API`)
-    setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `Sincronizando ${modulo.toUpperCase()}...` } }))
-    let fase = 0, pagina = 1, total = 0, pend = 0, guarda = 0
+    const limiteGuard = historico ? 200 : 60
+    const descricao = historico
+      ? `Reprocessando pagos/recebidos desde ${dataInicio.split('-').reverse().join('/')}...`
+      : `Sincronizando ${modulo.toUpperCase()}...`
+    setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: descricao } }))
+    let fase = 0, pagina = 1, total = 0, pend = 0, guarda = 0, concluido = false
     try {
-      while (guarda++ < 60) {
+      while (guarda++ < limiteGuard) {
         const r = await authFetch('/api/integracoes/bling/sync', {
           method: 'POST',
-          body: JSON.stringify({ integracao_id: integ.id, modulo, fase, pagina, limpar_origem_arquivo: limpar && fase === 0 && pagina === 1 }),
+          body: JSON.stringify({
+            integracao_id: integ.id, modulo, fase, pagina,
+            escopo: opcoes.escopo || 'incremental',
+            data_inicio: dataInicio, data_fim: dataFim,
+            limpar_origem_arquivo: limpar && fase === 0 && pagina === 1,
+          }),
         })
         if (r.error) throw new Error(r.error)
         total += r.gravados || 0; pend += r.total_pendencias || 0
         setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `${r.recurso} · pág. ${r.pagina} · ${total} gravados${pend ? ` · ${pend} pendências` : ''}` } }))
-        if (!r.hasMore) break
+        if (!r.hasMore) { concluido = true; break }
         fase = r.next.fase; pagina = r.next.pagina
       }
-      setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log: `Concluído: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}` } }))
-      showToast?.(`Sincronização ${modulo.toUpperCase()} concluída: ${total} títulos`, 'success')
+      if (!concluido) {
+        const log = `Carga parcial: ${total} títulos gravados · retomar em ${fase === 0 ? 'recebimentos' : 'pagamentos'}, pág. ${pagina}${pend ? ` · ${pend} pendências` : ''}`
+        setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log } }))
+        showToast?.('Carga parcial — ainda existem páginas pendentes', 'error')
+      } else {
+        const log = `Concluído: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}`
+        setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log } }))
+        showToast?.(`${historico ? 'Histórico' : `Sincronização ${modulo.toUpperCase()}`} concluído: ${total} títulos`, 'success')
+      }
     } catch (e) {
       setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log: `Erro: ${e.message}` } }))
       showToast?.('Erro na sincronização: ' + e.message, 'error')
@@ -216,10 +236,17 @@ export default function IntegracoesTab({ empresas, showToast }) {
                 )}
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   {integ.modulo_fluxo_ativo && (
-                    <button onClick={() => sincronizar(integ, 'fluxo')} disabled={st.rodando}
-                      style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 14px', color: 'var(--fs-text-2)', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: st.rodando ? 0.5 : 1 }}>
-                      Sincronizar Fluxo agora
-                    </button>
+                    <>
+                      <button onClick={() => sincronizar(integ, 'fluxo')} disabled={st.rodando}
+                        style={{ background: 'var(--fs-bg)', border: '1px solid var(--fs-border)', borderRadius: 8, padding: '8px 14px', color: 'var(--fs-text-2)', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: st.rodando ? 0.5 : 1 }}>
+                        Sincronizar Fluxo agora
+                      </button>
+                      <button onClick={() => sincronizar(integ, 'fluxo', { escopo: 'historico', data_inicio: '2023-01-01' })} disabled={st.rodando}
+                        title="Busca títulos já recebidos/pagos desde 01/01/2023 sem remover os registros importados por CSV"
+                        style={{ background: 'rgba(var(--fs-brand-rgb),0.10)', border: '1px solid rgba(var(--fs-brand-rgb),0.35)', borderRadius: 8, padding: '8px 14px', color: 'var(--fs-brand)', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: st.rodando ? 0.5 : 1 }}>
+                        Reprocessar pagos desde 2023
+                      </button>
+                    </>
                   )}
                   {integ.modulo_dre_ativo && (
                     <button onClick={() => sincronizar(integ, 'dre')} disabled={st.rodando}

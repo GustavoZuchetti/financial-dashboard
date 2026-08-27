@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server'
 import { getAuthProfile, ensureToken, fetchContas, fetchCategoriasMap, montarRegistrosFluxo } from '@/lib/bling-server'
 
 // POST /api/integracoes/bling/sync
-// body: { integracao_id, modulo: 'fluxo'|'dre', fase?: 0|1, pagina?: number, diag?: boolean }
+// body: { integracao_id, modulo: 'fluxo'|'dre', fase?: 0|1, pagina?: number, diag?: boolean,
+//         escopo?: 'incremental'|'historico', data_inicio?: 'YYYY-MM-DD', data_fim?: 'YYYY-MM-DD' }
 // Orçamento: 1 página (100 títulos) por chamada — a UI itera enquanto hasMore.
 // fase 0 = contas/receber (entrada) · fase 1 = contas/pagar (saída)
+// escopo historico = títulos já recebidos/pagos em uma janela explícita.
 const FASES = [
   { recurso: 'contas/receber', tipoFluxo: 'entrada' },
   { recurso: 'contas/pagar',   tipoFluxo: 'saida'   },
@@ -17,7 +19,12 @@ export async function POST(request) {
   if (!['org_admin', 'super_admin'].includes(profile.role))
     return NextResponse.json({ error: 'Apenas administradores podem sincronizar' }, { status: 403 })
 
-  const { integracao_id, modulo = 'fluxo', fase = 0, pagina = 1, diag = false, limpar_origem_arquivo = false } = await request.json()
+  const {
+    integracao_id, modulo = 'fluxo', fase = 0, pagina = 1, diag = false,
+    limpar_origem_arquivo = false, escopo = 'incremental',
+    data_inicio = '2023-01-01',
+    data_fim = new Date().toISOString().split('T')[0],
+  } = await request.json()
 
   let { data: integ } = await admin.from('integracoes')
     .select('*').eq('id', integracao_id).eq('organization_id', profile.organization_id).single()
@@ -49,7 +56,15 @@ export async function POST(request) {
     // DRE precisa do DETALHE de cada título (a listagem não traz categoria) →
     // páginas menores para caber no timeout de 10s da Vercel
     const LIMITE = 50  // muitos títulos são pulados (já completos) → página maior
-    const itens = await fetchContas(integ, recurso, pagina, LIMITE)
+
+    // A API do Bling possui filtros de data diferentes para recebimentos e pagamentos.
+    // Sem esta janela explícita, contas/receber cai no padrão aproximado de 1 ano.
+    const filtrosHistorico = escopo === 'historico' && modulo === 'fluxo'
+      ? (fase === 0
+        ? { situacoes: [2, 3], tipoFiltroData: 'R', dataInicial: data_inicio, dataFinal: data_fim }
+        : { situacao: 2, dataPagamentoInicial: data_inicio, dataPagamentoFinal: data_fim })
+      : {}
+    const itens = await fetchContas(integ, recurso, pagina, LIMITE, filtrosHistorico)
 
     // Substituição opcional (1ª chamada): remove registros de origem ARQUIVO
     // (doc_ref nulo) da entidade — evita duplicidade título CSV × título API
@@ -81,7 +96,7 @@ export async function POST(request) {
     const categoriasMap = await fetchCategoriasMap(integ)
     const nomesContato = { ...(integ.contatos_cache || {}) }
     const { registros: regsFluxo } = await montarRegistrosFluxo(
-      admin, integ, recurso, tipoFluxo, pagina, LIMITE, categoriasMap, nomesContato, itens)
+      admin, integ, recurso, tipoFluxo, pagina, LIMITE, categoriasMap, nomesContato, itens, filtrosHistorico)
 
     const registros = [], pendencias = []
     if (modulo === 'fluxo') {
@@ -121,7 +136,13 @@ export async function POST(request) {
     const cheia = itens.length >= LIMITE
     const next = cheia ? { fase, pagina: pagina + 1 } : (fase + 1 < FASES.length ? { fase: fase + 1, pagina: 1 } : null)
 
-    const resultado = { modulo, recurso, pagina, recebidos: itens.length, gravados, pendencias: pendencias.slice(0, 20), total_pendencias: pendencias.length }
+    const resultado = {
+      modulo, recurso, pagina, escopo,
+      janela: escopo === 'historico' ? { inicio: data_inicio, fim: data_fim } : null,
+      filtro_data: escopo === 'historico' ? (fase === 0 ? 'recebimento' : 'pagamento') : null,
+      recebidos: itens.length, gravados,
+      pendencias: pendencias.slice(0, 20), total_pendencias: pendencias.length,
+    }
     await admin.from('integracoes').update({
       ultima_sync: new Date().toISOString(),
       ultimo_resultado: resultado,

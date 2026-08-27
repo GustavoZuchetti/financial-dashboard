@@ -133,6 +133,9 @@ export default function AtrasadosPage() {
   )
 
   const isConsol = empIds.length > 1
+  const totalAtraso = totReceber + totPagar
+  const maioresAtrasos = [...filtrados].sort((a, b) => b.restante - a.restante).slice(0, 3)
+  const faixaPrincipal = [...aging].sort((a, b) => (b.receber + b.pagar) - (a.receber + a.pagar))[0]
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
@@ -142,68 +145,127 @@ export default function AtrasadosPage() {
         </div>
       )}
 
-      <div>
-        <h1 style={{ fontSize:24, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>Em Atraso</h1>
-        <p style={{ fontSize:12.5, color:'var(--fs-text-4)', margin:'4px 0 0' }}>
-          Títulos vencidos e não liquidados — fora do fluxo de caixa até a baixa. Referência: hoje, {fData(hoje)}.
-        </p>
+      <div className="fs-page-header">
+        <div>
+          <div className="fs-page-eyebrow">Fluxo de Caixa / Monitoramento</div>
+          <h1 style={{ fontSize:24, fontWeight:800, color:'var(--fs-text-1)', margin:0 }}>Em Atraso</h1>
+          <p style={{ fontSize:12.5, color:'var(--fs-text-4)', margin:'5px 0 0', maxWidth:620 }}>
+            Títulos vencidos e não liquidados — fora do fluxo de caixa até a baixa. Referência: hoje, {fData(hoje)}.
+          </p>
+        </div>
+        <div className="fs-context-pill">
+          <span className="fs-context-dot" />
+          <span><strong style={{ color:'var(--fs-text-1)' }}>{filtrados.length}</strong> títulos monitorados</span>
+        </div>
       </div>
 
       {/* Cards executivos */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:12 }}>
+      <div className="fs-overdue-kpis">
         {[
-          ['A Receber em Atraso', totReceber, aReceber.length, 'var(--fs-warning, var(--fs-warning))'],
+          ['A Receber em Atraso', totReceber, aReceber.length, 'var(--fs-warning)'],
           ['A Pagar em Atraso',   totPagar,   aPagar.length,   'var(--fs-danger)'],
           ['Exposição Líquida',   totReceber - totPagar, null, (totReceber - totPagar) >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)'],
         ].map(([rot, val, qtd, cor]) => (
-          <div key={rot} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'14px 18px' }}>
-            <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:6 }}>{rot}</div>
-            <div className="fs-num" style={{ fontSize:22, fontWeight:800, color:cor }}>{fCFull(val)}</div>
-            {qtd !== null && <div style={{ fontSize:11, color:'var(--fs-text-4)', marginTop:2 }}>{qtd} título{qtd === 1 ? '' : 's'}</div>}
+          <div key={rot} className="fs-finance-kpi" style={{ borderTopColor: cor }}>
+            <div className="fs-finance-kpi__label">{rot}</div>
+            <div className="fs-finance-kpi__value" style={{ color:cor }}>{fCFull(val)}</div>
+            <div className="fs-finance-kpi__meta">
+              <span>{qtd !== null ? `${qtd} título${qtd === 1 ? '' : 's'}` : 'Receber − Pagar'}</span>
+              <span className="fs-risk-badge">{rot === 'Exposição Líquida' ? (val >= 0 ? 'favorável' : 'atenção') : 'vencido'}</span>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Aging */}
-      <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'16px 18px' }}>
-        <div style={{ fontSize:13, fontWeight:800, color:'var(--fs-text-1)', marginBottom:12 }}>Aging — valor em atraso por faixa de dias</div>
-        <div style={{ width:'100%', height:220 }}>
-          <ResponsiveContainer>
-            <BarChart data={aging} margin={{ top:4, right:8, left:8, bottom:4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--fs-border)" vertical={false} />
-              <XAxis dataKey="faixa" tick={{ fontSize:11, fill:'var(--fs-text-4)' }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={fC} tick={{ fontSize:10, fill:'var(--fs-text-4)' }} axisLine={false} tickLine={false} width={64} />
-              <Tooltip formatter={(v, n) => [fCFull(v), n === 'receber' ? 'A Receber' : 'A Pagar']}
-                cursor={{ fill: 'var(--fs-hover-2)' }}
-                contentStyle={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, fontSize:12 }} />
-              <Legend formatter={(v) => v === 'receber' ? 'A Receber' : 'A Pagar'} wrapperStyle={{ fontSize:12 }} />
-              <Bar dataKey="receber" name="receber" fill="var(--fs-warning, var(--fs-warning))" radius={[4,4,0,0]} isAnimationActive={false} />
-              <Bar dataKey="pagar"   name="pagar"   fill="var(--fs-danger)" radius={[4,4,0,0]} isAnimationActive={false} />
-            </BarChart>
-          </ResponsiveContainer>
+      <div className="fs-overdue-main-grid">
+        {/* Aging */}
+        <div className="fs-overdue-panel">
+          <div className="fs-section-label">
+            <div>
+              <h2>Exposição por aging</h2>
+              <p>Valor vencido agrupado pela quantidade de dias em atraso.</p>
+            </div>
+            <span className="fs-risk-badge">{faixaPrincipal?.faixa || 'Sem dados'} · {fC(totalAtraso)}</span>
+          </div>
+          <div style={{ width:'100%', height:220 }}>
+            <ResponsiveContainer>
+              <BarChart data={aging} margin={{ top:4, right:8, left:8, bottom:4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--fs-border)" vertical={false} />
+                <XAxis dataKey="faixa" tick={{ fontSize:11, fill:'var(--fs-text-4)' }} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={fC} tick={{ fontSize:10, fill:'var(--fs-text-4)' }} axisLine={false} tickLine={false} width={64} />
+                <Tooltip formatter={(v, n) => [fCFull(v), n === 'receber' ? 'A Receber' : 'A Pagar']}
+                  cursor={{ fill: 'var(--fs-hover-2)' }}
+                  contentStyle={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, fontSize:12 }} />
+                <Legend formatter={(v) => v === 'receber' ? 'A Receber' : 'A Pagar'} wrapperStyle={{ fontSize:12 }} />
+                <Bar dataKey="receber" name="receber" fill="var(--fs-warning)" radius={[4,4,0,0]} isAnimationActive={false} />
+                <Bar dataKey="pagar"   name="pagar"   fill="var(--fs-danger)" radius={[4,4,0,0]} isAnimationActive={false} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Prioridades */}
+        <div className="fs-overdue-panel fs-overdue-panel--priority">
+          <div className="fs-section-label">
+            <div>
+              <h2>Prioridades de ação</h2>
+              <p>Maiores valores vencidos no recorte atual.</p>
+            </div>
+            <span className="fs-risk-badge is-risk">ação</span>
+          </div>
+          {maioresAtrasos.length === 0 ? (
+            <div className="fs-status-callout"><span style={{ color:'var(--fs-success)', fontSize:15 }}>✓</span><span><strong>Caixa em dia.</strong><br />Nenhum título vencido requer ação.</span></div>
+          ) : (
+            <div style={{ display:'grid', gap:10 }}>
+              {maioresAtrasos.map(r => (
+                <div key={r.id} style={{ padding:'11px 12px', border:'1px solid var(--fs-border)', borderRadius:9, background:'var(--fs-bg)' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'flex-start' }}>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ color:'var(--fs-text-1)', fontSize:12.5, fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.descricao || 'Sem descrição'}</div>
+                      <div style={{ color:'var(--fs-text-4)', fontSize:10.5, marginTop:4 }}>{r.tipo === 'entrada' ? 'A Receber' : 'A Pagar'} · {r.dias} dias · {r.categoria || 'Sem categoria'}</div>
+                    </div>
+                    <div className="fs-num" style={{ color:r.tipo === 'entrada' ? 'var(--fs-warning)' : 'var(--fs-danger)', fontSize:12.5, fontWeight:800, whiteSpace:'nowrap' }}>{fC(r.restante)}</div>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, marginTop:9 }}>
+                    <span style={{ color:'var(--fs-text-4)', fontSize:10.5 }}>Vencimento {fData(r.data)}</span>
+                    <button onClick={() => handleBaixar(r)} style={{ background:'transparent', border:'1px solid var(--fs-border-2)', borderRadius:6, color:'var(--fs-text-2)', fontSize:10.5, fontWeight:700, padding:'4px 9px', cursor:'pointer' }}>Baixar</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Filtros + export */}
-      <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
-        <select value={tipoFiltro} onChange={e => setTipo(e.target.value)}
-          style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-2)', fontSize:12.5, padding:'8px 10px' }}>
+      <div className="fs-filter-bar">
+        <span className="fs-filter-bar__label">Filtrar títulos</span>
+        <select value={tipoFiltro} onChange={e => setTipo(e.target.value)} className="fs-input"
+          style={{ padding:'7px 10px' }}>
           <option value="todos">A Receber + A Pagar</option>
           <option value="entrada">Somente a Receber</option>
           <option value="saida">Somente a Pagar</option>
         </select>
-        <div style={{ flex:1, minWidth:200, position:'relative' }}>
-          <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por descrição ou categoria..."
-            style={{ width:'100%', background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', fontSize:12.5, padding:'8px 12px' }} />
+        <div style={{ flex:1, minWidth:220, position:'relative' }}>
+          <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por descrição ou categoria..." className="fs-input"
+            style={{ width:'100%' }} />
         </div>
+        <span style={{ color:'var(--fs-text-4)', fontSize:11 }}>{filtrados.length} resultado{filtrados.length === 1 ? '' : 's'}</span>
         <button onClick={handleExport} disabled={loading || !filtrados.length}
-          style={{ display:'flex', alignItems:'center', gap:7, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-2)', fontSize:12.5, fontWeight:600, padding:'8px 14px', cursor:'pointer' }}>
+          style={{ display:'flex', alignItems:'center', gap:7, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-2)', fontSize:12.5, fontWeight:600, padding:'8px 14px', cursor:'pointer', opacity: loading || !filtrados.length ? 0.5 : 1 }}>
           <SvgIcon name="download" size={14} color="var(--fs-text-3)" /> Exportar Excel
         </button>
       </div>
 
       {/* Tabela detalhada */}
-      <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, overflow:'hidden' }}>
+      <div className="fs-data-table">
+        <div style={{ padding:'15px 16px 11px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, borderBottom:'1px solid var(--fs-border)' }}>
+          <div>
+            <div style={{ color:'var(--fs-text-1)', fontSize:13, fontWeight:800 }}>Títulos que exigem atenção</div>
+            <div style={{ color:'var(--fs-text-4)', fontSize:11, marginTop:3 }}>Ordenados pelo maior tempo de atraso.</div>
+          </div>
+          <span className="fs-risk-badge is-risk">{fC(totalAtraso)} em exposição</span>
+        </div>
         <div style={{ display:'grid', gridTemplateColumns: isConsol ? '90px 1fr 160px 110px 90px 110px 120px 80px' : '90px 1fr 180px 110px 90px 130px 80px', gap:10, padding:'10px 16px', borderBottom:'1px solid var(--fs-border)' }}>
           {(isConsol
             ? ['Vencimento','Descrição','Entidade','Categoria','Dias','Faixa','Valor em Atraso','']

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts'
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const fC = (v) => {
@@ -121,45 +121,67 @@ export default function FluxoProjecao() {
     ...historico.map(h => ({ ...h, entradas_real: h.entradas, saidas_real: h.saidas })),
     ...projecoes.map(p => ({ ...p, entradas_proj: p.entradas, saidas_proj: p.saidas }))
   ]
+  const menorSaldoProjetado = projecoes.length ? Math.min(...projecoes.map(p => p.acumulado)) : 0
+  const mediaSaldo = mediaE - mediaS
+  const riscoProjecao = menorSaldoProjetado < 0 || mediaSaldo < 0
+  const primeiroMesProjetado = projecoes[0]?.name
 
   return (
     <div style={{ color:'var(--fs-text-1)', width:'100%' }}>
-      <div style={{ marginBottom:24 }}>
-        <h1 style={{ fontSize:28, fontWeight:800, margin:0 }}>Projeção de Caixa</h1>
-        <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:4 }}>
-          Projeção calculada com base na média histórica + tendência dos últimos {mesesBase} meses
+      <div className="fs-page-header" style={{ marginBottom:20 }}>
+        <div>
+          <div className="fs-page-eyebrow">Fluxo de Caixa / Planejamento</div>
+          <h1 style={{ fontSize:28, fontWeight:800, margin:0 }}>Projeção de Caixa</h1>
+          <div style={{ fontSize:12, color:'var(--fs-text-4)', marginTop:5, maxWidth:650 }}>
+            Estimativa de liquidez calculada com base na média histórica e na tendência dos últimos {mesesBase} meses.
+          </div>
+        </div>
+        <div className={`fs-risk-badge ${riscoProjecao ? 'is-risk' : 'is-ok'}`}>
+          <span>{riscoProjecao ? '!' : '✓'}</span>
+          {riscoProjecao ? 'Atenção ao saldo projetado' : 'Trajetória projetada positiva'}
         </div>
       </div>
 
       {/* Controles */}
-      <div style={{ display:'flex', gap:12, marginBottom:20, flexWrap:'wrap' }}>
-        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 16px', display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase' }}>Base histórica</div>
-          <select value={mesesBase} onChange={e=>setMesesBase(Number(e.target.value))} style={IS}>
-            {[3,6,9,12].map(n=><option key={n} value={n}>{n} meses</option>)}
-          </select>
-        </div>
-        <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 16px', display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase' }}>Projetar</div>
-          <select value={mesesProj} onChange={e=>setMesesProj(Number(e.target.value))} style={IS}>
-            {[3,6,9,12].map(n=><option key={n} value={n}>{n} meses</option>)}
-          </select>
-        </div>
-        {mediaE > 0 && (
-          <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
-            {[
-              { label:'Média Entradas/mês', val: mediaE, color:'var(--fs-success)' },
-              { label:'Média Saídas/mês',   val: mediaS, color:'var(--fs-danger)' },
-              { label:'Média Saldo/mês',    val: mediaE - mediaS, color: mediaE >= mediaS ? 'var(--fs-brand)' : 'var(--fs-warning)' },
-            ].map(({ label, val, color }) => (
-              <div key={label} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'12px 16px' }}>
-                <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:4 }}>{label}</div>
-                <div style={{ fontSize:18, fontWeight:800, color }} className="fs-num">{fC(Math.round(val))}</div>
-              </div>
-            ))}
+      <div className="fs-projection-controls" style={{ marginBottom:16 }}>
+        <div className="fs-projection-control-group">
+          <label>Parâmetros</label>
+          <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, padding:'7px 10px' }}>
+            <span style={{ color:'var(--fs-text-4)', fontSize:11 }}>Base</span>
+            <select value={mesesBase} onChange={e=>setMesesBase(Number(e.target.value))} style={IS}>
+              {[3,6,9,12].map(n=><option key={n} value={n}>{n} meses</option>)}
+            </select>
           </div>
-        )}
+          <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:8, padding:'7px 10px' }}>
+            <span style={{ color:'var(--fs-text-4)', fontSize:11 }}>Horizonte</span>
+            <select value={mesesProj} onChange={e=>setMesesProj(Number(e.target.value))} style={IS}>
+              {[3,6,9,12].map(n=><option key={n} value={n}>{n} meses</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="fs-projection-legend">
+          <span><i /> Realizado</span>
+          <span><i className="is-projected" /> Projetado</span>
+          <span style={{ color:'var(--fs-purple)' }}>— Saldo acumulado</span>
+        </div>
       </div>
+
+      {mediaE > 0 && (
+        <div className="fs-projection-kpis" style={{ marginBottom:16 }}>
+          {[
+            { label:'Média Entradas / mês', val: mediaE, color:'var(--fs-success)', meta:'base histórica' },
+            { label:'Média Saídas / mês',   val: mediaS, color:'var(--fs-danger)', meta:'base histórica' },
+            { label:'Média Saldo / mês',    val: mediaSaldo, color: mediaSaldo >= 0 ? 'var(--fs-brand)' : 'var(--fs-warning)', meta:'entradas − saídas' },
+            { label:'Menor Saldo Projetado', val: menorSaldoProjetado, color: menorSaldoProjetado >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)', meta:'ponto de atenção' },
+          ].map(({ label, val, color, meta }) => (
+            <div key={label} className="fs-finance-kpi" style={{ borderTopColor:color }}>
+              <div className="fs-finance-kpi__label">{label}</div>
+              <div className="fs-finance-kpi__value" style={{ color }}>{fC(Math.round(val))}</div>
+              <div className="fs-finance-kpi__meta"><span>{meta}</span>{label === 'Menor Saldo Projetado' && <span className={`fs-risk-badge ${val < 0 ? 'is-risk' : 'is-ok'}`}>{val < 0 ? 'risco' : 'coberto'}</span>}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <><KpiCardsSkeleton count={4} /><ChartSkeleton height={260} /></>
@@ -169,33 +191,63 @@ export default function FluxoProjecao() {
         </div>
       ) : (
         <>
-          {/* Gráfico */}
-          <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px', marginBottom:16 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:8 }}>
-              <div style={{ fontSize:14, fontWeight:800, color:'var(--fs-text-1)' }}>Histórico + Projeção</div>
-              <div style={{ display:'flex', gap:16, fontSize:11, color:'var(--fs-text-4)' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:5 }}><div style={{ width:24, height:3, background:'var(--fs-brand)', borderRadius:2 }}/> Realizado</div>
-                <div style={{ display:'flex', alignItems:'center', gap:5 }}><div style={{ width:24, height:3, background:'var(--fs-purple)', borderRadius:2, borderTop:'2px dashed var(--fs-purple)' }}/> Projetado</div>
+          <div className="fs-projection-main-grid">
+            {/* Gráfico */}
+            <div className="fs-projection-panel">
+              <div className="fs-section-label">
+                <div>
+                  <h2>Histórico + Projeção</h2>
+                  <p>Entradas e saídas mensais com saldo acumulado estimado.</p>
+                </div>
+                <span className="fs-risk-badge">{mesesProj} meses à frente</span>
+              </div>
+              <ResponsiveContainer width="100%" height={270}>
+                <ComposedChart data={chartData} margin={{top:4,right:8,left:0,bottom:4}}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fC} width={72} />
+                  <Tooltip content={<TT />} cursor={false} />
+                  {primeiroMesProjetado && <ReferenceLine x={primeiroMesProjetado} stroke="var(--fs-border-2)" strokeDasharray="4 4" label={{ value:'projeção', fill:'var(--fs-text-4)', fontSize:10, position:'insideTopRight' }} />}
+                  <Bar dataKey="entradas_real" fill="var(--fs-success)"                    name="Entradas (real)"     barSize={14} radius={[3,3,0,0]} />
+                  <Bar dataKey="saidas_real"   fill="rgba(var(--fs-danger-rgb),0.7)"        name="Saídas (real)"       barSize={14} radius={[3,3,0,0]} />
+                  <Bar dataKey="entradas_proj" fill="rgba(var(--fs-success-rgb),0.35)"       name="Entradas (proj)"     barSize={14} radius={[3,3,0,0]} />
+                  <Bar dataKey="saidas_proj"   fill="rgba(var(--fs-danger-rgb),0.25)"       name="Saídas (proj)"       barSize={14} radius={[3,3,0,0]} />
+                  <Line type="monotone" dataKey="acumulado" stroke="var(--fs-purple)" strokeWidth={2} strokeDasharray="5 3" dot={{r:3}} name="Saldo acumulado (proj)" />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Método e risco */}
+            <div className="fs-projection-panel">
+              <div className="fs-section-label">
+                <div>
+                  <h2>Leitura da projeção</h2>
+                  <p>Parâmetros usados para estimar a liquidez futura.</p>
+                </div>
+                <span className={`fs-risk-badge ${riscoProjecao ? 'is-risk' : 'is-ok'}`}>{riscoProjecao ? 'revisar' : 'estável'}</span>
+              </div>
+              <div className="fs-status-callout">
+                <span style={{ color:riscoProjecao ? 'var(--fs-warning)' : 'var(--fs-success)', fontSize:15 }}>{riscoProjecao ? '!' : '✓'}</span>
+                <span><strong>{riscoProjecao ? 'Há pressão sobre a liquidez.' : 'A trajetória permanece coberta.'}</strong><br />Use o menor saldo projetado como ponto de atenção para decisão.</span>
+              </div>
+              <div className="fs-projection-logic">
+                <div className="fs-projection-logic__row"><span>Base histórica</span><strong>{mesesBase} meses</strong></div>
+                <div className="fs-projection-logic__row"><span>Horizonte futuro</span><strong>{mesesProj} meses</strong></div>
+                <div className="fs-projection-logic__row"><span>Média de saldo</span><strong style={{ color:mediaSaldo >= 0 ? 'var(--fs-success)' : 'var(--fs-warning)' }}>{fC(Math.round(mediaSaldo))} / mês</strong></div>
+                <div className="fs-projection-logic__row"><span>Menor acumulado</span><strong style={{ color:menorSaldoProjetado >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)' }}>{fC(Math.round(menorSaldoProjetado))}</strong></div>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={260}>
-              <ComposedChart data={chartData} margin={{top:4,right:8,left:0,bottom:4}}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--fs-border)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:11}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill:'var(--fs-text-4)',fontSize:10}} tickFormatter={fC} width={72} />
-                <Tooltip content={<TT />} cursor={false} />
-                <Bar dataKey="entradas_real" fill="var(--fs-success)"                    name="Entradas (real)"     barSize={14} radius={[3,3,0,0]} />
-                <Bar dataKey="saidas_real"   fill="rgba(var(--fs-danger-rgb),0.7)"        name="Saídas (real)"       barSize={14} radius={[3,3,0,0]} />
-                <Bar dataKey="entradas_proj" fill="rgba(var(--fs-success-rgb),0.35)"       name="Entradas (proj)"     barSize={14} radius={[3,3,0,0]} />
-                <Bar dataKey="saidas_proj"   fill="rgba(var(--fs-danger-rgb),0.25)"       name="Saídas (proj)"       barSize={14} radius={[3,3,0,0]} />
-                <Line type="monotone" dataKey="acumulado" stroke="var(--fs-purple)" strokeWidth={2} strokeDasharray="5 3" dot={{r:3}} name="Saldo acumulado (proj)" />
-              </ComposedChart>
-            </ResponsiveContainer>
           </div>
 
           {/* Tabela de projeção */}
-          <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, padding:'20px 24px' }}>
-            <div style={{ fontSize:14, fontWeight:800, color:'var(--fs-text-1)', marginBottom:16 }}>Detalhamento da projeção</div>
+          <div className="fs-projection-panel" style={{ marginTop:16 }}>
+            <div className="fs-section-label">
+              <div>
+                <h2>Detalhamento da projeção</h2>
+                <p>Valores estimados por mês; o selo PROJ diferencia o futuro do realizado.</p>
+              </div>
+              <span className="fs-risk-badge">{projecoes.length} períodos</span>
+            </div>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
               <thead>
                 <tr>

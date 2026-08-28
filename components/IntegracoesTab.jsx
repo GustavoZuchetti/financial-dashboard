@@ -12,7 +12,17 @@ const authFetch = async (url, opts = {}) => {
     ...opts,
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}`, ...(opts.headers || {}) },
   })
-  return r.json()
+  const texto = await r.text()
+  let body = null
+  try { body = texto ? JSON.parse(texto) : null } catch { /* Vercel pode devolver texto em timeout */ }
+  if (body && typeof body === 'object') return body
+  const retryAvel = r.status === 429 || r.status >= 500
+  return {
+    error: `Resposta inválida do servidor (HTTP ${r.status})${texto ? `: ${texto.slice(0, 160)}` : ''}`,
+    retryAvel,
+    aguardar_ms: retryAvel ? 8000 : 0,
+    status: r.status,
+  }
 }
 
 export default function IntegracoesTab({ empresas, showToast }) {
@@ -113,24 +123,20 @@ export default function IntegracoesTab({ empresas, showToast }) {
             limpar_origem_arquivo: limpar && fase === 0 && pagina === 1,
           }),
         })
-        if (r.error) throw new Error(r.error)
-
-        // Gateway/timeout: a API devolve o cursor intacto. Repetimos a mesma
-        // página sem zerar o acumulado e sem avançar fase ou janela.
+        // Resposta textual de gateway (por exemplo, timeout da Vercel) também
+        // deve repetir a mesma página; o cursor local continua intacto.
         if (r.retryAvel) {
           if (++retries > maxRetryPagina) {
-            throw new Error(`Bling indisponível após ${maxRetryPagina} tentativas na página ${r.pagina}. ${total} títulos já gravados foram preservados; execute novamente mais tarde.`)
+            throw new Error(`Servidor indisponível após ${maxRetryPagina} tentativas. ${total} títulos já gravados foram preservados; execute novamente mais tarde.`)
           }
           const espera = r.aguardar_ms || 8000
-          const janelaInfo = r.janela ? ` · janela ${r.janela.indice + 1}/${r.janela.total}` : ''
           setSync(sx => ({ ...sx, [integ.id]: { rodando: true,
-            log: `Bling instável · pág. ${r.pagina}${janelaInfo} · tentativa ${retries}/${maxRetryPagina} em ${Math.round(espera / 1000)}s · ${total} gravados` } }))
+            log: `Servidor instável · pág. ${pagina} · tentativa ${retries}/${maxRetryPagina} em ${Math.round(espera / 1000)}s · ${total} gravados` } }))
           await new Promise(resolve => setTimeout(resolve, espera))
-          fase = r.next?.fase ?? fase
-          pagina = r.next?.pagina ?? pagina
-          janela = r.next?.janela ?? janela
           continue
         }
+        if (r.error) throw new Error(r.error)
+
 
         retries = 0
         total += r.gravados || 0; pend += r.total_pendencias || 0

@@ -75,17 +75,6 @@ export async function POST(request) {
   try {
     integ = await ensureToken(admin, integ)
 
-    // Setup idempotente das colunas na largada (fase 0, pág 1)
-    if (fase === 0 && pagina === 1 && !diag && process.env.SUPABASE_ACCESS_TOKEN) {
-      await fetch('https://api.supabase.com/v1/projects/wbrjdehmauaincgtcjrk/database/query', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query:
-          'alter table public.fluxo_caixa add column if not exists competencia date;' +
-          'alter table public.lancamentos add column if not exists competencia date;' +
-          "alter table public.integracoes add column if not exists contatos_cache jsonb not null default '{}'::jsonb;" }),
-      }).catch(() => null)
-    }
     const fasesAtivas = escopo === 'historico' && modulo === 'fluxo' ? FASES_HISTORICO : FASES
 
     // ── RETOMADA DO CURSOR ────────────────────────────────────────────────
@@ -102,6 +91,18 @@ export async function POST(request) {
       totalJanelas: janelasPre.length,
     })
     const fase = partida.fase, pagina = partida.pagina, janela = partida.janela
+
+    // Setup idempotente das colunas na largada (fase 0, pág 1)
+    if (fase === 0 && pagina === 1 && !diag && process.env.SUPABASE_ACCESS_TOKEN) {
+      await fetch('https://api.supabase.com/v1/projects/wbrjdehmauaincgtcjrk/database/query', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query:
+          'alter table public.fluxo_caixa add column if not exists competencia date;' +
+          'alter table public.lancamentos add column if not exists competencia date;' +
+          "alter table public.integracoes add column if not exists contatos_cache jsonb not null default '{}'::jsonb;" }),
+      }).catch(() => null)
+    }
     const faseAtual = fasesAtivas[fase] || fasesAtivas[0]
     const { recurso, tipoFluxo } = faseAtual
     // DRE precisa do DETALHE de cada título (a listagem não traz categoria) →

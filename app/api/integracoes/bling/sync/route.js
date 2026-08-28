@@ -6,11 +6,39 @@ import { getAuthProfile, ensureToken, fetchContas, fetchCategoriasMap, montarReg
 //         escopo?: 'incremental'|'historico', data_inicio?: 'YYYY-MM-DD', data_fim?: 'YYYY-MM-DD' }
 // Orçamento: 1 página (100 títulos) por chamada — a UI itera enquanto hasMore.
 // fase 0 = contas/receber (entrada) · fase 1 = contas/pagar (saída)
-// escopo historico = títulos já recebidos/pagos em uma janela explícita.
+// escopo historico = títulos já recebidos/pagos em janelas explícitas.
 const FASES = [
   { recurso: 'contas/receber', tipoFluxo: 'entrada' },
   { recurso: 'contas/pagar',   tipoFluxo: 'saida'   },
 ]
+// Contas a pagar aceita uma situação por consulta; o histórico percorre pago e parcial.
+const FASES_HISTORICO = [
+  { recurso: 'contas/receber', tipoFluxo: 'entrada', situacoes: [2, 3], filtro: 'recebimento' },
+  { recurso: 'contas/pagar',   tipoFluxo: 'saida',   situacao: 2, filtro: 'pagamento' },
+  { recurso: 'contas/pagar',   tipoFluxo: 'saida',   situacao: 3, filtro: 'pagamento_parcial' },
+]
+const MAX_DIAS_JANELA = 366
+
+function isoUTC(d) {
+  return d.toISOString().split('T')[0]
+}
+
+function criarJanelas(inicio, fim) {
+  const ini = new Date(`${inicio}T00:00:00Z`)
+  const ultimo = new Date(`${fim}T00:00:00Z`)
+  if (!Number.isFinite(ini.getTime()) || !Number.isFinite(ultimo.getTime()) || ini > ultimo) return []
+  const janelas = []
+  let cursor = ini
+  while (cursor <= ultimo) {
+    const limite = new Date(cursor)
+    limite.setUTCDate(limite.getUTCDate() + MAX_DIAS_JANELA - 1)
+    const fimJanela = limite < ultimo ? limite : ultimo
+    janelas.push({ inicio: isoUTC(cursor), fim: isoUTC(fimJanela) })
+    cursor = new Date(fimJanela)
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
+  }
+  return janelas
+}
 
 export async function POST(request) {
   const auth = await getAuthProfile(request)
@@ -20,7 +48,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Apenas administradores podem sincronizar' }, { status: 403 })
 
   const {
-    integracao_id, modulo = 'fluxo', fase = 0, pagina = 1, diag = false,
+    integracao_id, modulo = 'fluxo', fase = 0, pagina = 1, janela = 0, diag = false,
     limpar_origem_arquivo = false, escopo = 'incremental',
     data_inicio = '2023-01-01',
     data_fim = new Date().toISOString().split('T')[0],
@@ -52,17 +80,26 @@ export async function POST(request) {
           "alter table public.integracoes add column if not exists contatos_cache jsonb not null default '{}'::jsonb;" }),
       }).catch(() => null)
     }
-    const { recurso, tipoFluxo } = FASES[fase] || FASES[0]
+    const fasesAtivas = escopo === 'historico' && modulo === 'fluxo' ? FASES_HISTORICO : FASES
+    const faseAtual = fasesAtivas[fase] || fasesAtivas[0]
+    const { recurso, tipoFluxo } = faseAtual
     // DRE precisa do DETALHE de cada título (a listagem não traz categoria) →
     // páginas menores para caber no timeout de 10s da Vercel
     const LIMITE = 50  // muitos títulos são pulados (já completos) → página maior
 
-    // A API do Bling possui filtros de data diferentes para recebimentos e pagamentos.
-    // Sem esta janela explícita, contas/receber cai no padrão aproximado de 1 ano.
+    // O Bling rejeita períodos de filtro superiores a 366 dias. O backfill
+    // percorre janelas consecutivas e mantém a janela no cursor do cliente.
+    const janelas = escopo === 'historico' && modulo === 'fluxo'
+      ? criarJanelas(data_inicio, data_fim)
+      : []
+    const janelaAtual = janelas[janela]
+    if (escopo === 'historico' && modulo === 'fluxo' && !janelaAtual)
+      return NextResponse.json({ error: 'Janela histórica inválida', janela, total_janelas: janelas.length }, { status: 400 })
+
     const filtrosHistorico = escopo === 'historico' && modulo === 'fluxo'
-      ? (fase === 0
-        ? { situacoes: [2, 3], tipoFiltroData: 'R', dataInicial: data_inicio, dataFinal: data_fim }
-        : { situacao: 2, dataPagamentoInicial: data_inicio, dataPagamentoFinal: data_fim })
+      ? (faseAtual.filtro === 'recebimento'
+        ? { situacoes: faseAtual.situacoes, tipoFiltroData: 'R', dataInicial: janelaAtual.inicio, dataFinal: janelaAtual.fim }
+        : { situacao: faseAtual.situacao, dataPagamentoInicial: janelaAtual.inicio, dataPagamentoFinal: janelaAtual.fim })
       : {}
     const itens = await fetchContas(integ, recurso, pagina, LIMITE, filtrosHistorico)
 
@@ -134,12 +171,19 @@ export async function POST(request) {
 
     // Avanço do cursor: página cheia → próxima página; senão → próxima fase
     const cheia = itens.length >= LIMITE
-    const next = cheia ? { fase, pagina: pagina + 1 } : (fase + 1 < FASES.length ? { fase: fase + 1, pagina: 1 } : null)
+    const totalFases = fasesAtivas.length
+    const proximaFase = fase + 1 < totalFases ? { fase: fase + 1, pagina: 1, janela } : null
+    const proximaJanela = escopo === 'historico' && modulo === 'fluxo' && janela + 1 < janelas.length
+      ? { fase: 0, pagina: 1, janela: janela + 1 }
+      : null
+    const next = cheia
+      ? { fase, pagina: pagina + 1, janela }
+      : (proximaFase || proximaJanela)
 
     const resultado = {
-      modulo, recurso, pagina, escopo,
-      janela: escopo === 'historico' ? { inicio: data_inicio, fim: data_fim } : null,
-      filtro_data: escopo === 'historico' ? (fase === 0 ? 'recebimento' : 'pagamento') : null,
+      modulo, recurso, pagina, fase, escopo,
+      janela: escopo === 'historico' ? { indice: janela, total: janelas.length, inicio: janelaAtual.inicio, fim: janelaAtual.fim } : null,
+      filtro_data: escopo === 'historico' ? faseAtual.filtro : null,
       recebidos: itens.length, gravados,
       pendencias: pendencias.slice(0, 20), total_pendencias: pendencias.length,
     }

@@ -100,13 +100,13 @@ export default function IntegracoesTab({ empresas, showToast }) {
       ? `Reprocessando pagos/recebidos desde ${dataInicio.split('-').reverse().join('/')}...`
       : `Sincronizando ${modulo.toUpperCase()}...`
     setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: descricao } }))
-    let fase = 0, pagina = 1, total = 0, pend = 0, guarda = 0, concluido = false
+    let fase = 0, pagina = 1, janela = 0, total = 0, pend = 0, guarda = 0, concluido = false
     try {
       while (guarda++ < limiteGuard) {
         const r = await authFetch('/api/integracoes/bling/sync', {
           method: 'POST',
           body: JSON.stringify({
-            integracao_id: integ.id, modulo, fase, pagina,
+            integracao_id: integ.id, modulo, fase, pagina, janela,
             escopo: opcoes.escopo || 'incremental',
             data_inicio: dataInicio, data_fim: dataFim,
             limpar_origem_arquivo: limpar && fase === 0 && pagina === 1,
@@ -116,10 +116,10 @@ export default function IntegracoesTab({ empresas, showToast }) {
         total += r.gravados || 0; pend += r.total_pendencias || 0
         setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `${r.recurso} · pág. ${r.pagina} · ${total} gravados${pend ? ` · ${pend} pendências` : ''}` } }))
         if (!r.hasMore) { concluido = true; break }
-        fase = r.next.fase; pagina = r.next.pagina
+        fase = r.next.fase; pagina = r.next.pagina; janela = r.next.janela || 0
       }
       if (!concluido) {
-        const log = `Carga parcial: ${total} títulos gravados · retomar em ${fase === 0 ? 'recebimentos' : 'pagamentos'}, pág. ${pagina}${pend ? ` · ${pend} pendências` : ''}`
+        const log = `Carga parcial: ${total} títulos gravados · retomar em ${fase === 0 ? 'recebimentos' : 'pagamentos'}, janela ${janela + 1}, pág. ${pagina}${pend ? ` · ${pend} pendências` : ''}`
         setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log } }))
         showToast?.('Carga parcial — ainda existem páginas pendentes', 'error')
       } else {

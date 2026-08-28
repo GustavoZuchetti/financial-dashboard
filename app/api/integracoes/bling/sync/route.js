@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getAuthProfile, ensureToken, fetchContas, fetchCategoriasMap, montarRegistrosFluxo } from '@/lib/bling-server'
 
+// A listagem pode precisar repetir uma página profunda após 504/timeout.
+// O padrão de 10s é insuficiente para esse caminho de recuperação.
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60
+
 // POST /api/integracoes/bling/sync
 // body: { integracao_id, modulo: 'fluxo'|'dre', fase?: 0|1, pagina?: number, diag?: boolean,
 //         escopo?: 'incremental'|'historico', data_inicio?: 'YYYY-MM-DD', data_fim?: 'YYYY-MM-DD' }
@@ -196,6 +201,33 @@ export async function POST(request) {
     return NextResponse.json({ ...resultado, hasMore: !!next, next })
   } catch (e) {
     console.error('Bling sync:', e)
+
+    // Indisponibilidade temporária da origem não é uma falha de cursor. A UI
+    // repete a MESMA fase/página após uma pausa; nada é descartado nem avançado.
+    if (e?.gateway) {
+      const pagFalha = e.pagina ?? pagina
+      const fasesFalha = escopo === 'historico' && modulo === 'fluxo' ? FASES_HISTORICO : FASES
+      const faseFalha = fasesFalha?.[fase] || FASES[0]
+      return NextResponse.json({
+        modulo,
+        recurso: e.recurso || faseFalha.recurso,
+        fase,
+        pagina: pagFalha,
+        janela: escopo === 'historico' && modulo === 'fluxo'
+          ? { indice: janela, total: criarJanelas(data_inicio, data_fim).length }
+          : null,
+        recebidos: 0,
+        gravados: 0,
+        pendencias: [],
+        total_pendencias: 0,
+        retryAvel: true,
+        aguardar_ms: 8_000,
+        aviso: `Bling temporariamente indisponível (HTTP ${e.status}) na página ${pagFalha}. A mesma página será repetida.`,
+        hasMore: true,
+        next: { fase, pagina: pagFalha, janela },
+      })
+    }
+
     return NextResponse.json({ error: String(e.message || e) }, { status: 502 })
   }
 }

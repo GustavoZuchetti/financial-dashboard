@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { proximoCursor, cursorDePartida, cursorParaSalvar } from '@/lib/bling-cursor'
 import { getAuthProfile, ensureToken, fetchContas, fetchCategoriasMap, montarRegistrosFluxo } from '@/lib/bling-server'
 
 // A listagem pode precisar repetir uma página profunda após 504/timeout.
@@ -53,8 +54,8 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Apenas administradores podem sincronizar' }, { status: 403 })
 
   const {
-    integracao_id, modulo = 'fluxo', fase = 0, pagina = 1, janela = 0, diag = false,
-    limpar_origem_arquivo = false, escopo = 'incremental',
+    integracao_id, modulo = 'fluxo', fase: faseReq, pagina: pagReq, janela: janReq, diag = false,
+    limpar_origem_arquivo = false, escopo = 'incremental', retomar = false,
     data_inicio = '2023-01-01',
     data_fim = new Date().toISOString().split('T')[0],
   } = await request.json()
@@ -86,6 +87,21 @@ export async function POST(request) {
       }).catch(() => null)
     }
     const fasesAtivas = escopo === 'historico' && modulo === 'fluxo' ? FASES_HISTORICO : FASES
+
+    // ── RETOMADA DO CURSOR ────────────────────────────────────────────────
+    // A sincronização manual era estateless: recomeçava sempre em
+    // { fase 0, pagina 1 } e a UI parava no limiteGuard. Com 50 títulos por
+    // iteração, a varredura nunca alcançava o fim numa base de milhares de
+    // títulos, e os mesmos registros ficavam de fora todos os dias.
+    // Agora a posição persiste em integracoes.sync_cursor. Ver lib/bling-cursor.js.
+    const janelasPre = escopo === 'historico' && modulo === 'fluxo'
+      ? criarJanelas(data_inicio, data_fim) : []
+    const partida = cursorDePartida({
+      retomar, salvo: integ.sync_cursor, escopo,
+      pedido: { fase: faseReq, pagina: pagReq, janela: janReq },
+      totalJanelas: janelasPre.length,
+    })
+    const fase = partida.fase, pagina = partida.pagina, janela = partida.janela
     const faseAtual = fasesAtivas[fase] || fasesAtivas[0]
     const { recurso, tipoFluxo } = faseAtual
     // DRE precisa do DETALHE de cada título (a listagem não traz categoria) →
@@ -94,9 +110,7 @@ export async function POST(request) {
 
     // O Bling rejeita períodos de filtro superiores a 366 dias. O backfill
     // percorre janelas consecutivas e mantém a janela no cursor do cliente.
-    const janelas = escopo === 'historico' && modulo === 'fluxo'
-      ? criarJanelas(data_inicio, data_fim)
-      : []
+    const janelas = janelasPre
     const janelaAtual = janelas[janela]
     if (escopo === 'historico' && modulo === 'fluxo' && !janelaAtual)
       return NextResponse.json({ error: 'Janela histórica inválida', janela, total_janelas: janelas.length }, { status: 400 })
@@ -174,29 +188,34 @@ export async function POST(request) {
       gravados = count ?? registros.length
     }
 
-    // Avanço do cursor: página cheia → próxima página; senão → próxima fase
+    // Avanço do cursor — lógica única em lib/bling-cursor.js
     const cheia = itens.length >= LIMITE
-    const totalFases = fasesAtivas.length
-    const proximaFase = fase + 1 < totalFases ? { fase: fase + 1, pagina: 1, janela } : null
-    const proximaJanela = escopo === 'historico' && modulo === 'fluxo' && janela + 1 < janelas.length
-      ? { fase: 0, pagina: 1, janela: janela + 1 }
-      : null
-    const next = cheia
-      ? { fase, pagina: pagina + 1, janela }
-      : (proximaFase || proximaJanela)
+    const next = proximoCursor({
+      fase, pagina, janela, paginaCheia: cheia,
+      totalFases: fasesAtivas.length,
+      totalJanelas: escopo === 'historico' && modulo === 'fluxo' ? janelas.length : 0,
+    })
 
     const resultado = {
       modulo, recurso, pagina, fase, escopo,
       janela: escopo === 'historico' ? { indice: janela, total: janelas.length, inicio: janelaAtual.inicio, fim: janelaAtual.fim } : null,
       filtro_data: escopo === 'historico' ? faseAtual.filtro : null,
       recebidos: itens.length, gravados,
+      retomado: partida.retomado,
       pendencias: pendencias.slice(0, 20), total_pendencias: pendencias.length,
     }
-    await admin.from('integracoes').update({
-      ultima_sync: new Date().toISOString(),
-      ultimo_resultado: resultado,
-      updated_at: new Date().toISOString(),
-    }).eq('id', integ.id)
+    // Persistir a posição: é isto que permite a próxima execução CONTINUAR em
+    // vez de recomeçar. next === null significa varredura completa e zera o
+    // cursor, para que a rodada seguinte reprocesse o que mudou na origem.
+    if (!diag) {
+      await admin.from('integracoes').update({
+        ultima_sync: new Date().toISOString(),
+        ultimo_resultado: resultado,
+        sync_cursor: cursorParaSalvar({ next, escopo }),
+        ...(next ? {} : { ultima_varredura_completa: new Date().toISOString() }),
+        updated_at: new Date().toISOString(),
+      }).eq('id', integ.id).then(r => r, () => null)
+    }
 
     return NextResponse.json({ ...resultado, hasMore: !!next, next })
   } catch (e) {

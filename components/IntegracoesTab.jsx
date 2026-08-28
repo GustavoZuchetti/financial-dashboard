@@ -105,19 +105,29 @@ export default function IntegracoesTab({ empresas, showToast }) {
       `Substituir os registros de ${modulo === 'dre' ? 'DRE' : 'Fluxo de Caixa'} importados por ARQUIVO desta entidade pelos dados da API?\n\n` +
       `Recomendado: a API traz o histórico completo e evita duplicidade com importações antigas por CSV.\n\n` +
       `OK = substituir (remove os registros sem vínculo com a API antes de gravar)\nCancelar = manter e apenas adicionar/atualizar os vindos da API`)
-    const limiteGuard = historico ? 400 : 60
+    // Teto de iterações. Era 60 no incremental: com LIMITE=50 na rota, 3.000
+    // títulos por execução para AS DUAS fases — insuficiente para uma base de
+    // milhares, e como o cursor recomeçava do zero, o excedente ficava de fora
+    // todo dia. Agora o cursor persiste (lib/bling-cursor.js) e o teto é igual
+    // ao do histórico: uma execução cobre a varredura inteira na maioria dos
+    // casos, e o que sobrar continua na próxima.
+    const limiteGuard = 400
     const maxRetryPagina = 5
     const descricao = historico
       ? `Reprocessando pagos/recebidos desde ${dataInicio.split('-').reverse().join('/')}...`
       : `Sincronizando ${modulo.toUpperCase()}...`
     setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: descricao } }))
-    let fase = 0, pagina = 1, janela = 0, total = 0, pend = 0, guarda = 0, retries = 0, concluido = false
+    // primeira = deixa a rota decidir o ponto de partida a partir do cursor
+    // salvo. As iterações seguintes mandam fase/página explícitos do `next`.
+    let fase = null, pagina = null, janela = null
+    let total = 0, pend = 0, guarda = 0, retries = 0, concluido = false, retomou = false
     try {
       while (guarda++ < limiteGuard) {
         const r = await authFetch('/api/integracoes/bling/sync', {
           method: 'POST',
           body: JSON.stringify({
-            integracao_id: integ.id, modulo, fase, pagina, janela,
+            integracao_id: integ.id, modulo,
+            ...(fase == null ? { retomar: true } : { fase, pagina, janela }),
             escopo: opcoes.escopo || 'incremental',
             data_inicio: dataInicio, data_fim: dataFim,
             limpar_origem_arquivo: limpar && fase === 0 && pagina === 1,
@@ -140,17 +150,23 @@ export default function IntegracoesTab({ empresas, showToast }) {
 
         retries = 0
         total += r.gravados || 0; pend += r.total_pendencias || 0
+        if (r.retomado) retomou = true
         const janelaInfo = historico && r.janela ? ` · janela ${r.janela.indice + 1}/${r.janela.total}` : ''
         setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `${r.recurso} · pág. ${r.pagina}${janelaInfo} · ${total} gravados${pend ? ` · ${pend} pendências` : ''}` } }))
         if (!r.hasMore) { concluido = true; break }
-        fase = r.next?.fase ?? fase; pagina = r.next?.pagina ?? pagina; janela = r.next?.janela ?? janela
+        fase = r.next?.fase ?? 0; pagina = r.next?.pagina ?? 1; janela = r.next?.janela ?? 0
       }
       if (!concluido) {
-        const log = `Carga parcial: ${total} títulos gravados · retomar em ${fase === 0 ? 'recebimentos' : 'pagamentos'}, janela ${janela + 1}, pág. ${pagina}${pend ? ` · ${pend} pendências` : ''}`
+        // Parada por teto de iterações. Diferente de antes, a posição ficou
+        // GRAVADA: basta executar de novo que continua daqui.
+        const log = `Parada parcial em ${fase === 0 ? 'recebimentos' : 'pagamentos'}, pág. ${pagina}`
+          + ` · ${total} títulos gravados${pend ? ` · ${pend} pendências` : ''}`
+          + ' · posição salva — execute novamente para continuar daqui'
         setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log } }))
-        showToast?.('Carga parcial — ainda existem páginas pendentes', 'error')
+        showToast?.('Parada parcial — posição salva, execute novamente para continuar', 'error')
       } else {
-        const log = `Concluído: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}`
+        const inicio = retomou ? 'Varredura completa (retomada de execução anterior)' : 'Varredura completa'
+        const log = `${inicio}: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}`
         setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log } }))
         showToast?.(`${historico ? 'Histórico' : `Sincronização ${modulo.toUpperCase()}`} concluído: ${total} títulos`, 'success')
       }

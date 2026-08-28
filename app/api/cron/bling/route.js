@@ -47,7 +47,18 @@ export async function GET(request) {
 
       while (Date.now() - inicio < janelaPorEnt && Date.now() - inicioGlobal < 55000) {
         const { recurso, tipoFluxo } = FASES[fase] || FASES[0]
-        const res = await processarPaginaFluxo(admin, integ, recurso, tipoFluxo, pagina, 50, categoriasMap, nomesContato)
+        let res
+        try {
+          res = await processarPaginaFluxo(admin, integ, recurso, tipoFluxo, pagina, 50, categoriasMap, nomesContato)
+        } catch (e) {
+          // Mantém o cursor na página que falhou para a próxima execução diária.
+          // Indisponibilidade temporária não deve apagar o avanço anterior.
+          if (e?.gateway) {
+            r.interrompido = `Bling indisponível (HTTP ${e.status}) na página ${e.pagina ?? pagina}`
+            break
+          }
+          throw e
+        }
         r.gravados += res.gravados
         r.paginas++
         if (res.paginaCheia) pagina++

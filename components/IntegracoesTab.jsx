@@ -95,12 +95,13 @@ export default function IntegracoesTab({ empresas, showToast }) {
       `Substituir os registros de ${modulo === 'dre' ? 'DRE' : 'Fluxo de Caixa'} importados por ARQUIVO desta entidade pelos dados da API?\n\n` +
       `Recomendado: a API traz o histórico completo e evita duplicidade com importações antigas por CSV.\n\n` +
       `OK = substituir (remove os registros sem vínculo com a API antes de gravar)\nCancelar = manter e apenas adicionar/atualizar os vindos da API`)
-    const limiteGuard = historico ? 200 : 60
+    const limiteGuard = historico ? 400 : 60
+    const maxRetryPagina = 5
     const descricao = historico
       ? `Reprocessando pagos/recebidos desde ${dataInicio.split('-').reverse().join('/')}...`
       : `Sincronizando ${modulo.toUpperCase()}...`
     setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: descricao } }))
-    let fase = 0, pagina = 1, janela = 0, total = 0, pend = 0, guarda = 0, concluido = false
+    let fase = 0, pagina = 1, janela = 0, total = 0, pend = 0, guarda = 0, retries = 0, concluido = false
     try {
       while (guarda++ < limiteGuard) {
         const r = await authFetch('/api/integracoes/bling/sync', {
@@ -113,10 +114,30 @@ export default function IntegracoesTab({ empresas, showToast }) {
           }),
         })
         if (r.error) throw new Error(r.error)
+
+        // Gateway/timeout: a API devolve o cursor intacto. Repetimos a mesma
+        // página sem zerar o acumulado e sem avançar fase ou janela.
+        if (r.retryAvel) {
+          if (++retries > maxRetryPagina) {
+            throw new Error(`Bling indisponível após ${maxRetryPagina} tentativas na página ${r.pagina}. ${total} títulos já gravados foram preservados; execute novamente mais tarde.`)
+          }
+          const espera = r.aguardar_ms || 8000
+          const janelaInfo = r.janela ? ` · janela ${r.janela.indice + 1}/${r.janela.total}` : ''
+          setSync(sx => ({ ...sx, [integ.id]: { rodando: true,
+            log: `Bling instável · pág. ${r.pagina}${janelaInfo} · tentativa ${retries}/${maxRetryPagina} em ${Math.round(espera / 1000)}s · ${total} gravados` } }))
+          await new Promise(resolve => setTimeout(resolve, espera))
+          fase = r.next?.fase ?? fase
+          pagina = r.next?.pagina ?? pagina
+          janela = r.next?.janela ?? janela
+          continue
+        }
+
+        retries = 0
         total += r.gravados || 0; pend += r.total_pendencias || 0
-        setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `${r.recurso} · pág. ${r.pagina} · ${total} gravados${pend ? ` · ${pend} pendências` : ''}` } }))
+        const janelaInfo = historico && r.janela ? ` · janela ${r.janela.indice + 1}/${r.janela.total}` : ''
+        setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `${r.recurso} · pág. ${r.pagina}${janelaInfo} · ${total} gravados${pend ? ` · ${pend} pendências` : ''}` } }))
         if (!r.hasMore) { concluido = true; break }
-        fase = r.next.fase; pagina = r.next.pagina; janela = r.next.janela || 0
+        fase = r.next?.fase ?? fase; pagina = r.next?.pagina ?? pagina; janela = r.next?.janela ?? janela
       }
       if (!concluido) {
         const log = `Carga parcial: ${total} títulos gravados · retomar em ${fase === 0 ? 'recebimentos' : 'pagamentos'}, janela ${janela + 1}, pág. ${pagina}${pend ? ` · ${pend} pendências` : ''}`

@@ -443,7 +443,12 @@ export default function GestaoFluxoCaixaPage() {
       // r.valor e a tela somava outra coisa: 26 títulos e R$ 387.545 de
       // divergência medidos na auditoria de 13/08 — Causa 4. Como este arquivo
       // vai a CEO e investidores, ele é o pior lugar para uma base própria.
-      const agX = agregarPeriodo(rows, { de: startDate, ate: endDate, hoje })
+      // `hoje` precisa ser declarado AQUI: as outras ocorrências no arquivo são
+      // locais a load() e a handleBaixar(). Referenciá-la daqui lançava
+      // "hoje is not defined" em runtime — e o build não pega, porque é erro de
+      // execução, não de compilação, e só dispara ao clicar em Exportar.
+      const hojeExport = new Date().toISOString().split('T')[0]
+      const agX = agregarPeriodo(rows, { de: startDate, ate: endDate, hoje: hojeExport })
       const n2 = (v) => Number(Number(v).toFixed(2))
       const resumoAoa = [
         ['Extrato — Fluxo de Caixa', ''],

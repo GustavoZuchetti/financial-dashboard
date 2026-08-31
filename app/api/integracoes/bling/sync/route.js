@@ -72,37 +72,42 @@ export async function POST(request) {
   if (!liberado) return NextResponse.json({ error: 'Módulo não liberado pela administração' }, { status: 403 })
   if (!ativo)    return NextResponse.json({ error: 'Módulo não está ativo nesta integração' }, { status: 400 })
 
+  // Cursor resolvido ANTES do try: o bloco catch precisa enxergar fase,
+  // pagina e janela para devolver a resposta de repeticao. Declaradas
+  // dentro do try, elas nao existiam no catch e o proprio tratador de erro
+  // lancava 'fase is not defined' - a recuperacao do 504 nunca funcionava.
+  const fasesAtivas = escopo === 'historico' && modulo === 'fluxo' ? FASES_HISTORICO : FASES
+
+  // ── RETOMADA DO CURSOR ────────────────────────────────────────────────
+  // A sincronização manual era estateless: recomeçava sempre em
+  // { fase 0, pagina 1 } e a UI parava no limiteGuard. Com 50 títulos por
+  // iteração, a varredura nunca alcançava o fim numa base de milhares de
+  // títulos, e os mesmos registros ficavam de fora todos os dias.
+  // Agora a posição persiste em integracoes.sync_cursor. Ver lib/bling-cursor.js.
+  const janelasPre = escopo === 'historico' && modulo === 'fluxo'
+    ? criarJanelas(data_inicio, data_fim) : []
+  const partida = cursorDePartida({
+    retomar, salvo: integ.sync_cursor, escopo,
+    pedido: { fase: faseReq, pagina: pagReq, janela: janReq },
+    totalJanelas: janelasPre.length,
+  })
+  const fase = partida.fase, pagina = partida.pagina, janela = partida.janela
+
+  // Setup idempotente das colunas na largada (fase 0, pág 1)
+  if (fase === 0 && pagina === 1 && !diag && process.env.SUPABASE_ACCESS_TOKEN) {
+    await fetch('https://api.supabase.com/v1/projects/wbrjdehmauaincgtcjrk/database/query', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query:
+        'alter table public.fluxo_caixa add column if not exists competencia date;' +
+        'alter table public.lancamentos add column if not exists competencia date;' +
+        "alter table public.integracoes add column if not exists contatos_cache jsonb not null default '{}'::jsonb;" }),
+    }).catch(() => null)
+  }
+
   try {
     integ = await ensureToken(admin, integ)
 
-    const fasesAtivas = escopo === 'historico' && modulo === 'fluxo' ? FASES_HISTORICO : FASES
-
-    // ── RETOMADA DO CURSOR ────────────────────────────────────────────────
-    // A sincronização manual era estateless: recomeçava sempre em
-    // { fase 0, pagina 1 } e a UI parava no limiteGuard. Com 50 títulos por
-    // iteração, a varredura nunca alcançava o fim numa base de milhares de
-    // títulos, e os mesmos registros ficavam de fora todos os dias.
-    // Agora a posição persiste em integracoes.sync_cursor. Ver lib/bling-cursor.js.
-    const janelasPre = escopo === 'historico' && modulo === 'fluxo'
-      ? criarJanelas(data_inicio, data_fim) : []
-    const partida = cursorDePartida({
-      retomar, salvo: integ.sync_cursor, escopo,
-      pedido: { fase: faseReq, pagina: pagReq, janela: janReq },
-      totalJanelas: janelasPre.length,
-    })
-    const fase = partida.fase, pagina = partida.pagina, janela = partida.janela
-
-    // Setup idempotente das colunas na largada (fase 0, pág 1)
-    if (fase === 0 && pagina === 1 && !diag && process.env.SUPABASE_ACCESS_TOKEN) {
-      await fetch('https://api.supabase.com/v1/projects/wbrjdehmauaincgtcjrk/database/query', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query:
-          'alter table public.fluxo_caixa add column if not exists competencia date;' +
-          'alter table public.lancamentos add column if not exists competencia date;' +
-          "alter table public.integracoes add column if not exists contatos_cache jsonb not null default '{}'::jsonb;" }),
-      }).catch(() => null)
-    }
     const faseAtual = fasesAtivas[fase] || fasesAtivas[0]
     const { recurso, tipoFluxo } = faseAtual
     // DRE precisa do DETALHE de cada título (a listagem não traz categoria) →

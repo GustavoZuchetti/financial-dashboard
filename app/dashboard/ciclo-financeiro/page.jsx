@@ -127,6 +127,11 @@ export default function CicloFinanceiroPage() {
       // (dias do mês / nº de lançamentos) media frequência, não prazo.
       // Consolidação: somar numeradores e denominadores de todas as
       // entidades ANTES da razão (nunca média de razões por entidade).
+      //
+      // `all` fica FORA dos blocos: o cálculo do fluxo mensal, mais abaixo,
+      // também o consome. Declarado dentro do primeiro bloco, ele não existia
+      // lá e o load() inteiro abortava em 'all is not defined'.
+      let all = []
       {
         const anoMin = Math.min(...hist.map(h=>h.ano))
         const anoMax = Math.max(...hist.map(h=>h.ano))
@@ -134,7 +139,7 @@ export default function CicloFinanceiroPage() {
         const rangeEnd   = new Date(anoMax, 11, 31).toISOString().split('T')[0]
 
         // Títulos LIQUIDADOS no range (base do prazo é a liquidação)
-        let all = [], pg = 0
+        let pg = 0
         while (true) {
           let q = supabase.from('fluxo_caixa')
             .select('tipo,valor,valor_liquidado,competencia,data,data_liquidacao,status')

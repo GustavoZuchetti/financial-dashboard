@@ -271,6 +271,10 @@ export default function FluxoCaixaPage() {
       const fcFuture   = (fcAll||[]).filter(emAberto)
       const vencidosE  = fcFuture.filter(f => f.tipo==='entrada' && f.data < today).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
       const vencidosS  = fcFuture.filter(f => f.tipo==='saida'   && f.data < today).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
+      // Janela de 30 dias para "a vencer". next30str era usada sem nunca ter
+      // sido declarada: o load() abortava aqui e os KPIs de vencidos/a vencer
+      // ficavam com o valor da carga anterior, sem erro visível na tela.
+      const next30str = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
       const aVencerE   = fcFuture.filter(f => f.tipo==='entrada' && f.data >= today && f.data <= next30str).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
       const aVencerS   = fcFuture.filter(f => f.tipo==='saida'   && f.data >= today && f.data <= next30str).reduce((a,f)=>a+Math.abs(Number(f.valor)),0)
       setVencidos({ e: vencidosE, s: vencidosS, aE: aVencerE, aS: aVencerS })

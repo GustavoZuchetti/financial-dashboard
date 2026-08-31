@@ -131,6 +131,49 @@ teste('lista vazia devolve zeros, não NaN', () => {
   eq(ag.total, { entradas: 0, saidas: 0, liquido: 0 }); eq(ag.contagem, 0)
 })
 
+
+// ─── 5. Coerência do saldo final entre períodos ──────────────────────────────
+// A revisão do Controller em 28/08 apontou: ao trocar o período, o saldo de
+// partida muda e o número final parecia inconsistente. A partida DEVE mudar
+// (é a âncora rolada até a véspera), mas o SALDO FINAL numa mesma data-fim tem
+// de ser idêntico, qualquer que seja a data de início. É o teste que prova a
+// composição — e que falhava enquanto os KPIs somavam valor de título e a
+// partida usava caixa efetivo.
+teste('[TRAVA] saldo final é o mesmo, comece o período onde começar', () => {
+  const regs = [
+    { tipo: 'entrada', valor: 500, status: 'pago', valor_liquidado: 500, data_liquidacao: '2026-07-10', data: '2026-07-05' },
+    { tipo: 'saida',   valor: 800, status: 'pago', valor_liquidado: 800, data_liquidacao: '2026-07-20', data: '2026-07-20' },
+    { tipo: 'entrada', valor: 300, status: 'pago', valor_liquidado: 300, data_liquidacao: '2026-08-11', data: '2026-08-11' },
+    { tipo: 'saida',   valor: 150, status: 'pago', valor_liquidado: 150, data_liquidacao: '2026-08-12', data: '2026-08-12' },
+  ]
+  const ANCORA = 1000
+
+  // Período A: 01/07 a 31/08 — partida é a própria âncora
+  const agA = A.agregarPeriodo(regs, { de: '2026-07-01', ate: '2026-08-31', hoje: HOJE })
+  const finalA = ANCORA + agA.realizado.liquido
+
+  // Período B: 01/08 a 31/08 — partida = âncora + movimento de julho
+  const julho = A.agregarPeriodo(regs, { de: '2026-07-01', ate: '2026-07-31', hoje: HOJE })
+  const partidaB = ANCORA + julho.realizado.liquido
+  const agB = A.agregarPeriodo(regs, { de: '2026-08-01', ate: '2026-08-31', hoje: HOJE })
+  const finalB = partidaB + agB.realizado.liquido
+
+  eq(finalA, 850, 'final jul-ago: ')
+  eq(finalB, 850, 'final ago: ')
+  eq(finalA, finalB, 'coerência entre períodos: ')
+})
+
+teste('[REGRESSÃO] misturar valor de título com borderô quebra a coerência', () => {
+  // Reproduz o defeito: um título pago de 1.000 com borderô de 900. Somando o
+  // valor do TÍTULO no período e o valor do BORDERÔ na partida, os dois
+  // caminhos divergem exatamente na diferença — 100.
+  const reg = { tipo: 'saida', valor: 1000, status: 'pago', valor_liquidado: 900, data_liquidacao: '2026-07-10', data: '2026-07-10' }
+  const efetivo = A.agregarPeriodo([reg], { de: '2026-07-01', ate: '2026-07-31', hoje: HOJE }).realizado.saidas
+  const porTitulo = Number(reg.valor)          // base ANTIGA dos KPIs
+  eq(efetivo, 900, 'base correta: ')
+  eq(porTitulo - efetivo, 100, 'divergência que o defeito produzia: ')
+})
+
 // ─── Execução ────────────────────────────────────────────────────────────────
 for (const [nome, fn] of testes) {
   try { await fn(); ok++; console.log(`  ok   ${nome}`) }

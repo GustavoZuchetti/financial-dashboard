@@ -199,6 +199,12 @@ export default function GestaoFluxoCaixaPage() {
 
   // Parcelas do saldo de partida, para exibir a composição no cartão
   const ancoraSoma   = (partidaInfo?.linhas || []).reduce((a, l) => a + (Number(l.ancora?.valor) || 0), 0)
+  // Saldo final = partida + resultado efetivo. NULO quando não há âncora: sem
+  // ponto de partida certificado não existe posição de caixa, e exibir o
+  // resultado do período como se fosse saldo seria pior que não exibir nada.
+  const saldoFinal = (saldoAnterior == null || !agregado)
+    ? null
+    : Math.round((Number(saldoAnterior) + agregado.realizado.liquido) * 100) / 100
   const movAteVespera = (partidaInfo?.linhas || []).reduce((a, l) => a + (Number(l.liquido) || 0), 0)
 
   useEffect(() => {
@@ -874,10 +880,20 @@ export default function GestaoFluxoCaixaPage() {
           { label:'Saídas · realizado', value: fC(agregado?.realizado.saidas ?? 0), color:'var(--fs-danger)',
             sub: agregado?.projetado.saidas ? `+ ${fC(agregado.projetado.saidas)} projetado` : null,
             ajuda: ROTULOS.realizadoAjuda },
-          { label:'Saldo · realizado', value: fC(agregado?.realizado.liquido ?? 0),
+          // RESULTADO, não "Saldo": é entradas − saídas, um FLUXO. Chamar de saldo
+          // induzia a leitura de que o número representava posição de caixa.
+          { label:'Resultado do período', value: fC(agregado?.realizado.liquido ?? 0),
             color: (agregado?.realizado.liquido ?? 0) >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)',
             sub: agregado?.projetado.liquido ? `${agregado.projetado.liquido >= 0 ? '+' : ''}${fC(agregado.projetado.liquido)} projetado` : null,
-            ajuda: 'Movimento efetivo de caixa no período. O projetado ao lado ainda não movimentou.' },
+            ajuda: 'Entradas menos saídas efetivas do período. É um FLUXO, não uma posição de caixa — para a posição, ver Saldo Final.' },
+          // SALDO FINAL: a posição de caixa ao fim do período. Faltava na tela.
+          // partida + resultado. Selecionar jul–ago ou só ago tem de chegar ao
+          // MESMO saldo final — é o teste de coerência da composição.
+          { label:'Saldo final em ' + endDate.split('-').reverse().slice(0,2).join('/'),
+            value: saldoFinal == null ? '—' : fC(saldoFinal),
+            color: saldoFinal == null ? 'var(--fs-text-4)' : (saldoFinal >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)'),
+            sub: saldoFinal == null ? 'sem saldo de abertura' : 'partida + resultado',
+            ajuda: 'Posição de caixa ao fim do período: saldo de partida mais o resultado efetivo. Este é o número que se concilia com extrato bancário.' },
         ].map(k => (
           <div key={k.label} title={k.ajuda || ''} style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:10, padding:'10px 16px', flex:1, minWidth:150 }}>
             <div style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', marginBottom:4 }}>{k.label}</div>
@@ -929,12 +945,28 @@ export default function GestaoFluxoCaixaPage() {
               {/* Composição explícita: saldo de partida NÃO é a âncora — é a
                   âncora rolada até a véspera do período. Sem mostrar as duas
                   parcelas, o número parece mudar sozinho ao trocar o período. */}
-              <div style={{ fontSize:10.5, color:'var(--fs-text-4)', marginTop:6, lineHeight:1.7 }}>
-                <div>Âncora de {(partidaInfo?.linhas?.[0]?.ancora?.data_corte || '').split('-').reverse().join('/')}
-                  {(partidaInfo?.linhas || []).length > 1 ? ` · ${partidaInfo.linhas.length} entidades` : ''}
-                  : <span className="fs-num" style={{ color:'var(--fs-text-2)' }}>{fC(ancoraSoma)}</span></div>
-                <div>Movimento até {new Date(startDate + 'T12:00:00Z').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', timeZone:'UTC' })}
-                  {' '}(véspera): <span className="fs-num" style={{ color: movAteVespera >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)' }}>{fC(movAteVespera)}</span></div>
+              {/* A âncora é FIXA e o movimento é o que varia com o período.
+                  Sem essa distinção visual, o saldo de partida parece "mudar
+                  sozinho" ao trocar as datas — foi o que confundiu na revisão. */}
+              <div style={{ fontSize:10.5, marginTop:8, lineHeight:1.8 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                  <span style={{ color:'var(--fs-text-3)' }}>
+                    Âncora {(partidaInfo?.linhas?.[0]?.ancora?.data_corte || '').split('-').reverse().join('/')}
+                    <span style={{ color:'var(--fs-text-4)' }}> · fixa</span>
+                  </span>
+                  <span className="fs-num" style={{ color:'var(--fs-text-2)', fontWeight:700 }}>{fC(ancoraSoma)}</span>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                  <span style={{ color:'var(--fs-text-4)' }}>
+                    Movimento até {new Date(startDate + 'T12:00:00Z').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', timeZone:'UTC' })} (véspera)
+                  </span>
+                  <span className="fs-num" style={{ color: movAteVespera >= 0 ? 'var(--fs-success)' : 'var(--fs-danger)' }}>{fC(movAteVespera)}</span>
+                </div>
+                {(partidaInfo?.linhas || []).length > 1 && (
+                  <div style={{ color:'var(--fs-text-4)', fontSize:10 }}>
+                    consolidado de {partidaInfo.linhas.length} entidades
+                  </div>
+                )}
               </div>
             </div>
           )}

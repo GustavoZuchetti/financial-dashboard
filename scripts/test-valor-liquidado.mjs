@@ -118,6 +118,56 @@ teste('[CENÁRIO] Alexandre julho: 5.000 em parciais + 22.000 integral = 27.000'
   eq(parciais.reduce((a, b) => a + b, 0) + integral, 27000, 'total pago ao sócio: ')
 })
 
+
+// ─── 5. Coerência: quem precisa ser REPROCESSADO ─────────────────────────────
+// Sem esta verificação, o critério de "título completo" comparava apenas
+// status, valor e vencimento — os três CORRETOS no caso 1414/11. O título era
+// considerado imutável e nunca mais reprocessado: o defeito ficava permanente
+// na base, por mais sincronizações que se rodasse.
+export function liquidadoCoerente(e) {
+  const v = Math.abs(Number(e?.valor) || 0)
+  const l = e?.valor_liquidado == null ? null : Math.abs(Number(e.valor_liquidado) || 0)
+  if (e?.status === 'pago')    return l != null && Math.abs(l - v) < 0.01
+  if (e?.status === 'parcial') return l != null && l > 0 && l < v - 0.005
+  return true
+}
+
+teste('[TRAVA] pago com liquidado menor é INCOERENTE (força reprocessamento)', () => {
+  eq(liquidadoCoerente({ status: 'pago', valor: 22000, valor_liquidado: 5000 }), false)
+})
+teste('[TRAVA] pago com liquidado nulo é incoerente', () => {
+  eq(liquidadoCoerente({ status: 'pago', valor: 350, valor_liquidado: null }), false)
+})
+teste('pago com liquidado igual ao valor é coerente', () => {
+  eq(liquidadoCoerente({ status: 'pago', valor: 22000, valor_liquidado: 22000 }), true)
+})
+teste('pago com liquidado MAIOR (guia replicada) é incoerente', () => {
+  // Nove títulos com o valor da guia inteira — o caso Receita Federal
+  eq(liquidadoCoerente({ status: 'pago', valor: 582.47, valor_liquidado: 1553.63 }), false)
+})
+teste('parcial válido é coerente; parcial cheio ou zerado não é', () => {
+  eq(liquidadoCoerente({ status: 'parcial', valor: 1000, valor_liquidado: 300 }), true)
+  eq(liquidadoCoerente({ status: 'parcial', valor: 1000, valor_liquidado: 1000 }), false)
+  eq(liquidadoCoerente({ status: 'parcial', valor: 1000, valor_liquidado: 0 }), false)
+  eq(liquidadoCoerente({ status: 'parcial', valor: 1000, valor_liquidado: null }), false)
+})
+teste('aberto e cancelado não têm liquidado a conferir', () => {
+  eq(liquidadoCoerente({ status: 'aberto', valor: 900, valor_liquidado: null }), true)
+  eq(liquidadoCoerente({ status: 'cancelado', valor: 900, valor_liquidado: null }), true)
+})
+teste('tolerância de centavo absorve arredondamento', () => {
+  eq(liquidadoCoerente({ status: 'pago', valor: 1000.00, valor_liquidado: 1000.004 }), true)
+  eq(liquidadoCoerente({ status: 'pago', valor: 1000.00, valor_liquidado: 999.90 }), false)
+})
+teste('[CENÁRIO] após a correção, o título deixa de ser reprocessado', () => {
+  // Antes: incoerente → redetalhado. Depois de regravado: coerente → estável.
+  const antes = { status: 'pago', valor: 22000, valor_liquidado: 5000 }
+  eq(liquidadoCoerente(antes), false, 'antes: ')
+  const depois = { ...antes, valor_liquidado: resolverLiquidado({
+    valor: 22000, status: 'pago', saldo: 0, borderoValorPago: 5000 }).valor_liquidado }
+  eq(liquidadoCoerente(depois), true, 'depois: ')
+})
+
 for (const [n, f] of testes) {
   try { await f(); ok++; console.log(`  ok   ${n}`) }
   catch (e) { falhou++; console.log(`  FALHA ${n}\n         ${e.message}`) }

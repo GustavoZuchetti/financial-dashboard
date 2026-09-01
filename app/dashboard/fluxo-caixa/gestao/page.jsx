@@ -415,9 +415,12 @@ export default function GestaoFluxoCaixaPage() {
       // Busca completa (paginada) com os MESMOS filtros da tela — não apenas a página atual
       let rows = [], pg = 0, done = false
       while (!done) {
+        // MESMO recorte da tela: vencimento OU liquidação dentro do período.
+        // Antes filtrava só por `data` (vencimento), trazendo títulos liquidados
+        // FORA do período — inclusive de 2025 — cujo caixa já havia se movido.
         let q = supabase.from('fluxo_caixa')
           .select('data,descricao,categoria,tipo,valor,status,data_liquidacao,valor_liquidado')
-          .gte('data', startDate).lte('data', endDate)
+          .or(`and(data.gte.${startDate},data.lte.${endDate}),and(data_liquidacao.gte.${startDate},data_liquidacao.lte.${endDate})`)
           .order('data', { ascending: true })
           .order('created_at', { ascending: true })
           .range(pg * 1000, (pg + 1) * 1000 - 1)
@@ -438,6 +441,18 @@ export default function GestaoFluxoCaixaPage() {
       if (termo) rows = rows.filter(r =>
         (r.descricao || '').toLowerCase().includes(termo) || (r.categoria || '').toLowerCase().includes(termo))
 
+      // ── RECORTE POR DATA EFETIVA — idêntico ao da tela ────────────────────
+      // Sem ele o arquivo trazia títulos com vencimento no período mas
+      // LIQUIDADOS antes dele: o caixa já havia se movido em 2025 e o
+      // lançamento entrava no resultado de 2026. Auditoria de 28/08:
+      // 8 lançamentos, entre eles um recebimento de R$ 137.132,16.
+      const consultandoVencX = statusFiltro === 'vencidos'
+      rows = rows.filter(r => {
+        const dEf = dataEfetiva(r)
+        const dExib = dEf || (consultandoVencX ? r.data : null)
+        return dExib && dExib >= startDate && dExib <= endDate
+      })
+
       // Aba 1 — Resumo
       // MESMA função da tela (lib/fluxo-agregados). Antes o export somava
       // r.valor e a tela somava outra coisa: 26 títulos e R$ 387.545 de
@@ -455,7 +470,7 @@ export default function GestaoFluxoCaixaPage() {
         ['Entidade', empNome || 'Consolidado'],
         ['Período', `${startDate} a ${endDate}`],
         ['Filtro de tipo', tipoFiltro === 'todos' ? 'Todos' : tipoFiltro],
-        ['Registros exportados', rows.length],
+        ['Registros no recorte do periodo', rows.length],
         ['', ''],
         ['REALIZADO — movimentou caixa (concilia com extrato)', ''],
         ['Entradas realizadas (R$)', n2(agX.realizado.entradas)],
@@ -472,6 +487,13 @@ export default function GestaoFluxoCaixaPage() {
         ['', ''],
         ['Efeitos com data aproximada (sem data de liquidacao)', agX.aproximados],
         ['Registros de tipo nao reconhecido (fora da soma)', agX.semSinal],
+        ['', ''],
+        ['AMARRACAO — Resumo x aba Extrato', ''],
+        ['Linhas na aba Extrato', 0],          // preenchido apos montar o extrato
+        ['Soma Entradas da aba Extrato (R$)', 0],
+        ['Soma Saidas da aba Extrato (R$)', 0],
+        ['Diferenca Entradas (deve ser 0,00)', 0],
+        ['Diferenca Saidas (deve ser 0,00)', 0],
       ]
 
       // Aba 2 — Extrato com saldo acumulado (partindo do saldo inicial)
@@ -493,22 +515,42 @@ export default function GestaoFluxoCaixaPage() {
       linhas.forEach(({ r, dExib, efeitoTotal, foraDoCaixa }) => {
         if (!foraDoCaixa) acum += r.tipo === 'entrada' ? efeitoTotal : -efeitoTotal
         const stX = getStatusInfo(r)
-        const v = Number(r.valor)
+        // As colunas Entrada/Saída imprimem o EFEITO DE CAIXA, não r.valor.
+        // Com r.valor a aba Extrato somava o valor do TÍTULO enquanto a aba
+        // Resumo somava o BORDERÔ — as duas abas do mesmo arquivo divergiam
+        // (auditoria de 28/08: R$ 141.164,16 nas entradas). O saldo acumulado
+        // já usava efeitoTotal, então o arquivo trazia três bases distintas.
+        // Vencido não liquidado (foraDoCaixa) mostra o valor do título apenas
+        // como referência, e segue sem compor o acumulado.
+        const vCaixa = foraDoCaixa ? Number(r.valor) : efeitoTotal
         extratoAoa.push([
           dExib || '', r.data || '', r.descricao || '', r.categoria || '',
           r.tipo === 'entrada' ? 'Entrada' : 'Saída',
           stX.label, stX.diasVencido || '',
-          r.tipo === 'entrada' ? Number(v.toFixed(2)) : '',
-          r.tipo === 'saida'   ? Number(v.toFixed(2)) : '',
+          r.tipo === 'entrada' ? Number(vCaixa.toFixed(2)) : '',
+          r.tipo === 'saida'   ? Number(vCaixa.toFixed(2)) : '',
           foraDoCaixa ? '' : Number(acum.toFixed(2)),
         ])
       })
 
+      // Fecha a amarração: soma o que a aba Extrato realmente imprimiu e
+      // compara com o Resumo. Diferença ≠ 0 é bug — e fica VISÍVEL no arquivo,
+      // em vez de só aparecer quando alguém confere à mão.
+      const somaEx = extratoAoa.slice(1).reduce((a, l) => ({
+        e: a.e + (Number(l[7]) || 0), s: a.s + (Number(l[8]) || 0),
+      }), { e: 0, s: 0 })
+      const iAm = resumoAoa.findIndex(l => l[0] === 'Linhas na aba Extrato')
+      resumoAoa[iAm][1]     = extratoAoa.length - 1
+      resumoAoa[iAm + 1][1] = n2(somaEx.e)
+      resumoAoa[iAm + 2][1] = n2(somaEx.s)
+      resumoAoa[iAm + 3][1] = n2(somaEx.e - (agX.realizado.entradas + agX.projetado.entradas))
+      resumoAoa[iAm + 4][1] = n2(somaEx.s - (agX.realizado.saidas + agX.projetado.saidas))
+
       downloadWorkbook([
-        { name: 'Resumo',  aoa: resumoAoa,  colWidths: [32, 22], currencyCols: [1] },
+        { name: 'Resumo',  aoa: resumoAoa,  colWidths: [38, 22], currencyCols: [1] },
         { name: 'Extrato', aoa: extratoAoa, colWidths: [13, 13, 46, 24, 10, 20, 12, 16, 16, 20], currencyCols: [7, 8, 9] },
       ], exportFilename('Fluxo_Caixa_Gestao', startDate, endDate))
-      showToast(`${rows.length} registros exportados para Excel`, 'success')
+      showToast(`${extratoAoa.length - 1} lançamentos exportados para Excel`, 'success')
     } catch (e) {
       console.error('Export:', e)
       showToast('Erro ao exportar: ' + e.message, 'error')

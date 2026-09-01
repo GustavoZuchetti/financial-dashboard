@@ -174,6 +174,49 @@ teste('[REGRESSÃO] misturar valor de título com borderô quebra a coerência',
   eq(porTitulo - efetivo, 100, 'divergência que o defeito produzia: ')
 })
 
+
+// ─── 6. Amarração entre as abas do Excel ─────────────────────────────────────
+// Auditoria de 28/08: o arquivo exportado tinha as DUAS abas divergindo entre
+// si — Resumo somava o borderô (agregarPeriodo) e Extrato imprimia r.valor.
+// R$ 141.164,16 de diferença nas entradas, no arquivo que vai a investidores.
+// Estes testes travam a regra: a linha impressa no Extrato é o EFEITO DE CAIXA,
+// e a soma das linhas tem de igualar o total do Resumo.
+teste('[TRAVA] a linha do extrato usa o borderô, não o valor do título', () => {
+  const reg = { tipo: 'saida', valor: 1000, status: 'pago', valor_liquidado: 900, data_liquidacao: '2026-07-10', data: '2026-07-10' }
+  const efeitoTotal = FS.efeitosCaixa(reg, HOJE).reduce((a, e) => a + e.valor, 0)
+  eq(efeitoTotal, 900, 'efeito impresso: ')
+  if (efeitoTotal === Number(reg.valor)) throw new Error('voltou a imprimir o valor do título')
+})
+
+teste('[TRAVA] soma das linhas do extrato == total do resumo', () => {
+  const regs = [
+    { tipo: 'entrada', valor: 1000, status: 'pago',    valor_liquidado: 950, data_liquidacao: '2026-07-10', data: '2026-07-05' },
+    { tipo: 'saida',   valor: 2000, status: 'pago',    valor_liquidado: 2000, data_liquidacao: '2026-07-15', data: '2026-07-15' },
+    { tipo: 'saida',   valor:  500, status: 'parcial', valor_liquidado: 200, data_liquidacao: '2026-07-20', data: '2026-08-20' },
+    { tipo: 'entrada', valor:  300, status: 'aberto',  data: '2026-08-25' },
+  ]
+  const ag = A.agregarPeriodo(regs, { de: '2026-07-01', ate: '2026-08-31', hoje: HOJE })
+  // Reproduz o que a aba Extrato imprime, linha a linha
+  let linhaE = 0, linhaS = 0
+  for (const r of regs) {
+    const efeito = FS.efeitosCaixa(r, HOJE)
+      .filter(e => e.data >= '2026-07-01' && e.data <= '2026-08-31')
+      .reduce((a, e) => a + e.valor, 0)
+    if (r.tipo === 'entrada') linhaE += efeito; else linhaS += efeito
+  }
+  eq(Math.round(linhaE * 100) / 100, Math.round((ag.realizado.entradas + ag.projetado.entradas) * 100) / 100, 'entradas: ')
+  eq(Math.round(linhaS * 100) / 100, Math.round((ag.realizado.saidas + ag.projetado.saidas) * 100) / 100, 'saídas: ')
+})
+
+teste('[TRAVA] liquidado ANTES do período fica fora do recorte', () => {
+  // O caso real: título liquidado em 28/08/2025 com vencimento em 15/07/2026.
+  // O caixa moveu em 2025 — não pode entrar no resultado de 2026.
+  const reg = { tipo: 'saida', valor: 6725.76, status: 'pago', valor_liquidado: 6725.76, data_liquidacao: '2025-08-28', data: '2026-07-15' }
+  const ag = A.agregarPeriodo([reg], { de: '2026-07-01', ate: '2026-08-31', hoje: HOJE })
+  eq(ag.total, { entradas: 0, saidas: 0, liquido: 0 }, 'fora do período: ')
+  eq(FS.dataEfetiva(reg), '2025-08-28', 'data efetiva: ')
+})
+
 // ─── Execução ────────────────────────────────────────────────────────────────
 for (const [nome, fn] of testes) {
   try { await fn(); ok++; console.log(`  ok   ${nome}`) }

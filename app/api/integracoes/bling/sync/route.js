@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { proximoCursor, cursorDePartida, cursorParaSalvar } from '@/lib/bling-cursor'
+import { verificarExclusoes } from '@/lib/bling-server'
 import { getAuthProfile, ensureToken, fetchContas, fetchCategoriasMap, montarRegistrosFluxo } from '@/lib/bling-server'
 
 // A listagem pode precisar repetir uma página profunda após 504/timeout.
@@ -210,6 +211,23 @@ export async function POST(request) {
       retomado: partida.retomado,
       pendencias: pendencias.slice(0, 20), total_pendencias: pendencias.length,
     }
+    // ── EXCLUSÕES NA ORIGEM, ao FECHAR a varredura ────────────────────────
+    // A sincronização é upsert-only: título excluído no Bling apenas some da
+    // listagem e fica órfão na nossa base. Esta verificação só era chamada pelo
+    // cron diário — e o Controller sincroniza manualmente, então na prática
+    // nunca rodava. Resultado: títulos em aberto apagados no Bling há tempos
+    // continuavam inflando "A Pagar" (caso TELEFONICA/JAM).
+    // Roda apenas no fim da varredura (next === null) para não competir com a
+    // paginação pelo orçamento de tempo da função.
+    let exclusoes = null
+    if (!next && !diag) {
+      try {
+        const d90 = new Date(); d90.setDate(d90.getDate() - 90)
+        exclusoes = await verificarExclusoes(admin, integ, {
+          desde: d90.toISOString().split('T')[0], limite: 60, prazoMs: 15000 })
+      } catch { /* complementar: nunca derruba a sincronização */ }
+    }
+
     // Persistir a posição: é isto que permite a próxima execução CONTINUAR em
     // vez de recomeçar. next === null significa varredura completa e zera o
     // cursor, para que a rodada seguinte reprocesse o que mudou na origem.
@@ -223,7 +241,7 @@ export async function POST(request) {
       }).eq('id', integ.id).then(r => r, () => null)
     }
 
-    return NextResponse.json({ ...resultado, hasMore: !!next, next })
+    return NextResponse.json({ ...resultado, exclusoes, hasMore: !!next, next })
   } catch (e) {
     console.error('Bling sync:', e)
 

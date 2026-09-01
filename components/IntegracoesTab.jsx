@@ -121,6 +121,7 @@ export default function IntegracoesTab({ empresas, showToast }) {
     // salvo. As iterações seguintes mandam fase/página explícitos do `next`.
     let fase = null, pagina = null, janela = null
     let total = 0, pend = 0, guarda = 0, retries = 0, concluido = false, retomou = false
+    let removidos = 0, valorRemov = 0
     try {
       while (guarda++ < limiteGuard) {
         const r = await authFetch('/api/integracoes/bling/sync', {
@@ -151,6 +152,7 @@ export default function IntegracoesTab({ empresas, showToast }) {
         retries = 0
         total += r.gravados || 0; pend += r.total_pendencias || 0
         if (r.retomado) retomou = true
+        if (r.exclusoes?.removidos) { removidos += r.exclusoes.removidos; valorRemov += r.exclusoes.valorRemovido || 0 }
         const janelaInfo = historico && r.janela ? ` · janela ${r.janela.indice + 1}/${r.janela.total}` : ''
         setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `${r.recurso} · pág. ${r.pagina}${janelaInfo} · ${total} gravados${pend ? ` · ${pend} pendências` : ''}` } }))
         if (!r.hasMore) { concluido = true; break }
@@ -166,7 +168,11 @@ export default function IntegracoesTab({ empresas, showToast }) {
         showToast?.('Parada parcial — posição salva, execute novamente para continuar', 'error')
       } else {
         const inicio = retomou ? 'Varredura completa (retomada de execução anterior)' : 'Varredura completa'
-        const log = `${inicio}: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}`
+        // Exclusões na origem: títulos apagados no Bling e removidos daqui.
+        const exc = removidos
+          ? ` · ${removidos} título(s) removido(s) por exclusão no Bling (R$ ${valorRemov.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`
+          : ''
+        const log = `${inicio}: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}${exc}`
         setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log } }))
         showToast?.(`${historico ? 'Histórico' : `Sincronização ${modulo.toUpperCase()}`} concluído: ${total} títulos`, 'success')
       }

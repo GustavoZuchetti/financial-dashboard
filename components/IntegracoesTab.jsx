@@ -8,11 +8,23 @@ import EmptyState from './EmptyState'
 
 const authFetch = async (url, opts = {}) => {
   const { data: { session } } = await supabase.auth.getSession()
-  const r = await fetch(url, {
-    ...opts,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}`, ...(opts.headers || {}) },
-  })
-  const texto = await r.text()
+  let r
+  try {
+    r = await fetch(url, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}`, ...(opts.headers || {}) },
+    })
+  } catch {
+    // "Failed to fetch" — a requisição NÃO completou. Na prática: função
+    // serverless morta por exceder o maxDuration, ou queda de conexão. O
+    // tratamento abaixo cobria apenas respostas inválidas; a exceção do
+    // próprio fetch subia crua até a tela, sem dizer nada ao usuário.
+    return {
+      error: 'A sincronização não respondeu a tempo. A posição foi salva até a última página concluída — execute novamente para continuar de onde parou.',
+      retryAvel: true, aguardar_ms: 8000, status: 0,
+    }
+  }
+  const texto = await r.text().catch(() => '')
   let body = null
   try { body = texto ? JSON.parse(texto) : null } catch { /* Vercel pode devolver texto em timeout */ }
   if (body && typeof body === 'object') return body
@@ -121,7 +133,7 @@ export default function IntegracoesTab({ empresas, showToast }) {
     // salvo. As iterações seguintes mandam fase/página explícitos do `next`.
     let fase = null, pagina = null, janela = null
     let total = 0, pend = 0, guarda = 0, retries = 0, concluido = false, retomou = false
-    let removidos = 0, valorRemov = 0
+    let removidos = 0, valorRemov = 0, adiados = 0
     try {
       while (guarda++ < limiteGuard) {
         const r = await authFetch('/api/integracoes/bling/sync', {
@@ -153,6 +165,7 @@ export default function IntegracoesTab({ empresas, showToast }) {
         total += r.gravados || 0; pend += r.total_pendencias || 0
         if (r.retomado) retomou = true
         if (r.exclusoes?.removidos) { removidos += r.exclusoes.removidos; valorRemov += r.exclusoes.valorRemovido || 0 }
+        adiados += r.adiados || 0
         const janelaInfo = historico && r.janela ? ` · janela ${r.janela.indice + 1}/${r.janela.total}` : ''
         setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `${r.recurso} · pág. ${r.pagina}${janelaInfo} · ${total} gravados${pend ? ` · ${pend} pendências` : ''}` } }))
         if (!r.hasMore) { concluido = true; break }
@@ -172,7 +185,12 @@ export default function IntegracoesTab({ empresas, showToast }) {
         const exc = removidos
           ? ` · ${removidos} título(s) removido(s) por exclusão no Bling (R$ ${valorRemov.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`
           : ''
-        const log = `${inicio}: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}${exc}`
+        // Adiados: títulos que precisavam de detalhe e não couberam no prazo da
+        // função. Não são erro — serão processados na próxima varredura. Informar
+        // é essencial: sem isso o "concluído" daria a falsa impressão de que a
+        // base está integralmente conferida.
+        const adi = adiados ? ` · ${adiados} título(s) adiado(s) por tempo — execute novamente para processá-los` : ''
+        const log = `${inicio}: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}${exc}${adi}`
         setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log } }))
         showToast?.(`${historico ? 'Histórico' : `Sincronização ${modulo.toUpperCase()}`} concluído: ${total} títulos`, 'success')
       }

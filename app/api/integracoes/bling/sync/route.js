@@ -73,6 +73,8 @@ export async function POST(request) {
   if (!liberado) return NextResponse.json({ error: 'Módulo não liberado pela administração' }, { status: 403 })
   if (!ativo)    return NextResponse.json({ error: 'Módulo não está ativo nesta integração' }, { status: 400 })
 
+  const T0 = Date.now()
+
   // Cursor resolvido ANTES do try: o bloco catch precisa enxergar fase,
   // pagina e janela para devolver a resposta de repeticao. Declaradas
   // dentro do try, elas nao existiam no catch e o proprio tratador de erro
@@ -113,7 +115,14 @@ export async function POST(request) {
     const { recurso, tipoFluxo } = faseAtual
     // DRE precisa do DETALHE de cada título (a listagem não traz categoria) →
     // páginas menores para caber no timeout de 10s da Vercel
-    const LIMITE = 50  // muitos títulos são pulados (já completos) → página maior
+    // Lote por página. Era 50 partindo da premissa de que "muitos títulos são
+    // pulados (já completos)". A verificação de coerência do liquidado quebrou
+    // essa premissa: quase todo título divergente passou a exigir detalhe +
+    // borderô, ~760ms cada pelo limitador de taxa. Com 50 a função estourava o
+    // maxDuration de 60s e morria sem resposta ("Failed to fetch").
+    // 30 mantém a página produtiva dentro do orçamento; o que não couber é
+    // adiado e retomado pelo cursor.
+    const LIMITE = Number(process.env.BLING_LIMITE_PAGINA) || 30
 
     // O Bling rejeita períodos de filtro superiores a 366 dias. O backfill
     // percorre janelas consecutivas e mantém a janela no cursor do cliente.
@@ -158,8 +167,9 @@ export async function POST(request) {
     // elimina a duplicação que causou divergências de critério
     const categoriasMap = await fetchCategoriasMap(integ)
     const nomesContato = { ...(integ.contatos_cache || {}) }
-    const { registros: regsFluxo } = await montarRegistrosFluxo(
-      admin, integ, recurso, tipoFluxo, pagina, LIMITE, categoriasMap, nomesContato, itens, filtrosHistorico)
+    const { registros: regsFluxo, adiados } = await montarRegistrosFluxo(
+      admin, integ, recurso, tipoFluxo, pagina, LIMITE, categoriasMap, nomesContato, itens, filtrosHistorico,
+      { inicio: T0, prazoMs: 34000 })
 
     const registros = [], pendencias = []
     if (modulo === 'fluxo') {
@@ -207,7 +217,7 @@ export async function POST(request) {
       modulo, recurso, pagina, fase, escopo,
       janela: escopo === 'historico' ? { indice: janela, total: janelas.length, inicio: janelaAtual.inicio, fim: janelaAtual.fim } : null,
       filtro_data: escopo === 'historico' ? faseAtual.filtro : null,
-      recebidos: itens.length, gravados,
+      recebidos: itens.length, gravados, adiados: adiados || 0,
       retomado: partida.retomado,
       pendencias: pendencias.slice(0, 20), total_pendencias: pendencias.length,
     }
@@ -219,12 +229,16 @@ export async function POST(request) {
     // continuavam inflando "A Pagar" (caso TELEFONICA/JAM).
     // Roda apenas no fim da varredura (next === null) para não competir com a
     // paginação pelo orçamento de tempo da função.
+    // Só roda se sobrar folga real na função — é verificação complementar e
+    // não pode ser a causa de um estouro de tempo.
     let exclusoes = null
-    if (!next && !diag) {
+    const restante = 48000 - (Date.now() - T0)
+    if (!next && !diag && restante > 8000) {
       try {
         const d90 = new Date(); d90.setDate(d90.getDate() - 90)
         exclusoes = await verificarExclusoes(admin, integ, {
-          desde: d90.toISOString().split('T')[0], limite: 60, prazoMs: 15000 })
+          desde: d90.toISOString().split('T')[0], limite: 60,
+          prazoMs: Math.min(12000, restante - 3000) })
       } catch { /* complementar: nunca derruba a sincronização */ }
     }
 

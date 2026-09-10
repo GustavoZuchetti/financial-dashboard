@@ -6,6 +6,29 @@ import { supabase } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import { useOrg } from '@/lib/org-context'
 
+// Tipos contábeis aceitos no DRE. 'ignorar' NÃO está aqui de propósito: é uma
+// decisão de mapeamento, não uma classificação contábil — a linha é excluída
+// antes de chegar à montagem do payload.
+const TIPOS_DRE = ['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','imposto_lucro','investimento']
+
+// Categorias do arquivo que ainda não têm De-Para. Enquanto houver alguma, a
+// importação fica BLOQUEADA: filtrar em silêncio deixaria o valor de fora sem
+// que ninguém percebesse, e a planilha seria dada como importada por inteiro.
+export function categoriasPendentes(linhas, mapeamentos) {
+  const mapa = new Set((mapeamentos || [])
+    .map(m => (m.categoria_origem || '').trim().toLowerCase()).filter(Boolean))
+  const faltando = new Map()
+  for (const r of linhas || []) {
+    const desc = (r?.__desc || '').trim()
+    const k = desc.toLowerCase()
+    if (!k || mapa.has(k)) continue
+    const at = faltando.get(k) || { categoria: desc, linhas: 0, valor: 0 }
+    at.linhas++; at.valor += Math.abs(Number(r?.valor) || 0)
+    faltando.set(k, at)
+  }
+  return [...faltando.values()].sort((a, b) => b.valor - a.valor)
+}
+
 // ─── Parsers ──────────────────────────────────────────────────────────────────
 // ─── Parser de data com formato configurável (para layouts personalizados) ───
 function parseDataComFormato(val, formato = 'DD/MM/YYYY') {
@@ -207,7 +230,13 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
     const map = (mappings || []).find(m => m.categoria_origem?.toLowerCase() === (r.__desc || '').toLowerCase())
     return map && map.tipo_destino !== 'ignorar'
   }).length
-  const naoEntrarao = (data || []).length - entrarao
+  // "Ignorados" e "sem configuração" são naturezas DISTINTAS e estavam somadas
+  // num número só. Ignorar é decisão consciente; sem configuração é pendência
+  // que bloqueia. Somá-las escondia o problema atrás de um número que parecia
+  // sob controle.
+  const semMapa = (data || []).filter(r =>
+    !(mappings || []).some(m => m.categoria_origem?.toLowerCase() === (r.__desc || '').toLowerCase())).length
+  const marcadosIgnorar = (data || []).length - entrarao - semMapa
 
   return (
     <div style={{ background: 'var(--fs-surface)', border: '1px solid var(--fs-border)', borderRadius: 16, padding: 24, marginBottom: 20 }}>
@@ -218,7 +247,8 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
             ? [
               { label: 'Linhas carregadas', val: data.length,  rgb: '59,130,246' },
               { label: 'Entram no DRE',     val: entrarao,     rgb: '16,185,129' },
-              { label: 'Serão ignorados',   val: naoEntrarao,  rgb: '148,163,184' },
+              { label: 'Marcados p/ ignorar', val: marcadosIgnorar, rgb: '148,163,184' },
+              ...(semMapa > 0 ? [{ label: 'Sem configuração', val: semMapa, rgb: 'var(--fs-danger-rgb)' }] : []),
               { label: 'Categorias s/ mapa', val: pendentes.length, rgb: '245,158,11' },
             ]
             : [
@@ -239,7 +269,10 @@ function PreviewTable({ data, mappings, onEdit, onRemove, modulo }) {
 
       {modulo === 'dre' && pendentes.length > 0 && (
         <div style={{ background: 'var(--fs-warning-bg)', border: '1px solid rgba(var(--fs-warning-rgb),0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: 'var(--fs-warning)' }}>
-          {pendentes.length} categoria{pendentes.length !== 1 ? 's' : ''} sem mapeamento de {uniqueRows.length} únicas. Registros sem mapeamento não entram no DRE.
+          {pendentes.length} categoria{pendentes.length !== 1 ? 's' : ''} sem mapeamento de {uniqueRows.length} únicas.
+          {modulo === 'dre'
+            ? ' A importação fica bloqueada até que todas sejam configuradas ou marcadas como ignoradas.'
+            : ' Registros sem mapeamento não entram.'}
         </div>
       )}
 
@@ -414,6 +447,8 @@ export default function ImportacaoPage() {
   const [mappingsDre,    setMappingsDre]    = useState([])
   const [mappingsFluxo,  setMappingsFluxo]  = useState([])
   const [dataDre,        setDataDre]        = useState([])
+  // Categorias do arquivo de DRE ainda sem De-Para. Bloqueiam a importação.
+  const pendentesDre = categoriasPendentes(dataDre, mappingsDre)
   const [dataFluxo,      setDataFluxo]      = useState([])
   const [loading,        setLoading]        = useState(true)
   const [isImporting,    setIsImporting]    = useState(false)
@@ -816,9 +851,16 @@ export default function ImportacaoPage() {
   const buildDrePayload = () =>
     (dataDre || [])
       .filter(row => {
-        // Excluir categorias marcadas como "ignorar"
         const map = (mappingsDre || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
-        return map?.tipo_destino !== 'ignorar'
+        // SEM MAPEAMENTO NUNCA ENTRA. O filtro anterior era
+        // `map?.tipo_destino !== 'ignorar'`: sem mapeamento, `map` é undefined,
+        // `map?.tipo_destino` é undefined, e undefined !== 'ignorar' é TRUE —
+        // a linha passava. A tela dizia "Registros sem mapeamento não entram no
+        // DRE" enquanto o código fazia o oposto (caso "Transferências Facesign",
+        // R$ 4.037,92, relatado em 02/09).
+        if (!map) return false
+        // Excluir categorias marcadas como "ignorar"
+        return map.tipo_destino !== 'ignorar'
       })
       .map(row => {
         const map = (mappingsDre || []).find(m => m.categoria_origem?.toLowerCase() === (row.__desc || '').toLowerCase())
@@ -826,8 +868,18 @@ export default function ImportacaoPage() {
         // O tipo_destino do mapping pode estar defasado se a conta foi
         // reclassificada depois que o mapping foi criado.
         const contaVinc = map?.conta_id ? (planoContas || []).find(c => c.id === map.conta_id) : null
-        let tipo = contaVinc?.tipo || map?.tipo_destino || (row.tipoCsv.includes('pagar') ? 'despesa' : 'receita')
-        if (!['receita','deducao','custo','despesa','receita_financeira','despesa_financeira','imposto_lucro','investimento'].includes(tipo)) tipo = 'receita'
+        // SEM ADIVINHAÇÃO. Antes havia dois fallbacks silenciosos:
+        //   1) `row.tipoCsv.includes('pagar') ? 'despesa' : 'receita'` —
+        //      classificava pela palavra "pagar" na origem. Uma transferência
+        //      entre entidades, que não é receita nem despesa, virava uma das
+        //      duas por heurística de string.
+        //   2) tipo não reconhecido virava 'receita' — a pior escolha possível,
+        //      porque infla o resultado.
+        // Classificação errada em silêncio é pior que falha visível.
+        const tipo = contaVinc?.tipo || map?.tipo_destino
+        if (!TIPOS_DRE.includes(tipo))
+          throw new Error(`Categoria sem classificação válida: "${row.__desc || '(sem descrição)'}"`
+            + `${tipo ? ` (tipo "${tipo}" não reconhecido)` : ''}. Configure o De-Para antes de importar.`)
         return { empresa_id: empresaId, data: row.data, descricao: row.nome || row.__desc || '', valor: row.valor, tipo, conta_id: map?.conta_id || null, categoria: row.__desc || '' }
       })
       .filter(r => r.valor > 0)
@@ -1141,9 +1193,43 @@ export default function ImportacaoPage() {
               onEdit={row => setEditingRow(row)}
               onRemove={() => setDataDre([])}
             />
-            <button onClick={importDre} disabled={isImporting}
-              style={{ width: '100%', background: isImporting ? 'var(--fs-surface-3)' : 'var(--fs-brand)', color: isImporting ? 'var(--fs-text-4)' : '#fff', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 800, cursor: isImporting ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
-              {isImporting ? 'Importando...' : <><SvgIcon name="upload" size={13} color="#fff" style={{marginRight:6}} />Importar {dataDre.length} Lançamentos no DRE</>}
+            {/* BLOQUEIO: enquanto houver categoria sem De-Para, a importação
+                não é liberada. Filtrar em silêncio deixaria o valor de fora sem
+                que ninguém percebesse, e a planilha seria dada como importada
+                por inteiro — foi assim que "Transferências Facesign"
+                (R$ 4.037,92) entrou classificada por adivinhação. */}
+            {pendentesDre.length > 0 && (
+              <div style={{ border: '1px solid var(--fs-danger)', background: 'rgba(var(--fs-danger-rgb),0.08)', borderRadius: 10, padding: 14, marginBottom: 12 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:7, fontSize: 13, fontWeight: 800, color: 'var(--fs-danger)', marginBottom: 8 }}>
+                  <SvgIcon name="alert" size={15} color="var(--fs-danger)" />
+                  Importação bloqueada — {pendentesDre.length} categoria{pendentesDre.length !== 1 ? 's' : ''} sem configuração
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--fs-text-3)', lineHeight: 1.7, marginBottom: 8 }}>
+                  Configure o De-Para de cada uma, ou marque como ignorada, para liberar a importação.
+                  Sem classificação o lançamento entraria no DRE por adivinhação.
+                </div>
+                {pendentesDre.slice(0, 8).map(c => (
+                  <div key={c.categoria} style={{ display:'flex', justifyContent:'space-between', gap:12, fontSize: 12, color:'var(--fs-text-2)', padding:'3px 0' }}>
+                    <span>{c.categoria}</span>
+                    <span className="fs-num" style={{ color:'var(--fs-text-4)' }}>
+                      {c.linhas} linha{c.linhas !== 1 ? 's' : ''} · {fmtBRL(c.valor)}
+                    </span>
+                  </div>
+                ))}
+                {pendentesDre.length > 8 && (
+                  <div style={{ fontSize: 11, color:'var(--fs-text-4)', marginTop: 6 }}>
+                    e mais {pendentesDre.length - 8}…
+                  </div>
+                )}
+              </div>
+            )}
+            <button onClick={importDre} disabled={isImporting || pendentesDre.length > 0}
+              title={pendentesDre.length > 0 ? 'Configure as categorias pendentes para liberar' : ''}
+              style={{ width: '100%', background: (isImporting || pendentesDre.length > 0) ? 'var(--fs-surface-3)' : 'var(--fs-brand)', color: (isImporting || pendentesDre.length > 0) ? 'var(--fs-text-4)' : '#fff', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 800, cursor: (isImporting || pendentesDre.length > 0) ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
+              {isImporting ? 'Importando...'
+                : pendentesDre.length > 0
+                  ? <>Configure {pendentesDre.length} categoria{pendentesDre.length !== 1 ? 's' : ''} para importar</>
+                  : <><SvgIcon name="upload" size={13} color="#fff" style={{marginRight:6}} />Importar {dataDre.length} Lançamentos no DRE</>}
             </button>
           </>
         )

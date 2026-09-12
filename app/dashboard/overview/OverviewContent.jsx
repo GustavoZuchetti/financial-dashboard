@@ -479,19 +479,29 @@ export default function OverviewPage() {
       // ── Fluxo de Caixa ────────────────────────────────────────────────────
       // CAIXA EFETIVO: liquidado na data efetiva; a vencer pelo vencimento;
       // vencidos não liquidados fora
+      // REALIZADO x PROJETADO são separados aqui. Antes todo efeito entrava no
+      // mesmo balde, e o saldo acumulado somava título A VENCER como se fosse
+      // caixa. Verificado em 11/09: "Caixa Disponível" exibia R$ 1,31 mi contra
+      // R$ 22 mil no banco — a diferença é quase exatamente o "A Receber · 30
+      // dias" de R$ 1,54 mi. O Runway saía em 3,9 meses quando a autonomia real
+      // era de dias. É o campo `origem` que efeitosCaixa já devolve (PR #12) e
+      // que esta tela nunca passou a usar.
       const fcByMonth = {}
       ;(fcAll||[]).forEach(f => {
         efeitosCaixa(f).forEach(e => {
           if (e.data < dr.start || e.data > dr.end) return
           const m = new Date(e.data+'T00:00:00').getMonth()
-          if (!fcByMonth[m]) fcByMonth[m] = { entradas:0, saidas:0 }
-          if (ENTRADA_TIPOS.includes(f.tipo)) fcByMonth[m].entradas += e.valor
-          else fcByMonth[m].saidas += e.valor
+          if (!fcByMonth[m]) fcByMonth[m] = { entradas:0, saidas:0, entradasProj:0, saidasProj:0 }
+          const proj = e.origem === 'projetado'
+          const ehEntrada = ENTRADA_TIPOS.includes(f.tipo)
+          if (ehEntrada) fcByMonth[m][proj ? 'entradasProj' : 'entradas'] += e.valor
+          else           fcByMonth[m][proj ? 'saidasProj'   : 'saidas']    += e.valor
         })
       })
       // Saldo acumulado REAL: parte do saldo inicial + histórico anterior e
       // preserva valores negativos — truncar em zero mascara ruptura de caixa
-      let saldo = saldoBase ?? 0
+      let saldo = saldoBase ?? 0        // acumula SÓ o realizado — é posição de caixa
+      let saldoProj = saldoBase ?? 0    // projeção: realizado + a vencer
       const semAncora = saldoBase === null
       const temFluxo = (fcAll || []).length > 0
       const fcChart = monthRange.map(i => {
@@ -499,12 +509,14 @@ export default function OverviewPage() {
           // fallback: aproxima pelo regime de competência (lançamentos)
           const saidas = (byMonth[i]||[]).filter(l=>['custo','despesa','despesa_financeira','deducao'].includes(l.tipo)).reduce((a,l)=>a+Number(l.valor),0)
           const entradas = (byMonth[i]||[]).filter(l=>l.tipo==='receita').reduce((a,l)=>a+Number(l.valor),0)
-          saldo += entradas - saidas
-          return { name:MESES[i], entradas, saidas, saldo }
+          saldo += entradas - saidas; saldoProj = saldo
+          return { name:MESES[i], entradas, saidas, saldo, saldoProj: saldo }
         }
-        const fc = fcByMonth[i] || { entradas:0, saidas:0 }
-        saldo += fc.entradas - fc.saidas
-        return { name:MESES[i], entradas:fc.entradas, saidas:fc.saidas, saldo }
+        const fc = fcByMonth[i] || { entradas:0, saidas:0, entradasProj:0, saidasProj:0 }
+        saldo     += fc.entradas - fc.saidas
+        saldoProj += (fc.entradas + fc.entradasProj) - (fc.saidas + fc.saidasProj)
+        return { name:MESES[i], entradas:fc.entradas, saidas:fc.saidas,
+                 entradasProj:fc.entradasProj, saidasProj:fc.saidasProj, saldo, saldoProj }
       })
       setFcMensal(fcChart)
 
@@ -545,8 +557,18 @@ export default function OverviewPage() {
 
       // ── Métricas auxiliares ───────────────────────────────────────────────
       const burnRate = dr.nMonths > 0 ? Math.max(0, (vCur.cv + vCur.df) / dr.nMonths) : 0
+      // CAIXA DISPONÍVEL = posição de caixa. Só o REALIZADO, e só até HOJE.
+      // Pegar o último ponto da série incluía meses futuros do período (YTD vai
+      // até dezembro) e, antes da separação acima, somava título a vencer.
+      // Este número tem de bater com extrato bancário — é o critério.
+      const mesHoje = new Date(today + 'T00:00:00').getMonth()
+      const ateHoje = fcChart.filter((_, ix) => monthRange[ix] <= mesHoje)
       const caixa    = semAncora ? null
-        : (fcChart.length>0 ? fcChart[fcChart.length-1].saldo : (vCur.rb-vCur.cv-vCur.df))
+        : (ateHoje.length > 0 ? ateHoje[ateHoje.length-1].saldo
+          : (fcChart.length>0 ? fcChart[0].saldo : (vCur.rb-vCur.cv-vCur.df)))
+      // Projeção de caixa ao fim do período, incluindo o que está a vencer.
+      const caixaProjetado = semAncora || fcChart.length === 0 ? null
+        : fcChart[fcChart.length-1].saldoProj
       const runway   = (burnRate>0 && caixa!=null && caixa>0) ? caixa/burnRate : null
       const runwayMotivo = caixa==null ? 'saldo de abertura não configurado'
         : caixa<=0 ? 'caixa negativo' : (burnRate<=0 ? 'sem burn' : null)
@@ -563,7 +585,7 @@ export default function OverviewPage() {
       // Variação Receita Bruta vs período anterior
       const rbPrev_p = vPrev.rb * scale
       const rbPct    = rbPrev_p > 0.01 ? (vCur.rb - rbPrev_p) / rbPrev_p * 100 : null
-      setKpis({ rb:vCur.rb, rbPct, rl:vCur.rl, rlPct, ebt:vCur.ebt, ebtPct, marg:margCur, margDiff, margBruta:margBrutaCur, margBrutaDiff, lb:vCur.lb, caixa, aReceber, aPagar, burnRate, runway, runwayMotivo })
+      setKpis({ rb:vCur.rb, rbPct, rl:vCur.rl, rlPct, ebt:vCur.ebt, ebtPct, marg:margCur, margDiff, margBruta:margBrutaCur, margBrutaDiff, lb:vCur.lb, caixa, caixaProjetado, aReceber, aPagar, burnRate, runway, runwayMotivo })
 
       // ── Lançamentos recentes ──────────────────────────────────────────────
       const rec = [...(curLanc||[])].sort((a,b)=>new Date(b.data)-new Date(a.data)).slice(0,6)
@@ -646,15 +668,15 @@ export default function OverviewPage() {
             <KCard label="EBITDA"          value={fC(kpis.ebt)} info="Lucro antes de juros, impostos, depreciação e amortização. Aqui: Receita Líquida − Custos Variáveis − Despesas Fixas. Mede a geração de caixa operacional."                   pct={kpis.ebtPct} pctLabel="vs anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="var(--fs-brand)" />
             <KCard label="Margem Bruta"    value={`${kpis.margBruta.toFixed(1)}%`} info="Lucro Bruto ÷ Receita Bruta × 100. Eficiência da operação ANTES das despesas fixas — quanto sobra após custos variáveis e deduções. Variação em pontos percentuais (p.p.)." pct={kpis.margBrutaDiff} pctLabel="p.p. vs ant." sparkData={monthly} sparkKey="lucroBruto" sparkColor="var(--fs-teal)" />
             <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`} info="Resultado Líquido ÷ Receita Bruta × 100. Quanto sobra de cada R$ 1 faturado após todos os custos, despesas e resultados financeiros. Variação em pontos percentuais (p.p.)."     pct={kpis.margDiff} pctLabel="p.p. vs ant."  sparkData={monthly} sparkKey="resLiq" sparkColor="var(--fs-purple)" />
-            <KCard label="Caixa Disponível" sparkBelow value={kpis.caixa == null ? '—' : fC(kpis.caixa)} info={kpis.caixa == null ? motivoIndisponivel(partidaInfo?.faltando || [], migracaoPendente) : "Saldo de abertura certificado de cada entidade + movimento efetivo (entradas − saídas) até hoje, em regime de caixa. Nada anterior à data de corte é somado."} pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
+            <KCard label="Caixa Disponível" sparkBelow value={kpis.caixa == null ? '—' : fC(kpis.caixa)} info={kpis.caixa == null ? motivoIndisponivel(partidaInfo?.faltando || [], migracaoPendente) : "Posição de caixa HOJE: saldo de abertura certificado + apenas o movimento REALIZADO (liquidado) até a data corrente. Títulos a vencer NÃO entram — eles aparecem em A Receber e na projeção do gráfico. Este número deve bater com o extrato bancário."} sub={kpis.caixaProjetado != null && Math.abs(kpis.caixaProjetado - (kpis.caixa ?? 0)) > 1 ? `proj. fim do período: ${fC(kpis.caixaProjetado)}` : null} pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
           </div>
 
           {/* ── KPIs secundários ────────────────────────────────────────────── */}
           <div style={{ display:'flex', marginBottom:20, background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:12, flexWrap:'wrap' }}>
             <SCard first label="A Receber · 30 Dias" value={kpis.aReceber>0?fC(kpis.aReceber):'—'} info="Soma dos títulos de entrada a vencer nos próximos 30 dias (em aberto ou parcial). Parciais contam apenas o valor ainda não recebido." color="var(--fs-success)" />
             <SCard label="A Pagar · 30 Dias"   value={kpis.aPagar>0?fC(kpis.aPagar):'—'} info="Soma dos títulos de saída a vencer nos próximos 30 dias (em aberto ou parcial). Parciais contam apenas o valor ainda não pago."     color="var(--fs-danger)" />
-            <SCard label="Burn Rate Mensal"     value={fC(kpis.burnRate)} info="(Custos Variáveis + Despesas Fixas) ÷ nº de meses do período. Ritmo médio de consumo de caixa operacional por mês." sub="custos + despesas / mês" />
-            <SCard label="Runway"               value={kpis.runway?`${kpis.runway.toFixed(1)} meses`:'—'} info="Caixa Disponível ÷ Burn Rate Mensal = meses de operação que o caixa atual sustenta no ritmo de gasto atual. Não se aplica quando o caixa está negativo." sub={kpis.runway?'caixa ÷ burn rate':(kpis.runwayMotivo||'caixa ÷ burn rate')} color={kpis.runwayMotivo==='caixa negativo'?'var(--fs-danger)':undefined} />
+            <SCard label="Burn Rate Mensal"     value={fC(kpis.burnRate)} info="(Custos Variáveis + Despesas Fixas) ÷ nº de meses do período, em regime de COMPETÊNCIA. Ritmo médio de consumo operacional por mês." sub="custos + despesas / mês" />
+            <SCard label="Runway"               value={kpis.runway ? (kpis.runway < 1 ? `${Math.round(kpis.runway * 30)} dias` : `${kpis.runway.toFixed(1)} meses`) : '—'} info="Caixa Disponível (realizado) ÷ Burn Rate Mensal = tempo que o caixa atual sustenta a operação no ritmo de gasto atual. Não se aplica quando o caixa está negativo." sub={kpis.runway?'caixa ÷ burn rate':(kpis.runwayMotivo||'caixa ÷ burn rate')} color={kpis.runwayMotivo==='caixa negativo' || (kpis.runway!=null && kpis.runway < 3) ? 'var(--fs-danger)' : undefined} />
           </div>
 
           {/* ── Gráficos linha 1 ────────────────────────────────────────────── */}

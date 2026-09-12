@@ -43,9 +43,19 @@ export default function FluxoCaixaAnalise() {
   const [empresaId, setEmpresaId] = useState(null)
   const [isConsolidado, setIsConsolidado] = useState(false)
 
+  // A tela lia o localStorage UMA VEZ e nunca mais. O Sidebar grava a nova
+  // seleção e dispara window.dispatchEvent(new Event('storage')), mas esta tela
+  // não escutava — trocar de entidade não mudava nada e o usuário via o
+  // consolidado achando estar vendo uma entidade isolada. Verificado em produção
+  // em 11/09: desmarcar JAM e JB deixava os valores byte a byte idênticos.
   useEffect(() => {
-    const savedId = localStorage.getItem('empresa_id')
-    if (savedId) { setEmpresaId(savedId); setIsConsolidado(savedId === 'todas') }
+    const aplicar = () => {
+      const id = localStorage.getItem('empresa_id') || ''
+      setEmpresaId(id); setIsConsolidado(id === 'todas')
+    }
+    aplicar()
+    window.addEventListener('storage', aplicar)
+    return () => window.removeEventListener('storage', aplicar)
   }, [])
 
   useEffect(() => {

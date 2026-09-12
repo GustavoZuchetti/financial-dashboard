@@ -421,6 +421,18 @@ export default function ImportacaoPage() {
   const [activeTab,      setActiveTab]      = useState('dre')
   const [apiAtivo,       setApiAtivo]       = useState({ dre: false, fluxo: false }) // módulo importado via API p/ a entidade selecionada
   const [empresaId,      setEmpresaId]      = useState(null)
+  // ⚠️ Aqui empresaId NÃO é só filtro de leitura: ele determina em qual empresa
+  // os dados serão GRAVADOS. Sem reagir à troca de entidade, o usuário podia
+  // importar para a empresa errada sem nenhum indício. Por isso a seleção é
+  // reavaliada a cada evento 'storage' emitido pelo Sidebar.
+  useEffect(() => {
+    const aplicar = () => {
+      const id = localStorage.getItem('empresa_id') || ''
+      if (id && id !== 'todas') setEmpresaId(prev => (prev === id ? prev : id))
+    }
+    window.addEventListener('storage', aplicar)
+    return () => window.removeEventListener('storage', aplicar)
+  }, [])
   const [empresas,       setEmpresas]       = useState([])
   const [orgEmpresaIds,  setOrgEmpresaIds]  = useState([])
 

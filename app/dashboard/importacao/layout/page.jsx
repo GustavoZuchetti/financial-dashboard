@@ -69,9 +69,16 @@ export default function LayoutImportacao() {
   const [csvPreview, setCsvPreview] = useState([])
   const fileRef = useRef(null)
 
+  // Layouts de importação são gravados POR EMPRESA. Sem reagir à troca de
+  // entidade, um layout podia ser salvo na empresa errada.
   useEffect(() => {
-    const id = localStorage.getItem('empresa_id')
-    if (id) setEmpresaId(id)
+    const aplicar = () => {
+      const id = localStorage.getItem('empresa_id')
+      if (id) setEmpresaId(id)
+    }
+    aplicar()
+    window.addEventListener('storage', aplicar)
+    return () => window.removeEventListener('storage', aplicar)
   }, [])
 
   const loadLayouts = useCallback(async () => {

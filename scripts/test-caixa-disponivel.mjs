@@ -158,6 +158,43 @@ teste('[CENÁRIO] o caso medido em 11/09', () => {
   if (r.caixa > 100000) throw new Error('o recebível voltou para dentro do caixa')
 })
 
+
+// ─── 5. O cartão exibe APENAS o efetivo ──────────────────────────────────────
+// Decisão do Controller em 15/09/2026: "o CEO, investidor ou qualquer outra
+// pessoa deve acessar e ter a visão da realidade atual da empresa, sem números
+// projetados, a não ser que efetivamente seja um KPI de projeção na tela".
+//
+// O PR #20 havia posto a projeção como linha secundária do cartão. Mesmo
+// rotulada, ela convive com o valor principal e induz leitura somada.
+import { readFileSync as lerArq } from 'node:fs'
+
+teste('[TRAVA] o cartão de Caixa Disponível não exibe projeção', () => {
+  const src = lerArq(join(raiz, 'app/dashboard/overview/OverviewContent.jsx'), 'utf8')
+  const i = src.indexOf('label="Caixa Disponível"')
+  if (i < 0) throw new Error('cartão não encontrado')
+  const trecho = src.slice(i, i + 1200)
+  if (/proj\.\s*fim do período/.test(trecho))
+    throw new Error('a projeção voltou para o cartão de Caixa Disponível')
+  if (!/sub=\{null\}/.test(trecho))
+    throw new Error('o cartão deveria ter sub={null} — sem linha secundária')
+})
+
+teste('[TRAVA] o balão de ajuda não é recortado pelo cartão', () => {
+  // O cartão tem overflow:'hidden'. Um balão position:'absolute' nascido dentro
+  // dele é recortado na borda e fica ilegível — relatado em 15/09.
+  const src = lerArq(join(raiz, 'app/dashboard/overview/OverviewContent.jsx'), 'utf8')
+  const i = src.indexOf('const InfoTip')
+  const trecho = src.slice(i, src.indexOf('const KCard'))
+  if (!/position:'fixed'/.test(trecho))
+    throw new Error("InfoTip precisa usar position:'fixed' para escapar do overflow:hidden")
+  if (/position:'absolute'/.test(trecho))
+    throw new Error("InfoTip voltou a usar position:'absolute'")
+  if (!/getBoundingClientRect/.test(trecho))
+    throw new Error('sem cálculo de posição, o balão fixo aparece no lugar errado')
+  if (!/innerWidth/.test(trecho))
+    throw new Error('sem limite de borda, o balão estoura a janela à direita')
+})
+
 for (const [n, f] of testes) {
   try { await f(); ok++; console.log(`  ok   ${n}`) }
   catch (e) { falhou++; console.log(`  FALHA ${n}\n         ${e.message}`) }

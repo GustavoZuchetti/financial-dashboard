@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import IntegracoesTab from '@/components/IntegracoesTab'
 import SaldoAberturaTab from '@/components/SaldoAberturaTab'
+import NaturezaCategoriasTab from '@/components/NaturezaCategoriasTab'
 import { useOrg } from '@/lib/org-context'
 
 const inp = {
@@ -237,6 +238,7 @@ export default function ConfiguracoesPage() {
     { v: 'identidade',  l: 'Identidade Visual', icon: 'paintBrush' },
     ...(['org_admin','super_admin'].includes(myRole) ? [
       { v: 'saldo_abertura', l: 'Saldo de Abertura', icon: 'bank' },
+      { v: 'natureza',       l: 'Natureza das Contas', icon: 'layers' },
       { v: 'integracoes',    l: 'Integrações (API)', icon: 'plug' },
     ] : []),
   ]
@@ -473,6 +475,10 @@ export default function ConfiguracoesPage() {
       {/* ─── Tab: Identidade Visual ───────────────────────────── */}
       {tab === 'saldo_abertura' && ['org_admin','super_admin'].includes(myRole) && (
         <SaldoAberturaTab empresas={empresas} showToast={toast} />
+      )}
+
+      {tab === 'natureza' && ['org_admin','super_admin'].includes(myRole) && (
+        <NaturezaCategoriasTab empresas={empresas} showToast={toast} />
       )}
 
       {tab === 'integracoes' && ['org_admin','super_admin'].includes(myRole) && (

@@ -4,11 +4,12 @@ import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE, fmtBRL, fmtCompact } from '@/lib/dre-calc'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, ReferenceLine, ComposedChart} from 'recharts'
+import { inicioMesVigente, fimMesVigente } from '@/lib/periodo-padrao'
 
 const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 export default function DREAnalise() {
-  const [startDate,  setStartDate]  = useState(() => new Date(new Date().getFullYear(),0,1).toISOString().split('T')[0])
+  const [startDate,  setStartDate]  = useState(inicioMesVigente)
   const [endDate,    setEndDate]    = useState(new Date().toISOString().split('T')[0])
   const [debouncedStart, setDebouncedStart] = useState(startDate)
   const [debouncedEnd,   setDebouncedEnd]   = useState(endDate)

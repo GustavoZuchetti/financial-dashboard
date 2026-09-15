@@ -297,7 +297,11 @@ export default function OverviewPage() {
   const today    = now.toISOString().split('T')[0]
 
   // Modo: 'mes' | 'ytd' | 'custom'
-  const [modo,         setModo]         = useState('ytd')
+  // Abre no MÊS VIGENTE por decisão do Controller (11/09/2026): o login fica
+  // previsível e o recorte passa a ser escolha consciente do usuário. Antes
+  // abria em YTD enquanto o Fluxo de Caixa abria em 01/01 de dois anos atrás —
+  // as duas telas exibiam a mesma informação com janelas diferentes.
+  const [modo,         setModo]         = useState('mes')
   const [customRange,  setCustomRange]  = useState({ start: `${curYear}-01-01`, end: today })
   const [pickerOpen,   setPickerOpen]   = useState(false)
 

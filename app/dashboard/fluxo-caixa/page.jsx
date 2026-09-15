@@ -12,6 +12,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
+import { inicioMesVigente, fimMesVigente } from '@/lib/periodo-padrao'
 
 // ─── Formatadores ─────────────────────────────────────────────────────────────
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -144,10 +145,12 @@ export default function FluxoCaixaPage() {
   const [partidaInfo,  setPartidaInfo]  = useState(null)
   const { ancoras, migracaoPendente } = useAncoras(empIdsSel)
   const [empNome,      setEmpNome]      = useState('')
-  const [startDate,    setStartDate]    = useState(`${curYear - 2}-01-01`)
+  // Mês vigente (lib/periodo-padrao). Era `${curYear - 2}-01-01`, que puxava
+  // dois anos e meio de base incompleta para dentro do saldo acumulado.
+  const [startDate,    setStartDate]    = useState(inicioMesVigente)
   const [endDate,      setEndDate]      = useState(today)
   // Debounce de datas — evita query a cada clique no calendário
-  const [debStart, setDebStart] = useState(`${curYear - 2}-01-01`)
+  const [debStart, setDebStart] = useState(inicioMesVigente)
   const [debEnd,   setDebEnd]   = useState(today)
   useEffect(() => { const t = setTimeout(() => setDebStart(startDate), 500); return () => clearTimeout(t) }, [startDate])
   useEffect(() => { const t = setTimeout(() => setDebEnd(endDate), 500);     return () => clearTimeout(t) }, [endDate])
@@ -232,9 +235,13 @@ export default function FluxoCaixaPage() {
       }
 
       // Expande registros em efeitos de caixa dentro de uma janela
+      // `origem` é PRESERVADA no mapeamento. Antes o .map a descartava e todo
+      // efeito virava indistinguível — título a vencer entrava no saldo
+      // acumulado como se fosse caixa, o mesmo defeito corrigido na Visão Geral
+      // no PR #20. Sem isto as duas telas continuariam divergindo.
       const expandirEfeitos = (rows, ini, fim) => (rows || []).flatMap(r =>
         efeitosCaixa(r).filter(e => e.data >= ini && e.data <= fim)
-          .map(e => ({ tipo: r.tipo, data: e.data, valor: e.valor })))
+          .map(e => ({ tipo: r.tipo, data: e.data, valor: e.valor, origem: e.origem })))
 
       const [fc, fcPrev, fcAll, cfgRes] = await Promise.all([
         fetchAll('id,tipo,valor,data,descricao,categoria,status,valor_liquidado,data_liquidacao', debStart, debEnd, true),
@@ -330,24 +337,30 @@ export default function FluxoCaixaPage() {
   const chartMap = {}
   efeitos.forEach(f => {
     const k = getSortKey(f.data)
-    if (!chartMap[k]) chartMap[k] = { entradas:0, saidas:0 }
+    if (!chartMap[k]) chartMap[k] = { entradas:0, saidas:0, entradasProj:0, saidasProj:0 }
     const v = Math.abs(Number(f.valor)||0)
-    if (entradaTipos.includes(f.tipo)) chartMap[k].entradas += v
-    else if (saidaTipos.includes(f.tipo)) chartMap[k].saidas += v
+    const proj = f.origem === 'projetado'
+    if (entradaTipos.includes(f.tipo)) chartMap[k][proj ? 'entradasProj' : 'entradas'] += v
+    else if (saidaTipos.includes(f.tipo)) chartMap[k][proj ? 'saidasProj' : 'saidas'] += v
   })
 
   const presentes = Object.keys(chartMap).sort()
   const chartData = []
   if (presentes.length) {
+    // DUAS séries: `saldo` acumula só o REALIZADO — é posição de caixa e tem de
+    // bater com extrato. `saldoProj` inclui o a vencer, para projeção.
     let running = saldoBase ?? 0
+    let runningProj = saldoBase ?? 0
     let k = presentes[0]
     const fim = presentes[presentes.length - 1]
     let guarda = 0
     while (k <= fim && guarda < 400) {
-      const c = chartMap[k] || { entradas:0, saidas:0 }
-      running += c.entradas - c.saidas
-      // saldo ACUMULADO real (parte do saldo inicial + histórico anterior)
-      chartData.push({ name: keyLabel(k), entradas: c.entradas, saidas: c.saidas, saldo: running })
+      const c = chartMap[k] || { entradas:0, saidas:0, entradasProj:0, saidasProj:0 }
+      running     += c.entradas - c.saidas
+      runningProj += (c.entradas + c.entradasProj) - (c.saidas + c.saidasProj)
+      chartData.push({ name: keyLabel(k), entradas: c.entradas, saidas: c.saidas,
+                       entradasProj: c.entradasProj, saidasProj: c.saidasProj,
+                       saldo: running, saldoProj: runningProj })
       k = nextKey(k); guarda++
     }
   }

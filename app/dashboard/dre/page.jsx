@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
+import { inicioMesVigente, fimMesVigente } from '@/lib/periodo-padrao'
 
 // ─── Paleta ──────────────────────────────────────────────────────────────────
 const C = {
@@ -200,7 +201,7 @@ const CustomTooltip = ({ active, payload, lancamentos }) => {
 
 // ─── Página Principal ─────────────────────────────────────────────────────────
 export default function DREGeral() {
-  const [startDate, setStartDate]  = useState(() => new Date(new Date().getFullYear(),0,1).toISOString().split('T')[0])
+  const [startDate, setStartDate]  = useState(inicioMesVigente)
   const [endDate,   setEndDate]    = useState(new Date().toISOString().split('T')[0])
   // Datas com debounce — evita query a cada keystroke
   const [debouncedStart, setDebouncedStart] = useState(startDate)

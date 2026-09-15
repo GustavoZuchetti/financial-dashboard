@@ -10,6 +10,7 @@ import { agregarPeriodo, ROTULOS } from '@/lib/fluxo-agregados'
 import { useAncoras, motivoIndisponivel } from '@/lib/usar-ancoras'
 import { useOrg } from '@/lib/org-context'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
+import { inicioMesVigente, fimMesVigente } from '@/lib/periodo-padrao'
 
 // ─── Formatadores ─────────────────────────────────────────────────────────────
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -161,7 +162,7 @@ export default function GestaoFluxoCaixaPage() {
 
   // Filtros
   // Padrão: últimos 30 dias — o seletor nasce dizendo o que a tela mostra
-  const [startDate,  setStartDate]  = useState(() => new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0])
+  const [startDate,  setStartDate]  = useState(inicioMesVigente)
   const [endDate,    setEndDate]    = useState(today)
   const [tipoFiltro, setTipoFiltro] = useState('todos')
   const [statusFiltro, setStatusFiltro] = useState('todos') // todos|abertos|vencidos|pagos

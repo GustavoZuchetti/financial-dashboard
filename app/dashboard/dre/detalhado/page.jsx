@@ -5,6 +5,7 @@ import { calcDRE, calcDREMap, DRE_LINES, fmtBRL } from '@/lib/dre-calc'
 import SvgIcon from '@/components/SvgIcon'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 import { TableSkeleton } from '@/components/Skeleton'
+import { inicioMesVigente, fimMesVigente } from '@/lib/periodo-padrao'
 
 // ─── Modal de Drill-down ──────────────────────────────────────────────────────
 function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
@@ -179,7 +180,7 @@ function LancRow({ l, isLast }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function DREDetalhado() {
-  const [startDate, setStartDate] = useState(() => new Date(new Date().getFullYear(),0,1).toISOString().split('T')[0])
+  const [startDate, setStartDate] = useState(inicioMesVigente)
   const [endDate,   setEndDate]   = useState(new Date().toISOString().split('T')[0])
   // Datas com debounce — evita query a cada clique no calendário
   const [debStart, setDebStart] = useState(startDate)

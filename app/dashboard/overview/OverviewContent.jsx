@@ -63,25 +63,59 @@ const Spark = ({ data, dataKey, color, h = 34 }) => {
 
 // ─── KPI Card grande ──────────────────────────────────────────────────────────
 // ─── Tooltip informativo (ícone "i" — clique ou hover revela a explicação) ──
+// Balão de ajuda. Usa position:'fixed' com coordenadas calculadas a partir do
+// ícone, NÃO position:'absolute': o cartão que o contém tem overflow:'hidden',
+// então um balão absoluto era recortado na borda e ficava ilegível — relatado
+// em 15/09. Com fixed ele escapa do recorte, e o cálculo abaixo ainda o mantém
+// dentro da janela quando o cartão está próximo da borda direita ou do rodapé.
 const InfoTip = ({ text }) => {
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const ref = useRef(null)
+  const L = 250   // largura do balão
+
+  const posicionar = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const margem = 12
+    // Alinha pela esquerda do ícone; recua se estourar a borda direita
+    let left = Math.min(r.left, window.innerWidth - L - margem)
+    left = Math.max(margem, left)
+    // Abre para cima quando não há espaço abaixo
+    const abaixo = window.innerHeight - r.bottom
+    const top = abaixo < 140 ? r.top - 8 : r.bottom + 8
+    setPos({ top, left, acima: abaixo < 140 })
+  }, [])
+
+  const abrir = () => { posicionar(); setOpen(true) }
+
   useEffect(() => {
     if (!open) return
-    const close = () => setOpen(false)
-    window.addEventListener('click', close)
-    return () => window.removeEventListener('click', close)
+    const fechar = () => setOpen(false)
+    window.addEventListener('click', fechar)
+    window.addEventListener('scroll', fechar, true)
+    window.addEventListener('resize', fechar)
+    return () => {
+      window.removeEventListener('click', fechar)
+      window.removeEventListener('scroll', fechar, true)
+      window.removeEventListener('resize', fechar)
+    }
   }, [open])
+
   return (
-    <span
-      onMouseEnter={() => setOpen(true)}
+    <span ref={ref}
+      onMouseEnter={abrir}
       onMouseLeave={() => setOpen(false)}
-      onClick={(e) => { e.stopPropagation(); setOpen(o => !o) }}
+      onClick={(e) => { e.stopPropagation(); open ? setOpen(false) : abrir() }}
       tabIndex={0} role="button" aria-label={text}
-      style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:15, height:15, borderRadius:'50%', border:`1px solid ${open ? 'var(--fs-brand)' : 'var(--fs-text-4)'}`, color: open ? 'var(--fs-brand)' : 'var(--fs-text-4)', fontSize:9.5, fontWeight:700, cursor:'pointer', flexShrink:0, position:'relative', fontFamily:'var(--fs-font-body)', transition:'all 0.15s' }}>
+      style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:15, height:15, borderRadius:'50%', border:`1px solid ${open ? 'var(--fs-brand)' : 'var(--fs-text-4)'}`, color: open ? 'var(--fs-brand)' : 'var(--fs-text-4)', fontSize:9.5, fontWeight:700, cursor:'pointer', flexShrink:0, fontFamily:'var(--fs-font-body)', transition:'all 0.15s' }}>
       i
       {open && (
         <span role="tooltip"
-          style={{ position:'absolute', top:'calc(100% + 8px)', left:0, width:240, background:'var(--fs-surface-3)', border:'1px solid var(--fs-border-2)', borderRadius:8, padding:'10px 12px', fontSize:11.5, fontWeight:400, lineHeight:1.5, color:'var(--fs-text-2)', textTransform:'none', letterSpacing:'normal', boxShadow:'var(--fs-shadow-md)', zIndex:200, textAlign:'left', whiteSpace:'normal' }}>
+          style={{ position:'fixed', top:pos.top, left:pos.left, width:L,
+            transform: pos.acima ? 'translateY(-100%)' : undefined,
+            background:'var(--fs-surface-3)', border:'1px solid var(--fs-border-2)', borderRadius:8, padding:'10px 12px', fontSize:11.5, fontWeight:400, lineHeight:1.5, color:'var(--fs-text-2)', textTransform:'none', letterSpacing:'normal', boxShadow:'var(--fs-shadow-md)', zIndex:9999, textAlign:'left', whiteSpace:'normal' }}>
           {text}
         </span>
       )}
@@ -571,6 +605,11 @@ export default function OverviewPage() {
         : (ateHoje.length > 0 ? ateHoje[ateHoje.length-1].saldo
           : (fcChart.length>0 ? fcChart[0].saldo : (vCur.rb-vCur.cv-vCur.df)))
       // Projeção de caixa ao fim do período, incluindo o que está a vencer.
+      // NÃO é exibida no cartão de Caixa Disponível — decisão do Controller em
+      // 15/09: "o CEO, investidor ou qualquer outra pessoa deve acessar e ter a
+      // visão da realidade atual da empresa, sem números projetados, a não ser
+      // que efetivamente seja um KPI de projeção". Fica disponível para a série
+      // do gráfico e para um cartão de projeção próprio, se vier a existir.
       const caixaProjetado = semAncora || fcChart.length === 0 ? null
         : fcChart[fcChart.length-1].saldoProj
       const runway   = (burnRate>0 && caixa!=null && caixa>0) ? caixa/burnRate : null
@@ -672,7 +711,7 @@ export default function OverviewPage() {
             <KCard label="EBITDA"          value={fC(kpis.ebt)} info="Lucro antes de juros, impostos, depreciação e amortização. Aqui: Receita Líquida − Custos Variáveis − Despesas Fixas. Mede a geração de caixa operacional."                   pct={kpis.ebtPct} pctLabel="vs anterior" sparkData={monthly} sparkKey="ebitda" sparkColor="var(--fs-brand)" />
             <KCard label="Margem Bruta"    value={`${kpis.margBruta.toFixed(1)}%`} info="Lucro Bruto ÷ Receita Bruta × 100. Eficiência da operação ANTES das despesas fixas — quanto sobra após custos variáveis e deduções. Variação em pontos percentuais (p.p.)." pct={kpis.margBrutaDiff} pctLabel="p.p. vs ant." sparkData={monthly} sparkKey="lucroBruto" sparkColor="var(--fs-teal)" />
             <KCard label="Margem Líquida"  value={`${kpis.marg.toFixed(1)}%`} info="Resultado Líquido ÷ Receita Bruta × 100. Quanto sobra de cada R$ 1 faturado após todos os custos, despesas e resultados financeiros. Variação em pontos percentuais (p.p.)."     pct={kpis.margDiff} pctLabel="p.p. vs ant."  sparkData={monthly} sparkKey="resLiq" sparkColor="var(--fs-purple)" />
-            <KCard label="Caixa Disponível" sparkBelow value={kpis.caixa == null ? '—' : fC(kpis.caixa)} info={kpis.caixa == null ? motivoIndisponivel(partidaInfo?.faltando || [], migracaoPendente) : "Posição de caixa HOJE: saldo de abertura certificado + apenas o movimento REALIZADO (liquidado) até a data corrente. Títulos a vencer NÃO entram — eles aparecem em A Receber e na projeção do gráfico. Este número deve bater com o extrato bancário."} sub={kpis.caixaProjetado != null && Math.abs(kpis.caixaProjetado - (kpis.caixa ?? 0)) > 1 ? `proj. fim do período: ${fC(kpis.caixaProjetado)}` : null} pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
+            <KCard label="Caixa Disponível" sparkBelow value={kpis.caixa == null ? '—' : fC(kpis.caixa)} info={kpis.caixa == null ? motivoIndisponivel(partidaInfo?.faltando || [], migracaoPendente) : "Posição de caixa HOJE, apenas o efetivo: saldo de abertura certificado mais o movimento já liquidado. Nenhum valor projetado entra aqui. Deve bater com o extrato bancário."} sub={null} pct={null} sparkData={fcMensal} sparkKey="saldo" sparkColor="var(--fs-warning)" />
           </div>
 
           {/* ── KPIs secundários ────────────────────────────────────────────── */}

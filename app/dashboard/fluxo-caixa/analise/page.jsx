@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { supabase, getSelectedEntidadeIds, fetchAll } from '@/lib/supabase'
 import { efeitosCaixa } from '@/lib/fluxo-status'
 import { CHART_PALETTE, COLORS } from '@/lib/design-tokens'
+import { indexarNaturezas, separarPorNatureza, NATUREZAS } from '@/lib/natureza-categoria'
 
 const fmtFull    = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 const fmtCompact = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact', maximumFractionDigits: 1 }).format(v)
@@ -29,6 +30,7 @@ const S = {
 const PIE_COLORS = ['var(--fs-brand)','var(--fs-warning)','var(--fs-success)','var(--fs-purple)','var(--fs-danger)','#06b6d4','#f97316']
 
 export default function FluxoCaixaAnalise() {
+  const [naturezas, setNaturezas] = useState([])
   const [startDate, setStartDate] = useState(() => {
     const d = new Date()
     return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0]
@@ -56,6 +58,21 @@ export default function FluxoCaixaAnalise() {
     aplicar()
     window.addEventListener('storage', aplicar)
     return () => window.removeEventListener('storage', aplicar)
+  }, [])
+
+  // Classificação de natureza — define o que entra nos indicadores operacionais
+  useEffect(() => {
+    let vivo = true
+    ;(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const r = await fetch('/api/categorias-natureza', {
+          headers: { 'Authorization': `Bearer ${session?.access_token}` } })
+        const j = await r.json()
+        if (vivo && !j.error) setNaturezas(j.naturezas || [])
+      } catch { /* sem classificação, tudo é operacional */ }
+    })()
+    return () => { vivo = false }
   }, [])
 
   useEffect(() => {
@@ -90,8 +107,21 @@ export default function FluxoCaixaAnalise() {
   const entradas = data.filter(d => d.tipo === 'entrada')
   const saidas   = data.filter(d => d.tipo === 'saida')
 
-  const totalEntradas = entradas.reduce((acc, curr) => acc + Number(curr.valor), 0)
-  const totalSaidas   = saidas.reduce((acc, curr)   => acc + Number(curr.valor), 0)
+  // ── NATUREZA: transferências entre entidades do grupo saem dos indicadores
+  // operacionais. Medido em 11/09/2026: 44,0% das entradas e 44,3% das saídas
+  // eram o mesmo dinheiro circulando entre FACE, JAM e JB. O Índice de
+  // Cobertura, com o mesmo valor dos dois lados, convergia para 1,0 por
+  // construção matemática, não por desempenho.
+  // O que é excluído continua VISÍVEL numa linha própria: número filtrado sem
+  // declarar o filtro é a armadilha do "Registros sem mapeamento não entram no
+  // DRE", onde a tela afirmava algo que o cálculo não fazia.
+  const mapaNat = indexarNaturezas(naturezas || [])
+  const sepE = separarPorNatureza(entradas, mapaNat)
+  const sepS = separarPorNatureza(saidas,   mapaNat)
+
+  const totalEntradas = sepE.totalOperacional
+  const totalSaidas   = sepS.totalOperacional
+  const totalExcluido = sepE.totalExcluido + sepS.totalExcluido
   const saldoLiquido  = totalEntradas - totalSaidas
   const cobertura     = totalSaidas > 0 ? totalEntradas / totalSaidas : 0
 
@@ -105,8 +135,8 @@ export default function FluxoCaixaAnalise() {
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
   }
 
-  const entCats  = groupBy(entradas, 'categoria')
-  const saiCats  = groupBy(saidas,   'categoria')
+  const entCats  = groupBy(sepE.operacional, 'categoria')
+  const saiCats  = groupBy(sepS.operacional, 'categoria')
 
   // Evolução mensal
   const evolucao = data.reduce((acc, curr) => {
@@ -148,8 +178,8 @@ export default function FluxoCaixaAnalise() {
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Total Recebido',        value: totalEntradas, color: CHART_PALETTE.entrada, accent: CHART_PALETTE.entrada },
-          { label: 'Total Pago',            value: totalSaidas,   color: CHART_PALETTE.saida,   accent: CHART_PALETTE.saida   },
+          { label: 'Recebido · operacional', value: totalEntradas, color: CHART_PALETTE.entrada, accent: CHART_PALETTE.entrada },
+          { label: 'Pago · operacional',     value: totalSaidas,   color: CHART_PALETTE.saida,   accent: CHART_PALETTE.saida   },
           { label: 'Saldo Líquido',         value: saldoLiquido,  color: saldoLiquido >= 0 ? CHART_PALETTE.ebitda : CHART_PALETTE.saida, accent: saldoLiquido >= 0 ? CHART_PALETTE.ebitda : CHART_PALETTE.saida },
           { label: 'Índice de Cobertura',   value: null,          color: CHART_PALETTE.saldo,   accent: CHART_PALETTE.saldo, custom: cobertura.toFixed(2) + 'x' },
         ].map((k, i) => (
@@ -165,6 +195,28 @@ export default function FluxoCaixaAnalise() {
           </div>
         ))}
       </div>
+
+      {/* O que ficou de fora dos indicadores — declarado, nunca silencioso */}
+      {totalExcluido > 0 && (
+        <div style={{ ...S.card, marginBottom: 16, borderLeft: '3px solid var(--fs-brand)' }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--fs-text-2)', marginBottom: 8 }}>
+            Fora dos indicadores operacionais: {fmtFull(totalExcluido)}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, fontSize: 12, color: 'var(--fs-text-4)' }}>
+            {Object.entries({ ...sepE.porNatureza, ...Object.fromEntries(
+              Object.entries(sepS.porNatureza).map(([k, v]) => [k, (sepE.porNatureza[k] || 0) + v])) })
+              .filter(([k]) => k !== 'operacional')
+              .sort((a, b) => b[1] - a[1])
+              .map(([k, v]) => (
+                <span key={k}>{NATUREZAS[k]?.rotulo || k}: <strong style={{ color: 'var(--fs-text-3)' }}>{fmtFull(v)}</strong></span>
+              ))}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--fs-text-4)', marginTop: 8, lineHeight: 1.6 }}>
+            Esses valores continuam no saldo de caixa — transferência recebida está no banco.
+            Ficam fora apenas dos indicadores de desempenho. Classificação em Configurações › Natureza das Contas.
+          </div>
+        </div>
+      )}
 
       {/* Composição Entradas + Saídas */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import EmptyState from '@/components/EmptyState'
 import { TableSkeleton } from '@/components/Skeleton'
 import { supabase, getOrgEmpresaIds } from '@/lib/supabase'
+import { NATUREZAS, NATUREZA_PADRAO } from '@/lib/natureza-categoria'
 
 // ─── Ícones SVG profissionais (sem emojis) ────────────────────────────────────
 const Icon = ({ d, color, size = 15 }) => (
@@ -147,6 +148,26 @@ export default function PlanoContasPage() {
     }
     await syncEntidades(orgIds, masterId)
     setNova({ codigo:'', nome:'', tipo:'receita', descricao:'' }); setEditando(null); setShowAdd(false)
+    load()
+  }
+
+  // Natureza: decide se a conta entra nos KPIs operacionais. NÃO altera o DRE,
+  // que usa a coluna `tipo`. Propaga a todas as entidades pelo mesmo caminho do
+  // restante do plano — a classificação é do grupo, não de uma empresa.
+  const alterarNatureza = async (conta, natureza) => {
+    const anterior = conta.natureza || 'operacional'
+    if (anterior === natureza) return
+    const { error } = await supabase.from('plano_contas')
+      .update({ natureza })
+      .eq('codigo', conta.codigo)
+      .in('empresa_id', orgIds.length ? orgIds : [conta.empresa_id])
+    if (error) {
+      const faltaColuna = /natureza/.test(error.message || '')
+      return toast(faltaColuna
+        ? 'Coluna ausente: execute a migração 20260916_natureza_plano_contas.sql'
+        : 'Erro ao alterar natureza: ' + error.message, 'error')
+    }
+    toast(`${conta.nome} → ${NATUREZAS[natureza]?.rotulo || natureza}`)
     load()
   }
 
@@ -369,7 +390,7 @@ export default function PlanoContasPage() {
                   <table style={{ width:'100%',borderCollapse:'collapse',fontSize:13 }}>
                     <thead style={{ background:'var(--fs-bg)' }}>
                       <tr style={{ borderTop:'1px solid var(--fs-border)' }}>
-                        {['Código','Nome da Conta','Descrição','De-Para','Ações'].map((h,i) => (
+                        {['Código','Nome da Conta','Descrição','Natureza','De-Para','Ações'].map((h,i) => (
                           <th key={h} style={{ padding:'8px 16px',textAlign:i>=3?'center':'left',color:'var(--fs-text-4)',fontSize:11,fontWeight:700,textTransform:'uppercase' }}>{h}</th>
                         ))}
                       </tr>
@@ -382,6 +403,22 @@ export default function PlanoContasPage() {
                             <td style={{ padding:'11px 16px',fontWeight:700,color:grupo.cor,fontSize:12,whiteSpace:'nowrap' }}>{conta.codigo}</td>
                             <td style={{ padding:'11px 16px',fontWeight:600,color:'var(--fs-text-1)' }}>{conta.nome}</td>
                             <td style={{ padding:'11px 16px',color:'var(--fs-text-4)',fontSize:12 }}>{conta.descricao || '—'}</td>
+                            {/* NATUREZA — decide a entrada nos KPIs operacionais.
+                                Ortogonal ao `tipo`: não altera o DRE. */}
+                            <td style={{ padding:'11px 16px',textAlign:'center' }}>
+                              <select
+                                value={conta.natureza || NATUREZA_PADRAO}
+                                onChange={e => alterarNatureza(conta, e.target.value)}
+                                title={NATUREZAS[conta.natureza || NATUREZA_PADRAO]?.desc}
+                                style={{ padding:'4px 8px',borderRadius:6,fontSize:11.5,fontWeight:600,cursor:'pointer',outline:'none',
+                                  border:`1px solid ${(conta.natureza||NATUREZA_PADRAO)==='operacional'?'var(--fs-border)':'var(--fs-brand)'}`,
+                                  background:'var(--fs-surface)',
+                                  color:(conta.natureza||NATUREZA_PADRAO)==='operacional'?'var(--fs-text-3)':'var(--fs-brand)' }}>
+                                {Object.entries(NATUREZAS).map(([k,v]) => (
+                                  <option key={k} value={k}>{v.rotulo}</option>
+                                ))}
+                              </select>
+                            </td>
                             <td style={{ padding:'11px 16px',textAlign:'center' }}>
                               {mps.length > 0 ? (
                                 <button onClick={() => setContaDetalhes(conta)}

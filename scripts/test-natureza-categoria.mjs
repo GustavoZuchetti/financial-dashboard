@@ -31,14 +31,23 @@ function eq(a, e, ctx = '') {
     throw new Error(`${ctx}esperado ${JSON.stringify(e)}, recebido ${JSON.stringify(a)}`)
 }
 
-const CLASSIF = [
-  { categoria: 'Transferência entre contas Facesign', natureza: 'transferencia_interna' },
-  { categoria: 'Transferência JB',                    natureza: 'transferencia_interna' },
-  { categoria: 'Transferência FaceSign',              natureza: 'transferencia_interna' },
-  { categoria: 'Aporte de Capital',                   natureza: 'aporte_socio' },
-  { categoria: 'Obtenção de Empréstimos',             natureza: 'emprestimo' },
+// A natureza vive no PLANO DE CONTAS e é resolvida em cadeia:
+//     categoria → categoria_mappings → conta → conta.natureza
+const CONTAS = [
+  { id: 'c-transf', natureza: 'transferencia_interna' },
+  { id: 'c-aporte', natureza: 'aporte_socio' },
+  { id: 'c-empr',   natureza: 'emprestimo' },
+  { id: 'c-rec',    natureza: 'operacional' },
 ]
-const mapa = N.indexarNaturezas(CLASSIF)
+const MAPS = [
+  { categoria_origem: 'Transferência entre contas Facesign', conta_id: 'c-transf' },
+  { categoria_origem: 'Transferência JB',                    conta_id: 'c-transf' },
+  { categoria_origem: 'Transferência FaceSign',              conta_id: 'c-transf' },
+  { categoria_origem: 'Aporte de Capital',                   conta_id: 'c-aporte' },
+  { categoria_origem: 'Obtenção de Empréstimos',             conta_id: 'c-empr' },
+  { categoria_origem: 'Receita de Serviços',                 conta_id: 'c-rec' },
+]
+const mapa = N.indexarNaturezas(MAPS, CONTAS)
 const l = (cat, v) => ({ categoria: cat, valor: v })
 
 // ─── 1. Ausência de classificação = operacional ──────────────────────────────
@@ -104,12 +113,15 @@ teste('[TRAVA] sem pista devolve NULL, não "operacional"', () => {
 
 // ─── 4. Fila de trabalho ─────────────────────────────────────────────────────
 teste('pendentes vêm por volume decrescente, com sugestão quando houver', () => {
+  // 'Receita de Serviços' e 'Transferência JB' TÊM conta — saem da fila.
+  // Restam as sem mapeamento, ordenadas por volume.
   const itens = [
-    l('Receita de Serviços', 100), l('Transferência Nova', 5000),
-    l('Receita de Serviços', 200), l('Transferência JB', 999),
+    l('Impostos sobre receitas', 100), l('Transferência Nova', 5000),
+    l('Impostos sobre receitas', 200), l('Transferência JB', 999),
+    l('Receita de Serviços', 10000),
   ]
   const p = N.pendentesDeClassificacao(itens, mapa)
-  eq(p.map(x => x.categoria), ['Transferência Nova', 'Receita de Serviços'], 'ordem: ')
+  eq(p.map(x => x.categoria), ['Transferência Nova', 'Impostos sobre receitas'], 'ordem: ')
   eq(p[0].sugestao, 'transferencia_interna', 'sugestão: ')
   eq(p[1].sugestao, null, 'sem sugestão: ')
   eq(p[1].lancamentos, 2, 'agrupou: ')
@@ -134,6 +146,49 @@ teste('[TRAVA] só `operacional` compõe os indicadores', () => {
 teste('as quatro naturezas existem e são distintas', () => {
   eq(Object.keys(N.NATUREZAS).sort(),
      ['aporte_socio', 'emprestimo', 'operacional', 'transferencia_interna'])
+})
+
+
+// ─── 6. Resolução pela cadeia plano de contas ────────────────────────────────
+// Verificação de 16/09 sobre 130 categorias em fluxo_caixa: 107 (82,3%) já
+// existem no De-Para. A hipótese "sem mapeamento = não operacional" foi
+// TESTADA E DERRUBADA: das 23 sem mapeamento, só 5 eram não-operacionais; as
+// outras 18 somavam ~R$ 2,2 mi de despesa real (Impostos sobre receitas,
+// IRPJ/CSLL, Vale alimentação). Inferir exclusão dali inflaria o resultado.
+teste('[TRAVA] a natureza vem da CONTA, não da linha do De-Para', () => {
+  eq(N.naturezaDe('Transferência JB', mapa), 'transferencia_interna')
+  eq(N.naturezaDe('Receita de Serviços', mapa), 'operacional')
+})
+
+teste('[TRAVA] categoria SEM conta é operacional, nunca excluída em silêncio', () => {
+  // O caso real: "Impostos sobre receitas", R$ 1.676.629, sem mapeamento.
+  // Tratá-la como não-operacional tiraria despesa legítima dos indicadores.
+  eq(N.naturezaDe('Impostos sobre receitas', mapa), 'operacional')
+  eq(N.ehOperacional('IRPJ e CSLL - Parcelamento', mapa), true)
+  eq(N.ehOperacional('Vale alimentação', mapa), true)
+})
+
+teste('[REGRESSÃO] "sem mapeamento = fora do KPI" excluiria R$ 2,2 mi de despesa', () => {
+  const semMapa = [
+    l('Impostos sobre receitas', 1676629), l('IRPJ e CSLL - Parcelamento', 320404),
+    l('Vale alimentação', 151950), l('Dimensa', 61545), l('Rendimento de aplicação', 25181),
+  ]
+  const totalIndevido = semMapa.reduce((a, x) => a + x.valor, 0)
+  eq(totalIndevido, 2235709, 'despesa que seria perdida: ')
+  // Com a regra correta, tudo isso permanece nos indicadores
+  const r = N.separarPorNatureza(semMapa, mapa)
+  eq(r.totalExcluido, 0, 'nada excluído: ')
+  eq(r.totalOperacional, 2235709, 'tudo operacional: ')
+})
+
+teste('conta sem natureza definida assume operacional', () => {
+  const m = N.indexarNaturezas([{ categoria_origem: 'X', conta_id: 'c1' }], [{ id: 'c1' }])
+  eq(N.naturezaDe('X', m), 'operacional')
+})
+
+teste('mapeamento apontando para conta inexistente não quebra', () => {
+  const m = N.indexarNaturezas([{ categoria_origem: 'Y', conta_id: 'fantasma' }], CONTAS)
+  eq(N.naturezaDe('Y', m), 'operacional')
 })
 
 for (const [n, f] of testes) {

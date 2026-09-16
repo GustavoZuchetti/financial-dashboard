@@ -30,7 +30,7 @@ const S = {
 const PIE_COLORS = ['var(--fs-brand)','var(--fs-warning)','var(--fs-success)','var(--fs-purple)','var(--fs-danger)','#06b6d4','#f97316']
 
 export default function FluxoCaixaAnalise() {
-  const [naturezas, setNaturezas] = useState([])
+  const [naturezas, setNaturezas] = useState({ maps: [], contas: [] })
   const [startDate, setStartDate] = useState(() => {
     const d = new Date()
     return new Date(d.getFullYear(), 0, 1).toISOString().split('T')[0]
@@ -60,16 +60,20 @@ export default function FluxoCaixaAnalise() {
     return () => window.removeEventListener('storage', aplicar)
   }, [])
 
-  // Classificação de natureza — define o que entra nos indicadores operacionais
+  // Natureza vem do PLANO DE CONTAS, resolvida pelo De-Para:
+  //     categoria → categoria_mappings → conta → conta.natureza
+  // Sem conta vinculada, a categoria é operacional (padrão seguro) e aparece
+  // como pendência na tela de Plano de Contas — nunca some dos KPIs em
+  // silêncio. Ver lib/natureza-categoria.js.
   useEffect(() => {
     let vivo = true
     ;(async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        const r = await fetch('/api/categorias-natureza', {
-          headers: { 'Authorization': `Bearer ${session?.access_token}` } })
-        const j = await r.json()
-        if (vivo && !j.error) setNaturezas(j.naturezas || [])
+        const [{ data: maps }, { data: contas }] = await Promise.all([
+          supabase.from('categoria_mappings').select('categoria_origem,conta_id'),
+          supabase.from('plano_contas').select('id,natureza'),
+        ])
+        if (vivo) setNaturezas({ maps: maps || [], contas: contas || [] })
       } catch { /* sem classificação, tudo é operacional */ }
     })()
     return () => { vivo = false }
@@ -115,7 +119,7 @@ export default function FluxoCaixaAnalise() {
   // O que é excluído continua VISÍVEL numa linha própria: número filtrado sem
   // declarar o filtro é a armadilha do "Registros sem mapeamento não entram no
   // DRE", onde a tela afirmava algo que o cálculo não fazia.
-  const mapaNat = indexarNaturezas(naturezas || [])
+  const mapaNat = indexarNaturezas(naturezas?.maps, naturezas?.contas)
   const sepE = separarPorNatureza(entradas, mapaNat)
   const sepS = separarPorNatureza(saidas,   mapaNat)
 

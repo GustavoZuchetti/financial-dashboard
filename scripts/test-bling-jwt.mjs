@@ -111,6 +111,48 @@ teste('o código não trunca nem valida o tamanho do TOKEN', () => {
     throw new Error('o access_token deveria ser gravado sem transformação')
 })
 
+
+// ─── Rede de segurança da transição ──────────────────────────────────────────
+// RISCO IDENTIFICADO NA AVALIAÇÃO PRÉ-MERGE: no primeiro deploy, o token
+// GRAVADO ainda é opaco e o header novo já vai junto. A documentação não diz
+// se o Bling aceita "token opaco + enable-jwt". Se recusar com 401, as TRÊS
+// integrações quebrariam de uma vez.
+//
+// Antes desta mudança não havia recuperação: ensureToken só renovava por TEMPO
+// de expiração, e blingGet só repetia em 429 e 5xx — o 401 caía direto no
+// retorno de erro. A sincronização pararia até reconexão manual.
+teste('[TRAVA] 401 dispara renovação automática do token', () => {
+  const fn = corpo('export async function blingGet')
+  if (!/status === 401/.test(fn))
+    throw new Error('401 não tratado: token rejeitado pararia a sincronização sem recuperação')
+  if (!/ensureToken\([^)]*forcar:\s*true/.test(src))
+    throw new Error('a renovação em 401 precisa FORÇAR, senão o token dentro da validade não é trocado')
+})
+
+teste('[TRAVA] renovação em 401 acontece UMA vez por chamada', () => {
+  // Sem trava, um 401 crônico — credencial revogada — viraria laço de
+  // renovações contra a API do Bling, queimando o rate limit.
+  const fn = corpo('export async function blingGet')
+  if (!/jaRenovou/.test(fn)) throw new Error('sem guarda contra laço de renovação')
+})
+
+teste('ensureToker aceita forçar sem quebrar o caminho normal', () => {
+  const fn = corpo('export async function ensureToken')
+  if (!/forcar = false/.test(fn))
+    throw new Error('o padrão precisa ser NÃO forçar, para não renovar a cada chamada')
+  if (!/!forcar &&/.test(fn))
+    throw new Error('o atalho por tempo de expiração precisa continuar valendo quando não se força')
+})
+
+teste('[TRAVA] o admin chega ao blingGet sem propagar sete assinaturas', () => {
+  // Sete funções chamam blingGet. Exigir o parâmetro em todas seria sete
+  // pontos a esquecer — e o esquecido só falharia no dia do bloqueio.
+  if (!/_admin/.test(src))
+    throw new Error('sem referência guardada, a renovação em 401 não teria client admin')
+  if (!/if \(admin\) _admin = admin/.test(src))
+    throw new Error('ensureToken deveria guardar a referência ao ser chamada')
+})
+
 for (const [n, f] of testes) {
   try { await f(); ok++; console.log(`  ok   ${n}`) }
   catch (e) { falhou++; console.log(`  FALHA ${n}\n         ${e.message}`) }

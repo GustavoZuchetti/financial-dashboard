@@ -10,6 +10,7 @@ import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 import SvgIcon from '@/components/SvgIcon'
 import EmptyState from '@/components/EmptyState'
 import { TableSkeleton } from '@/components/Skeleton'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 
 const fC = (v) => {
   const n = Number(v) || 0
@@ -33,6 +34,7 @@ export default function AtrasadosPage() {
 
   const hoje = new Date().toISOString().split('T')[0]
 
+  const versaoSel = useVersaoSelecao()   // recarga a cada troca de entidade
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -68,7 +70,7 @@ export default function AtrasadosPage() {
         return { ...r, restante: v - liq, dias: diasEntre(r.data, hoje) }
       }).filter(r => r.restante > 0))
     } finally { setLoading(false) }
-  }, [hoje])
+  }, [hoje, versaoSel])
 
   useEffect(() => { load() }, [load])
 

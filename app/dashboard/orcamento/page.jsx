@@ -5,6 +5,7 @@ import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
 import { efeitosCaixa } from '@/lib/fluxo-status'
 import { KpiCardsSkeleton, TableSkeleton } from '@/components/Skeleton'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -164,6 +165,7 @@ export default function OrcamentoPage() {
     try { localStorage.setItem('fs-orcamento-escopo', novo) } catch {}
     setEditMode(false); setOrcEdits({}); setOrcMsg(null)
   }
+  const versaoSel = useVersaoSelecao()   // recarga a cada troca de entidade
   useEffect(() => {
     // Resolve a seleção global (inclusive 'todas' → todas as entidades da org)
     ;(async () => {
@@ -175,7 +177,7 @@ export default function OrcamentoPage() {
         setOrgId(e?.organization_id || null)
       }
     })()
-  }, [])
+  }, [versaoSel])
 
   useEffect(() => {
     if (!empresaId) return

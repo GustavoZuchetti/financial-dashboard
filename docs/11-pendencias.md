@@ -40,19 +40,6 @@ Devoluções e Estornos permanecem **operacional**.
 
 ---
 
-## 🔴 Funcional
-
-### F1 — Onze telas não recarregam ao mudar entre seleções múltiplas
-
-Passar de três para duas entidades no menu lateral **não recarrega** Visão Geral, DRE
-(as quatro), Fluxo de Caixa, Análise, Atrasados, Comparativo, Projeção, Ciclo nem
-Orçamento. Elas recalculam as entidades só quando `empresa_id` muda, e ele vale
-`'todas'` para qualquer seleção múltipla. **Continuam exibindo as três.**
-
-Anterior a 30/09. Corrigido **apenas na Gestão**, por meio de `versaoSel`.
-Correção proposta: o mesmo contador nas onze telas, ou um hook compartilhado.
-**Aguarda autorização** — são onze arquivos.
-
 ## 🔴 Segurança
 
 Detalhes e passos em [07 — Segurança](07-seguranca.md).

@@ -205,7 +205,7 @@ importação de DRE inteira quebraria — ver [03](03-banco-de-dados.md#categori
 Para razões (PMR, PMP), some numeradores e denominadores de todas as entidades antes de
 dividir. Média de razões pré-calculadas é matematicamente incorreta.
 
-**R9.2 — Toda tela que lê a entidade reage à troca dela** — e **recalcula as entidades a cada troca**, não só quando `empresa_id` muda. `empresa_id` vale `'todas'` para qualquer seleção com mais de uma entidade: passar de três para duas não o altera. ⚠️ Corrigido só na Gestão — ver [11](11-pendencias.md).
+**R9.2 — Toda tela que lê a entidade reage à troca dela** — e **recalcula as entidades a cada troca**, não só quando `empresa_id` muda. `empresa_id` vale `'todas'` para qualquer seleção com mais de uma entidade: passar de três para duas não o altera. Implementado em todas as telas pelo hook `useVersaoSelecao` (PR #28).
 *Incidente:* PR #19 — três telas liam a seleção uma única vez. Na Análise, desmarcar JAM
 e JB deixava os valores byte a byte idênticos. Em `importacao`, **gravava na empresa
 errada**. Trava estrutural em `test-escopo-entidade`.

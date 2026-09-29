@@ -4,6 +4,7 @@ import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import { efeitosCaixa } from '@/lib/fluxo-status'
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const fC = (v) => {
@@ -52,6 +53,7 @@ export default function FluxoProjecao() {
     return () => window.removeEventListener('storage', h)
   }, [])
 
+  const versaoSel = useVersaoSelecao()   // recarga a cada troca de entidade
   const load = useCallback(async () => {
     if (!empresaId) { setLoading(false); return }
     setLoading(true)
@@ -117,7 +119,7 @@ export default function FluxoProjecao() {
       setProjecoes(proj)
     } catch(e) { console.error('Projecao:', e) }
     finally { setLoading(false) }
-  }, [empresaId, isConsol, mesesBase, mesesProj, yr, mo])
+  }, [empresaId, isConsol, mesesBase, mesesProj, yr, mo, versaoSel])
 
   useEffect(() => { if (empresaId !== null) load() }, [load, empresaId])
 

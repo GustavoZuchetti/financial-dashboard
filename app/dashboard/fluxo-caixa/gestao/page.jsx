@@ -5,6 +5,7 @@ import { TableSkeleton } from '@/components/Skeleton'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import { podarSelecao, alternarPagina, paginaToda, resumirSelecao } from '@/lib/selecao-lancamentos'
 import { definirSelecaoEntidades } from '@/lib/selecao-entidade'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 import SvgIcon from '@/components/SvgIcon'
 import { getStatusInfo, efeitosCaixa, dataEfetiva } from '@/lib/fluxo-status'
 import { saldoDePartidaConsolidado, montarEntidades } from '@/lib/saldo-abertura'
@@ -184,7 +185,9 @@ export default function GestaoFluxoCaixaPage() {
   const [empNome,    setEmpNome]    = useState('')
   const [isConsol,   setIsConsol]   = useState(false)
   const [empIdsSel,  setEmpIdsSel]  = useState([])
-  const [versaoSel,  setVersaoSel]  = useState(0)
+  // Recarga a cada troca de entidade — hook compartilhado com as outras onze
+  // telas. A Gestão teve o próprio contador de 30/09 até a unificação no PR #28.
+  const versaoSel = useVersaoSelecao()
   const [partidaInfo, setPartidaInfo] = useState(null)
   const { ancoras, migracaoPendente } = useAncoras(empIdsSel)
 
@@ -249,19 +252,15 @@ export default function GestaoFluxoCaixaPage() {
   useEffect(() => {
     const id = localStorage.getItem('empresa_id') || ''
     setEmpresaId(id); setIsConsol(id === 'todas')
-    // `versaoSel` força o recálculo das entidades a CADA troca. empresa_id vale
-    // 'todas' para qualquer seleção com mais de uma entidade: passar de três
-    // para duas não o alterava, o efeito abaixo não rodava, e a tela seguia
-    // exibindo as três. Defeito anterior a 30/09, exposto pelo filtro de
-    // entidade — que alterna entre seleção parcial e total.
-    const h = () => { const nid = localStorage.getItem('empresa_id')||''; setEmpresaId(nid); setIsConsol(nid==='todas'); setVersaoSel(v => v + 1) }
+    const h = () => { const nid = localStorage.getItem('empresa_id')||''; setEmpresaId(nid); setIsConsol(nid==='todas') }
     window.addEventListener('storage', h)
     return () => window.removeEventListener('storage', h)
   }, [])
 
   // Resolve as entidades selecionadas antes do carregamento pesado, para que as
   // âncoras já estejam sendo buscadas quando o load rodar (evita carregar duas vezes).
-  // `versaoSel` garante o recálculo mesmo quando empresa_id não muda — ver acima.
+  // `versaoSel` garante o recálculo mesmo quando empresa_id não muda —
+  // ver lib/usar-versao-selecao.js.
   useEffect(() => {
     if (!empresaId) return
     let vivo = true

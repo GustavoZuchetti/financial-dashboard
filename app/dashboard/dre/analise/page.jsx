@@ -5,6 +5,7 @@ import { calcDRE, fmtBRL, fmtCompact } from '@/lib/dre-calc'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, ReferenceLine, ComposedChart} from 'recharts'
 import { inicioMesVigente, fimMesVigente } from '@/lib/periodo-padrao'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 
 const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
@@ -30,6 +31,7 @@ export default function DREAnalise() {
     window.addEventListener('storage', h); return () => window.removeEventListener('storage', h)
   }, [])
 
+  const versaoSel = useVersaoSelecao()   // recarga a cada troca de entidade
   const fetchData = useCallback(async () => {
     if (!empresaId) return
     setLoading(true)
@@ -93,7 +95,7 @@ export default function DREAnalise() {
                  acumulado: totalGastos > 0 ? +((acum/totalGastos)*100).toFixed(1) : 0 }
       }))
     } finally { setLoading(false) }
-  }, [empresaId, debouncedStart, debouncedEnd, isConsol])
+  }, [empresaId, debouncedStart, debouncedEnd, isConsol, versaoSel])
 
   useEffect(() => { fetchData() }, [fetchData])
 

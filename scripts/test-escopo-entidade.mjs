@@ -125,14 +125,42 @@ teste('[TRAVA] o Sidebar reage a mudanças feitas por outras telas', () => {
     throw new Error('Sidebar não escuta mudanças de seleção feitas por outras telas')
 })
 
-teste('[TRAVA] a Gestão recalcula as entidades a CADA troca', () => {
-  // empresa_id vale 'todas' para qualquer seleção com mais de uma entidade.
-  // Recalcular só quando ele muda deixava a tela exibindo três entidades depois
-  // de a seleção passar para duas. `versaoSel` força o recálculo.
-  // ⚠️ As outras onze telas têm o mesmo defeito — ver docs/11-pendencias.md.
-  if (!/setVersaoSel\(/.test(GESTAO)) throw new Error('sem contador de versão da seleção')
-  if (!/\[empresaId, isConsol, versaoSel\]/.test(GESTAO))
-    throw new Error('o recálculo das entidades precisa depender de versaoSel')
+// ─── Recarga a cada troca — TODAS as telas (30/09/2026) ──────────────────────
+// empresa_id vale 'todas' para qualquer seleção com mais de uma entidade.
+// Recalcular só quando ele muda deixava as telas exibindo três entidades depois
+// de a seleção passar para duas. Encontrado em doze telas.
+//
+// O critério aqui é CHAMAR getSelectedEntidadeIds, não ler o localStorage.
+// A trava acima usava só o segundo critério, e por isso não pegou Atrasados e
+// Orçamento — que resolvem as entidades por getSelectedEntidadeIds e não
+// reagiam a troca NENHUMA, nem de uma entidade para outra.
+const TELAS_QUE_RESOLVEM = arquivos(TELAS).filter(f =>
+  /getSelectedEntidadeIds\(\)/.test(readFileSync(f, 'utf8')))
+
+teste('[TRAVA] toda tela que resolve entidades usa o hook de versão', () => {
+  if (TELAS_QUE_RESOLVEM.length < 12)
+    throw new Error(`esperava ao menos 12 telas, achei ${TELAS_QUE_RESOLVEM.length} — critério quebrado?`)
+  const faltando = TELAS_QUE_RESOLVEM
+    .filter(f => !/useVersaoSelecao\(\)/.test(readFileSync(f, 'utf8')))
+    .map(f => relative(RAIZ, f).split('\\').join('/'))
+  if (faltando.length) throw new Error('sem useVersaoSelecao():\n           · ' + faltando.join('\n           · '))
+})
+
+teste('[TRAVA] a versão está nas dependências da recarga', () => {
+  // Declarar o hook sem pô-lo nas dependências não recarrega nada.
+  const faltando = TELAS_QUE_RESOLVEM
+    .filter(f => !/\[[^\]]*\bversaoSel\b[^\]]*\]\)/.test(readFileSync(f, 'utf8')))
+    .map(f => relative(RAIZ, f).split('\\').join('/'))
+  if (faltando.length) throw new Error('versaoSel fora das dependências:\n           · ' + faltando.join('\n           · '))
+})
+
+teste('[TRAVA] nenhuma tela mantém contador de versão próprio', () => {
+  // A Gestão teve um até a unificação. Duas implementações do mesmo mecanismo
+  // divergem — é o padrão que produziu quase todos os defeitos desta base.
+  const proprio = TELAS_QUE_RESOLVEM
+    .filter(f => /setVersaoSel\(/.test(readFileSync(f, 'utf8')))
+    .map(f => relative(RAIZ, f))
+  if (proprio.length) throw new Error('contador local em: ' + proprio.join(', '))
 })
 
 teste('[REGRESSÃO] o padrão defeituoso é reconhecível', () => {

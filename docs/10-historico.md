@@ -10,6 +10,7 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
+| 30/09 | #28 | **Treze telas recarregam a cada troca de entidade** — hook compartilhado `useVersaoSelecao` |
 | 30/09 | #27 | Logo nas telas de acesso · seleção em lote entre páginas · filtro e coluna de entidade na Gestão |
 | 29/09 | — | `34e95d3` — onboarding permitido sem empresa cadastrada |
 | 29/09 | — | Documentação completa em `docs/` |
@@ -28,6 +29,14 @@ regras existem.
 | 01/09 | #14 | Exportação: recorte por data efetiva e amarração entre abas |
 
 ### Incidentes de setembro
+
+**30/09 · Telas não recarregavam ao trocar a seleção · PR #28**
+Onze telas recalculavam as entidades só quando `empresa_id` mudava — e ele vale `'todas'`
+para qualquer seleção múltipla. Passar de três para duas entidades não recarregava nada.
+O levantamento encontrou um caso pior: **Atrasados e Orçamento não reagiam a troca
+nenhuma**, nem de uma entidade para outra — resolviam as entidades uma única vez, ao
+abrir. A trava do PR #19 não as pegou porque exigia o listener só em quem lê o
+`localStorage` diretamente; as duas o leem por `getSelectedEntidadeIds()`.
 
 **30/09 · Três falhas básicas relatadas · PR #27**
 Logo ausente no cadastro; seleção perdida ao trocar de página; sem identificação de

@@ -3,7 +3,7 @@
 > **Fonte da verdade** do sistema. Mantida junto ao código, versionada no mesmo
 > repositório, atualizada a cada mudança relevante.
 >
-> **Última revisão completa:** 29/09/2026 · **Última atualização:** 30/09/2026 · 223 testes · build ✓
+> **Última revisão completa:** 29/09/2026 · **Última atualização:** 30/09/2026 · 230 testes · build ✓
 
 ---
 

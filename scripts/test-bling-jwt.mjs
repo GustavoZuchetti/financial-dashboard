@@ -136,7 +136,7 @@ teste('[TRAVA] renovação em 401 acontece UMA vez por chamada', () => {
   if (!/jaRenovou/.test(fn)) throw new Error('sem guarda contra laço de renovação')
 })
 
-teste('ensureToker aceita forçar sem quebrar o caminho normal', () => {
+teste('ensureToken aceita forçar sem quebrar o caminho normal', () => {
   const fn = corpo('export async function ensureToken')
   if (!/forcar = false/.test(fn))
     throw new Error('o padrão precisa ser NÃO forçar, para não renovar a cada chamada')

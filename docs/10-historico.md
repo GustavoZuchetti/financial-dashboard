@@ -10,6 +10,7 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
+| 30/09 | #27 | Logo nas telas de acesso · seleção em lote entre páginas · filtro e coluna de entidade na Gestão |
 | 29/09 | — | `34e95d3` — onboarding permitido sem empresa cadastrada |
 | 29/09 | — | Documentação completa em `docs/` |
 | 24/09 | — | Tabela `categorias_natureza` removida após verificação de que estava vazia |
@@ -27,6 +28,19 @@ regras existem.
 | 01/09 | #14 | Exportação: recorte por data efetiva e amarração entre abas |
 
 ### Incidentes de setembro
+
+**30/09 · Três falhas básicas relatadas · PR #27**
+Logo ausente no cadastro; seleção perdida ao trocar de página; sem identificação de
+entidade na Gestão. O estudo prévio encontrou mais seis defeitos:
+- endpoint público de logo com resultado **indefinido** entre organizações
+- Apresentação do DRE com a marca "Facesign" **fixa no código**
+- "selecionar todos" **substituía** a seleção em silêncio — e **desmarcava tudo** quando
+  os tamanhos coincidiam
+- "Novo Lançamento" **não funcionava** no consolidado — gravava `empresa_id = 'todas'`
+- menu lateral não refletia mudanças feitas por outras telas
+- **defeito sistêmico:** as telas não recarregam ao passar de três para duas entidades —
+  corrigido só na Gestão
+
 
 **23/09 · Integração não conforme com a migração JWT · PR #25**
 Validação inicial concluiu "conforme" com base em armazenamento e fluxo OAuth. A

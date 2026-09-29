@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
+import LogoAcesso from '@/components/LogoAcesso'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -60,8 +61,15 @@ function AceitarConviteForm() {
       <div style={{ width:'100%', maxWidth:440, background:'var(--fs-surface)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:16, padding:40 }}>
 
         <div style={{ textAlign:'center', marginBottom:32 }}>
-          <div style={{ width:52,height:52,background:'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))',borderRadius:13,margin:'0 auto 14px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:800,color:'#fff' }}>FS</div>
-          <h1 style={{ fontSize:20,fontWeight:800,color:'var(--fs-text-1)',margin:0 }}>Financial Dashboard</h1>
+          {/* Logo da organização QUE CONVIDOU, vinda do próprio convite. Antes era
+              um "FS" fixo. Tela com fundo escuro: versão escura tem precedência. */}
+          <div style={{ marginBottom:14 }}>
+            <LogoAcesso logo={invite?.org?.logo_url || invite?.org?.logo_url_light || null}
+              nomeFallback={invite?.org?.nome || null} />
+          </div>
+          <h1 style={{ fontSize:20,fontWeight:800,color:'var(--fs-text-1)',margin:0 }}>
+            {invite?.org?.nome ? `Convite · ${invite.org.nome}` : 'Financial Dashboard'}
+          </h1>
         </div>
 
         {step === 'validando' && (

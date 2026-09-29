@@ -108,10 +108,23 @@ Gráfico com **duas séries acumuladas**: `saldo` (realizado) e `saldoProj` (com
 O cartão de saldo de partida mostra a **âncora** (fixa) separada do **movimento até a
 véspera** (varia com o período).
 
+**Entidade.** Com mais de uma entidade na visão, a tabela ganha a coluna **Entidade**.
+O filtro de entidade na barra **altera a seleção global** — a mesma do menu lateral —,
+para que âncoras, Saldo do Dia, KPIs e exportação reajam juntos. Um filtro local
+exibiria o Saldo do Dia com a âncora de outras entidades.
+
+**Seleção em lote.** Sobrevive à troca de página; zera ao mudar qualquer filtro;
+"selecionar todos" age na página atual. Regras em [04 § 9A](04-regras-de-negocio.md#9a-seleção-em-lote-para-exclusão).
+
+**Novo Lançamento.** Com mais de uma entidade na visão, a entidade de destino é
+obrigatória. Antes o lançamento era gravado com `empresa_id = 'todas'` e rejeitado.
+
 **Exportação Excel** — abas Resumo e Extrato:
 - Recorte por **data efetiva** (R6.1)
 - Extrato imprime o **efeito de caixa**, não o valor do título
 - Resumo declara a **amarração** com o Extrato; a diferença deve ser `0,00`
+- Coluna **Entidade** é a **última** — colunas A a J idênticas às versões anteriores, para não quebrar planilhas que leem por posição
+- A amarração localiza as colunas **pelo nome**, não pela posição
 
 ### Análise — `/dashboard/fluxo-caixa/analise`
 

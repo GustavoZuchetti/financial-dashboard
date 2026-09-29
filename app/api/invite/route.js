@@ -22,8 +22,22 @@ export async function GET(request) {
   if (data.used_at)   return NextResponse.json({ error: 'Convite já utilizado'  }, { status: 410 })
   if (new Date(data.expires_at) < new Date()) return NextResponse.json({ error: 'Convite expirado' }, { status: 410 })
 
+  // Identidade visual da organização QUE CONVIDOU. A tela de cadastro exibia um
+  // "FS" fixo; o convite já identifica a organização, então não há por que
+  // adivinhar. Só nome e logo — dados que o convidado verá dentro do sistema de
+  // qualquer forma. Falha aqui não invalida o convite.
+  let org = null
+  try {
+    const { data: o } = await supabaseAdmin
+      .from('organizations')
+      .select('nome, logo_url, logo_url_light')
+      .eq('id', data.organization_id)
+      .single()
+    if (o) org = { nome: o.nome || null, logo_url: o.logo_url || null, logo_url_light: o.logo_url_light || null }
+  } catch { /* sem identidade visual: a tela usa o fallback */ }
+
   // Retorna apenas os campos necessários (não expõe o token)
-  return NextResponse.json({ email: data.email, role: data.role, organization_id: data.organization_id })
+  return NextResponse.json({ email: data.email, role: data.role, organization_id: data.organization_id, org })
 }
 
 // POST /api/invite — aceita o convite e cria o usuário

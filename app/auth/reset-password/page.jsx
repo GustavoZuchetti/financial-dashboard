@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import LogoAcesso from '@/components/LogoAcesso'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -52,9 +53,10 @@ export default function ResetPasswordPage() {
         padding: '40px 36px',
       }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
-          <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff', fontSize: 14 }}>FS</div>
-          <span style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>Facesign</span>
+        {/* Logo cadastrada — antes era um "FS" fixo. A tela não sabe a
+            organização do usuário, então usa /api/public/logo, como o login. */}
+        <div style={{ marginBottom: 32 }}>
+          <LogoAcesso tamanho={40} />
         </div>
 
         {/* Loading */}

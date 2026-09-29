@@ -40,6 +40,8 @@ uma regra que já existia numa lib.
 | `lib/saldo-abertura.js` | Saldo de partida e série diária — `saldoEm`, `saldoDePartidaConsolidado` |
 | `lib/natureza-categoria.js` | O que entra nos KPIs operacionais — `separarPorNatureza` |
 | `lib/periodo-padrao.js` | Janela inicial das telas — `mesVigente` |
+| `lib/selecao-entidade.js` | **Gravação** da seleção de entidades — `definirSelecaoEntidades`. A leitura validada segue em `getSelectedEntidadeIds` |
+| `lib/selecao-lancamentos.js` | Seleção em lote para exclusão — `podarSelecao`, `alternarPagina`, `resumirSelecao` |
 | `lib/bling-cursor.js` | Posição de varredura da sincronização |
 | `lib/bling-server.js` | Todo acesso à API do Bling |
 | `lib/supabase.js` | Resolução de entidades selecionadas — `getSelectedEntidadeIds` |
@@ -85,7 +87,7 @@ app/
 components/                       Sidebar, SvgIcon, IntegracoesTab, SaldoAberturaTab, ...
 lib/                              fontes únicas — ver tabela acima
 scripts/
-  test-*.mjs                      13 suítes de teste — ver 09
+  test-*.mjs                      15 suítes de teste — ver 09
   seed_* / setup_* / *_setup.js   ⚠️ legado, com credencial exposta — ver 07
 supabase/migrations/              migrações versionadas — aplicar no SQL Editor
 docs/                             esta documentação
@@ -109,6 +111,7 @@ docs/                             esta documentação
 | `IntegracoesTab` | Configurações › Integrações — conexão e sincronização por entidade |
 | `SaldoAberturaTab` | Configurações › Saldo de Abertura — âncoras por entidade |
 | `SvgIcon` | biblioteca de ícones — **única fonte de ícones do sistema** |
+| `LogoAcesso` | logo nas telas anteriores ao login — convite, redefinir senha |
 | `IdleTimeout` | logout após 45 min de inatividade |
 | `ViewAsBanner` | aviso fixo quando o `super_admin` navega **como outra organização** |
 | `OrgLogo` | logo da organização, reage à troca de tema |
@@ -153,6 +156,7 @@ escopo da organização visualizada. Ver [07](07-seguranca.md).
 |---|---|
 | Resolver entidades por `getSelectedEntidadeIds()` | Valida a seleção do `localStorage` contra a organização — defesa em profundidade contra acesso cruzado |
 | Listar empresas por `/api/my-empresas` | Nunca consultar `empresas` pelo client sem filtro de organização |
+| Alterar a seleção de entidade **só** por `definirSelecaoEntidades()` | Duas telas a alteram — Sidebar e Gestão. Gravar `empresa_ids` direto recria a divergência |
 | Toda tela que lê a entidade escuta o evento `storage` | O Sidebar emite `window.dispatchEvent(new Event('storage'))` na troca. Sem o listener, a tela mostra a entidade errada — ver PR #19 |
 | Paginar leituras do Supabase | O REST devolve no máximo 1.000 linhas por requisição |
 | `cursor={false}` em todo `<Tooltip>` do Recharts | Evita artefato visual |

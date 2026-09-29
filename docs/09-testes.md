@@ -1,6 +1,6 @@
 # 09 — Testes
 
-**13 suítes · 182 testes · todas passando** (verificado 29/09).
+**15 suítes · 223 testes · todas passando** (verificado 30/09).
 
 ```bash
 for t in scripts/test-*.mjs; do node "$t"; done
@@ -38,7 +38,9 @@ Um `[TRAVA]` falhando não é teste a ajustar — é defeito a corrigir.
 | `test-exclusoes-alvos` | 10 | Títulos em aberto verificados contra a origem | PR #15 |
 | `test-consistencia-saldo` | 8 | Mesmo saldo entre telas, período padrão | PR #21 |
 | `test-bling-resiliencia` | 5 | Degradação de página em 504 | PRs #8, #9 |
-| `test-escopo-entidade` | 4 | Toda tela reage à troca de entidade | PR #19 |
+| `test-selecao-lancamentos` | 22 | Seleção em lote: sobrevive à página, zera com filtro, declara o que não se vê | PR #27 |
+| `test-selecao-entidade` | 15 | Contrato de gravação da seleção; logo nas telas de acesso | PR #27 |
+| `test-escopo-entidade` | 8 | Toda tela reage à troca; só a lib grava a seleção; Sidebar reage a outras telas | PRs #19, #27 |
 
 ---
 
@@ -96,6 +98,16 @@ deliberadamente simples — não simulam React nem rede — para pegar o caso de
 para validar a seleção salva — reagir à troca ali causaria laço com o Sidebar.
 
 ---
+
+## Travas que provam que travam
+
+Uma trava que passa na primeira execução pode não estar testando nada. Desde 30/09,
+toda trava nova é validada por **sabotagem**: o código é alterado de propósito para
+reintroduzir o defeito, a trava precisa reprovar, e só então o código é restaurado.
+
+**Testes estruturais ignoram comentários.** Os comentários deste projeto descrevem o
+código antigo — "antes era `.select('*')`". Sem remover comentários, a trava
+reprovaria pela documentação, e a saída fácil seria apagá-la.
 
 ## O que os testes NÃO cobrem
 

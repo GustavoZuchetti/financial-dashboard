@@ -40,6 +40,19 @@ Devoluções e Estornos permanecem **operacional**.
 
 ---
 
+## 🔴 Funcional
+
+### F1 — Onze telas não recarregam ao mudar entre seleções múltiplas
+
+Passar de três para duas entidades no menu lateral **não recarrega** Visão Geral, DRE
+(as quatro), Fluxo de Caixa, Análise, Atrasados, Comparativo, Projeção, Ciclo nem
+Orçamento. Elas recalculam as entidades só quando `empresa_id` muda, e ele vale
+`'todas'` para qualquer seleção múltipla. **Continuam exibindo as três.**
+
+Anterior a 30/09. Corrigido **apenas na Gestão**, por meio de `versaoSel`.
+Correção proposta: o mesmo contador nas onze telas, ou um hook compartilhado.
+**Aguarda autorização** — são onze arquivos.
+
 ## 🔴 Segurança
 
 Detalhes e passos em [07 — Segurança](07-seguranca.md).
@@ -131,6 +144,17 @@ violações preexistentes. Exige limpeza prévia.
 
 **#1** e **#5** continuam abertos. O conteúdo do #5 entrou pelo #12; o do #1 foi coberto
 pelos #8 e #9. Fechar.
+
+### T8a — Emoji na tela de convite
+
+`app/aceitar-convite/page.jsx` usa ⏳ no estado "validando" — viola o padrão de ícones
+por `SvgIcon`. Encontrado em 30/09, fora do escopo daquele PR.
+
+### T8b — Login sem marca por organização
+
+Antes da autenticação não se sabe a organização do usuário; `/api/public/logo` devolve a
+da primeira organização com logo, em ordem determinística. Com vários clientes, cada um
+precisaria de uma URL de login própria.
 
 ### T8 — `components/UploadExcel.jsx` é código morto
 

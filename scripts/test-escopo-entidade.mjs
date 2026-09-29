@@ -82,13 +82,57 @@ teste('[TRAVA] telas que GRAVAM por empresa exigem entidade específica', () => 
     throw new Error(`sem guarda contra 'todas': ${semGuarda.join(', ')}`)
 })
 
-teste('o Sidebar emite o evento que as telas escutam', () => {
-  // Sem esta emissão, todos os listeners acima ficariam mudos.
-  const src = readFileSync(join(RAIZ, 'components', 'Sidebar.jsx'), 'utf8')
-  if (!/dispatchEvent\(\s*new Event\(\s*['"]storage['"]/.test(src))
-    throw new Error("Sidebar não emite window.dispatchEvent(new Event('storage'))")
-  if (!/setItem\(\s*['"]empresa_id['"]/.test(src))
-    throw new Error('Sidebar não grava empresa_id no localStorage')
+// ─── Contrato da gravação da seleção (30/09/2026) ────────────────────────────
+// Até 30/09 só o Sidebar alterava a seleção, e o evento era emitido por ele.
+// Com o filtro de entidade na Gestão, uma segunda tela passou a alterá-la. A
+// gravação foi para lib/selecao-entidade.js — fonte única — e estas travas
+// seguem o contrato para onde ele foi.
+const LIB_SEL = readFileSync(join(RAIZ, 'lib', 'selecao-entidade.js'), 'utf8')
+const SIDEBAR = readFileSync(join(RAIZ, 'components', 'Sidebar.jsx'), 'utf8')
+const GESTAO  = readFileSync(join(RAIZ, 'app', 'dashboard', 'fluxo-caixa', 'gestao', 'page.jsx'), 'utf8')
+
+teste('[TRAVA] a lib emite o evento que as telas escutam', () => {
+  // Sem esta emissão, todos os listeners ficariam mudos: o navegador não
+  // entrega o 'storage' nativo na própria aba que gravou.
+  if (!/dispatchEvent\(\s*new Event\(\s*EVENTO_SELECAO\s*\)/.test(LIB_SEL))
+    throw new Error('lib/selecao-entidade não emite o evento')
+  if (!/EVENTO_SELECAO\s*=\s*['"]storage['"]/.test(LIB_SEL))
+    throw new Error("o evento precisa ser 'storage' — é o que as telas escutam")
+  if (!/setItem\(\s*['"]empresa_ids['"]/.test(LIB_SEL) || !/setItem\(\s*['"]empresa_id['"]/.test(LIB_SEL))
+    throw new Error('a lib precisa gravar empresa_ids E empresa_id')
+})
+
+teste('[TRAVA] Sidebar e Gestão gravam a seleção pela fonte única', () => {
+  if (!/definirSelecaoEntidades\(/.test(SIDEBAR)) throw new Error('Sidebar não usa definirSelecaoEntidades')
+  if (!/definirSelecaoEntidades\(/.test(GESTAO))  throw new Error('Gestão não usa definirSelecaoEntidades')
+})
+
+teste('[TRAVA] só a lib grava empresa_ids', () => {
+  // Uma segunda gravação reintroduziria a divergência entre telas. layout.jsx
+  // grava apenas 'empresa_id' — exceção documentada (inicialização e eco do
+  // mesmo valor já gravado pela lib).
+  const fora = []
+  for (const f of arquivos(join(RAIZ, 'app')).concat(arquivos(join(RAIZ, 'components')))) {
+    if (/setItem\(\s*['"]empresa_ids['"]/.test(readFileSync(f, 'utf8'))) fora.push(relative(RAIZ, f))
+  }
+  if (fora.length) throw new Error('gravação de empresa_ids fora da lib: ' + fora.join(', '))
+})
+
+teste('[TRAVA] o Sidebar reage a mudanças feitas por outras telas', () => {
+  // Antes de 30/09 o Sidebar só lia na inicialização. Com o filtro da Gestão
+  // alterando a seleção, o menu seguiria exibindo as entidades antigas.
+  if (!/addEventListener\(\s*EVENTO_SELECAO/.test(SIDEBAR))
+    throw new Error('Sidebar não escuta mudanças de seleção feitas por outras telas')
+})
+
+teste('[TRAVA] a Gestão recalcula as entidades a CADA troca', () => {
+  // empresa_id vale 'todas' para qualquer seleção com mais de uma entidade.
+  // Recalcular só quando ele muda deixava a tela exibindo três entidades depois
+  // de a seleção passar para duas. `versaoSel` força o recálculo.
+  // ⚠️ As outras onze telas têm o mesmo defeito — ver docs/11-pendencias.md.
+  if (!/setVersaoSel\(/.test(GESTAO)) throw new Error('sem contador de versão da seleção')
+  if (!/\[empresaId, isConsol, versaoSel\]/.test(GESTAO))
+    throw new Error('o recálculo das entidades precisa depender de versaoSel')
 })
 
 teste('[REGRESSÃO] o padrão defeituoso é reconhecível', () => {

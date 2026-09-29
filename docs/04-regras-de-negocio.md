@@ -205,12 +205,38 @@ importação de DRE inteira quebraria — ver [03](03-banco-de-dados.md#categori
 Para razões (PMR, PMP), some numeradores e denominadores de todas as entidades antes de
 dividir. Média de razões pré-calculadas é matematicamente incorreta.
 
-**R9.2 — Toda tela que lê a entidade reage à troca dela.**
+**R9.2 — Toda tela que lê a entidade reage à troca dela** — e **recalcula as entidades a cada troca**, não só quando `empresa_id` muda. `empresa_id` vale `'todas'` para qualquer seleção com mais de uma entidade: passar de três para duas não o altera. ⚠️ Corrigido só na Gestão — ver [11](11-pendencias.md).
 *Incidente:* PR #19 — três telas liam a seleção uma única vez. Na Análise, desmarcar JAM
 e JB deixava os valores byte a byte idênticos. Em `importacao`, **gravava na empresa
 errada**. Trava estrutural em `test-escopo-entidade`.
 
 ---
+
+## 9A. Seleção em lote para exclusão
+
+Fonte: `lib/selecao-lancamentos.js` · trava em `test-selecao-lancamentos` (22 testes).
+
+A seleção alimenta **exclusão permanente** — sem lixeira nem desfazer.
+
+**R9A.1 — A seleção sobrevive à troca de página.**
+*Incidente (30/09):* marcar lançamentos e ir à próxima página desmarcava tudo.
+
+**R9A.2 — A seleção zera quando qualquer filtro muda** — período, tipo, situação, busca,
+entidade. Senão seria possível excluir itens que já não aparecem.
+
+**R9A.3 — "Selecionar todos" age só na página atual.**
+*Duas falhas na regra antiga*, que comparava o total selecionado com o tamanho da página:
+com itens em outras páginas, **substituía** a seleção em silêncio; quando os tamanhos
+coincidiam por acaso, **desmarcava tudo**, inclusive o que não estava na página.
+
+**R9A.4 — A confirmação declara o que não está à vista:** valor total, itens em outras
+páginas, quantos serão removidos de fato e quantos a sincronização recriará.
+
+**R9A.5 — Exclusão de lançamento do Bling não é bloqueada, é avisada.** Enquanto
+existir no Bling, a sincronização o recria. Mas título marcado `origem_ausente` **não**
+volta — removê-lo é legítimo. Decisão de 30/09.
+
+**R9A.6 — Só ids do conjunto filtrado vão para o DELETE**, nunca o conjunto de seleção cru.
 
 ## 10. Integração Bling
 

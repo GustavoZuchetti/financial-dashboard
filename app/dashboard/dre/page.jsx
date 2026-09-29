@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import SvgIcon from '@/components/SvgIcon'
+import { useOrg } from '@/lib/org-context'
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
 import { inicioMesVigente, fimMesVigente } from '@/lib/periodo-padrao'
 
@@ -201,6 +202,8 @@ const CustomTooltip = ({ active, payload, lancamentos }) => {
 
 // ─── Página Principal ─────────────────────────────────────────────────────────
 export default function DREGeral() {
+  // Organização efetiva — respeita o "ver como" do super_admin
+  const { org: orgApres } = useOrg()
   const [startDate, setStartDate]  = useState(inicioMesVigente)
   const [endDate,   setEndDate]    = useState(new Date().toISOString().split('T')[0])
   // Datas com debounce — evita query a cada keystroke
@@ -266,9 +269,15 @@ export default function DREGeral() {
         <div style={{ position:'fixed', inset:0, zIndex:9999, background:'var(--fs-bg)', display:'flex', flexDirection:'column', padding:'36px 48px', overflowY:'auto' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:28 }}>
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <div style={{ width:40,height:40,background:'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,color:'#fff',fontSize:16 }}>FS</div>
+              {/* Logo e nome da organização CORRENTE — respeita o "ver como".
+                  Antes eram fixos no código: "FS" e "Facesign". Um usuário de
+                  outra organização apresentando o próprio DRE via "Facesign". */}
+              {(orgApres?.logo_url || orgApres?.logo_url_light)
+                ? <img src={orgApres.logo_url || orgApres.logo_url_light} alt="Logo"
+                    style={{ height:40, maxWidth:160, objectFit:'contain' }} />
+                : <div style={{ width:40,height:40,background:'linear-gradient(135deg,var(--fs-brand-dark),var(--fs-brand))',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,color:'#fff',fontSize:16 }}>FS</div>}
               <div>
-                <div style={{ fontWeight:800, fontSize:18, color:'var(--fs-text-1)' }}>Facesign {isConsol&&<span style={{...badge,display:'inline-flex',alignItems:'center',gap:5}}><SvgIcon name="layers" size={11} color="currentColor" />Consolidado</span>}</div>
+                <div style={{ fontWeight:800, fontSize:18, color:'var(--fs-text-1)' }}>{orgApres?.nome || 'Demonstrativo'} {isConsol&&<span style={{...badge,display:'inline-flex',alignItems:'center',gap:5}}><SvgIcon name="layers" size={11} color="currentColor" />Consolidado</span>}</div>
                 <div style={{ fontSize:12, color:'var(--fs-text-4)' }}>DRE — {formatPeriod(startDate,endDate)}</div>
               </div>
             </div>

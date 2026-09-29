@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react'
 import EmptyState from '@/components/EmptyState'
 import { TableSkeleton } from '@/components/Skeleton'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
+import { podarSelecao, alternarPagina, paginaToda, resumirSelecao } from '@/lib/selecao-lancamentos'
+import { definirSelecaoEntidades } from '@/lib/selecao-entidade'
 import SvgIcon from '@/components/SvgIcon'
 import { getStatusInfo, efeitosCaixa, dataEfetiva } from '@/lib/fluxo-status'
 import { saldoDePartidaConsolidado, montarEntidades } from '@/lib/saldo-abertura'
@@ -100,7 +102,7 @@ const ConfirmModal = ({ item, onConfirm, onCancel, loading }) => (
 )
 
 // ─── Modal exclusão em lote ───────────────────────────────────────────────────
-const BulkModal = ({ count, periodo, onConfirm, onCancel, loading }) => (
+const BulkModal = ({ count, resumo = {}, periodo, onConfirm, onCancel, loading }) => (
   <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
     <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:14, padding:28, maxWidth:440, width:'100%', boxShadow:'0 8px 40px rgba(0,0,0,0.5)' }}>
       <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
@@ -122,6 +124,34 @@ const BulkModal = ({ count, periodo, onConfirm, onCancel, loading }) => (
           Esta ação não pode ser desfeita. Os dados serão permanentemente removidos do banco.
         </div>
       </div>
+
+      {/* R5 — declara o que não está à vista e o que vai voltar. A seleção agora
+          sobrevive à troca de página, então parte dos itens pode não estar na
+          tela no momento da confirmação. */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:'6px 16px', fontSize:12.5, marginBottom:20, padding:'0 2px' }}>
+        <span style={{ color:'var(--fs-text-3)' }}>Valor total selecionado</span>
+        <strong style={{ color:'var(--fs-text-1)', fontVariantNumeric:'tabular-nums' }}>
+          {Number(resumo.valor || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' })}
+        </strong>
+        {resumo.foraDaPagina > 0 && (<>
+          <span style={{ color:'var(--fs-warning)' }}>Em outras páginas — não visíveis agora</span>
+          <strong style={{ color:'var(--fs-warning)' }}>{resumo.foraDaPagina}</strong>
+        </>)}
+        {resumo.definitivos > 0 && (<>
+          <span style={{ color:'var(--fs-text-3)' }}>Serão removidos definitivamente</span>
+          <strong style={{ color:'var(--fs-danger)' }}>{resumo.definitivos}</strong>
+        </>)}
+        {resumo.recriados > 0 && (<>
+          <span style={{ color:'var(--fs-text-3)' }}>Vindos do Bling — voltarão na próxima sincronização</span>
+          <strong style={{ color:'var(--fs-text-2)' }}>{resumo.recriados}</strong>
+        </>)}
+      </div>
+      {resumo.recriados > 0 && (
+        <div style={{ fontSize:11.5, color:'var(--fs-text-4)', lineHeight:1.6, marginBottom:18 }}>
+          Lançamentos sincronizados do Bling são recriados enquanto existirem no Bling.
+          Para removê-los de fato, exclua-os no Bling.
+        </div>
+      )}
 
       <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
         <button onClick={onCancel} disabled={loading} style={{ padding:'9px 20px', borderRadius:8, border:'1px solid var(--fs-border)', background:'transparent', color:'var(--fs-text-2)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
@@ -154,6 +184,7 @@ export default function GestaoFluxoCaixaPage() {
   const [empNome,    setEmpNome]    = useState('')
   const [isConsol,   setIsConsol]   = useState(false)
   const [empIdsSel,  setEmpIdsSel]  = useState([])
+  const [versaoSel,  setVersaoSel]  = useState(0)
   const [partidaInfo, setPartidaInfo] = useState(null)
   const { ancoras, migracaoPendente } = useAncoras(empIdsSel)
 
@@ -172,6 +203,13 @@ export default function GestaoFluxoCaixaPage() {
 
   // Seleção múltipla
   const [selected,   setSelected]   = useState(new Set())
+  // Conjunto filtrado COMPLETO, não só a página. A seleção sobrevive à troca de
+  // página, então a confirmação de exclusão precisa enxergar itens de outras
+  // páginas para declará-los. Ver lib/selecao-lancamentos.js.
+  const [conjuntoFiltrado, setConjuntoFiltrado] = useState([])
+  // Entidades da organização, com nome — para a coluna e o filtro de entidade.
+  // Via /api/my-empresas: nunca consultar `empresas` pelo cliente (ver 07).
+  const [entidadesOrg, setEntidadesOrg] = useState([])
 
   // Saldo inicial
 
@@ -188,7 +226,7 @@ export default function GestaoFluxoCaixaPage() {
 
   // Modal novo lançamento
   const [novoModal,    setNovoModal]    = useState(false)
-  const [novoForm,     setNovoForm]     = useState({ data: today, descricao:'', tipo:'saida', valor:'', categoria:'' })
+  const [novoForm,     setNovoForm]     = useState({ data: today, descricao:'', tipo:'saida', valor:'', categoria:'', empresa_id:'' })
   const [novoLoading,  setNovoLoading]  = useState(false)
 
   // Modais
@@ -211,19 +249,30 @@ export default function GestaoFluxoCaixaPage() {
   useEffect(() => {
     const id = localStorage.getItem('empresa_id') || ''
     setEmpresaId(id); setIsConsol(id === 'todas')
-    const h = () => { const nid = localStorage.getItem('empresa_id')||''; setEmpresaId(nid); setIsConsol(nid==='todas') }
+    // `versaoSel` força o recálculo das entidades a CADA troca. empresa_id vale
+    // 'todas' para qualquer seleção com mais de uma entidade: passar de três
+    // para duas não o alterava, o efeito abaixo não rodava, e a tela seguia
+    // exibindo as três. Defeito anterior a 30/09, exposto pelo filtro de
+    // entidade — que alterna entre seleção parcial e total.
+    const h = () => { const nid = localStorage.getItem('empresa_id')||''; setEmpresaId(nid); setIsConsol(nid==='todas'); setVersaoSel(v => v + 1) }
     window.addEventListener('storage', h)
     return () => window.removeEventListener('storage', h)
   }, [])
 
   // Resolve as entidades selecionadas antes do carregamento pesado, para que as
   // âncoras já estejam sendo buscadas quando o load rodar (evita carregar duas vezes).
+  // `versaoSel` garante o recálculo mesmo quando empresa_id não muda — ver acima.
   useEffect(() => {
     if (!empresaId) return
     let vivo = true
-    getSelectedEntidadeIds().then(ids => { if (vivo) setEmpIdsSel(ids) })
+    getSelectedEntidadeIds().then(ids => {
+      if (!vivo) return
+      // Só troca a referência se a lista mudou: evita recarregar a tela e zerar
+      // a seleção (R2) quando o evento chega sem alteração real.
+      setEmpIdsSel(prev => (prev.length === ids.length && prev.every((x, i) => x === ids[i])) ? prev : ids)
+    })
     return () => { vivo = false }
-  }, [empresaId, isConsol])
+  }, [empresaId, isConsol, versaoSel])
 
   const load = useCallback(async () => {
     if (!empresaId) { setLoading(false); return }
@@ -252,7 +301,7 @@ export default function GestaoFluxoCaixaPage() {
       let todos = [], fPage = 0
       while (true) {
         let qF = supabase.from('fluxo_caixa')
-          .select('id,data,descricao,tipo,valor,categoria,created_at,status,data_liquidacao,valor_liquidado')
+          .select('id,data,descricao,tipo,valor,categoria,created_at,status,data_liquidacao,valor_liquidado,empresa_id,doc_ref,origem_ausente')
           .or(`and(data.gte.${startDate},data.lte.${endDate}),and(data_liquidacao.gte.${startDate},data_liquidacao.lte.${endDate})`)
           .range(fPage * 1000, (fPage + 1) * 1000 - 1)
         qF = isConsol ? qF.in('empresa_id', empIds) : qF.eq('empresa_id', empIds[0])
@@ -288,7 +337,11 @@ export default function GestaoFluxoCaixaPage() {
       // Paginação em memória
       setTotal(visiveis.length)
       setRegistros(visiveis.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE))
-      setSelected(new Set())
+      setConjuntoFiltrado(visiveis)
+      // R1 + R3: a seleção NÃO é mais zerada aqui. Este load() roda a cada troca
+      // de página — era por isso que ir à próxima página desmarcava tudo. Agora
+      // apenas se descartam ids que saíram do conjunto filtrado.
+      setSelected(prev => podarSelecao(prev, visiveis))
 
       // Totais/indicadores do período (sobre o conjunto completo já carregado)
       // ── TOTAIS DO PERÍODO em caixa efetivo, separando realizado de projetado.
@@ -377,12 +430,33 @@ export default function GestaoFluxoCaixaPage() {
     } finally { setDelLoading(false) }
   }
 
+  useEffect(() => {
+    let vivo = true
+    ;(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const r = await fetch('/api/my-empresas', { headers: { Authorization: `Bearer ${session?.access_token}` } })
+        const j = await r.json()
+        if (vivo && Array.isArray(j?.empresas)) setEntidadesOrg(j.empresas)
+      } catch { /* sem nomes: a coluna mostra o id abreviado */ }
+    })()
+    return () => { vivo = false }
+  }, [])
+
+  // R2 — zera a seleção quando QUALQUER filtro muda. Sem isto seria possível
+  // marcar itens, trocar o filtro e excluir registros que já não aparecem.
+  // `page` fica de fora de propósito: trocar de página preserva a seleção.
+  useEffect(() => { setSelected(new Set()) },
+    [startDate, endDate, tipoFiltro, statusFiltro, busca, empIdsSel])
+
   // ─── Excluir selecionados ───────────────────────────────────────────────────
   const handleBulkDelete = async () => {
     if (selected.size === 0) return
     setDelLoading(true)
     try {
-      const ids = [...selected]
+      // Defesa final: só ids presentes no conjunto filtrado — nunca o Set cru.
+      const ids = resumoSel.ids
+      if (!ids.length) { setDelLoading(false); return }
       const { error } = await supabase.from('fluxo_caixa').delete().in('id', ids)
       if (error) throw error
       showToast(`${ids.length} registro${ids.length > 1 ? 's excluídos' : ' excluído'} com sucesso`, 'success')
@@ -420,7 +494,7 @@ export default function GestaoFluxoCaixaPage() {
         // Antes filtrava só por `data` (vencimento), trazendo títulos liquidados
         // FORA do período — inclusive de 2025 — cujo caixa já havia se movido.
         let q = supabase.from('fluxo_caixa')
-          .select('data,descricao,categoria,tipo,valor,status,data_liquidacao,valor_liquidado')
+          .select('data,descricao,categoria,tipo,valor,status,data_liquidacao,valor_liquidado,empresa_id')
           .or(`and(data.gte.${startDate},data.lte.${endDate}),and(data_liquidacao.gte.${startDate},data_liquidacao.lte.${endDate})`)
           .order('data', { ascending: true })
           .order('created_at', { ascending: true })
@@ -511,7 +585,10 @@ export default function GestaoFluxoCaixaPage() {
       })
       linhas.sort((a, b) => a.dExib > b.dExib ? 1 : a.dExib < b.dExib ? -1 : 0)
 
-      const extratoAoa = [['Data Efetiva', 'Vencimento', 'Descrição', 'Categoria', 'Tipo', 'Situação', 'Dias em Atraso', 'Entrada (R$)', 'Saída (R$)', 'Saldo Acumulado (R$)']]
+      // "Entidade" é a ÚLTIMA coluna, de propósito: as colunas A a J ficam
+      // idênticas às versões anteriores. Planilhas que leem este arquivo por
+      // posição de coluna continuam funcionando.
+      const extratoAoa = [['Data Efetiva', 'Vencimento', 'Descrição', 'Categoria', 'Tipo', 'Situação', 'Dias em Atraso', 'Entrada (R$)', 'Saída (R$)', 'Saldo Acumulado (R$)', 'Entidade']]
       let acum = Number(saldoAnterior) || 0   // já inclui a âncora (lib/saldo-abertura)
       linhas.forEach(({ r, dExib, efeitoTotal, foraDoCaixa }) => {
         if (!foraDoCaixa) acum += r.tipo === 'entrada' ? efeitoTotal : -efeitoTotal
@@ -531,14 +608,21 @@ export default function GestaoFluxoCaixaPage() {
           r.tipo === 'entrada' ? Number(vCaixa.toFixed(2)) : '',
           r.tipo === 'saida'   ? Number(vCaixa.toFixed(2)) : '',
           foraDoCaixa ? '' : Number(acum.toFixed(2)),
+          nomeEntidade(r.empresa_id),
         ])
       })
 
       // Fecha a amarração: soma o que a aba Extrato realmente imprimiu e
       // compara com o Resumo. Diferença ≠ 0 é bug — e fica VISÍVEL no arquivo,
       // em vez de só aparecer quando alguém confere à mão.
+      // Colunas localizadas pelo NOME, não pela posição. Antes eram l[7] e l[8]
+      // fixos: inserir qualquer coluna antes delas faria a amarração somar as
+      // colunas erradas, exibindo diferenças falsas sem erro visível.
+      const iEntrada = extratoAoa[0].indexOf('Entrada (R$)')
+      const iSaida   = extratoAoa[0].indexOf('Saída (R$)')
+      if (iEntrada < 0 || iSaida < 0) throw new Error('Cabeçalho do extrato sem as colunas de Entrada/Saída')
       const somaEx = extratoAoa.slice(1).reduce((a, l) => ({
-        e: a.e + (Number(l[7]) || 0), s: a.s + (Number(l[8]) || 0),
+        e: a.e + (Number(l[iEntrada]) || 0), s: a.s + (Number(l[iSaida]) || 0),
       }), { e: 0, s: 0 })
       const iAm = resumoAoa.findIndex(l => l[0] === 'Linhas na aba Extrato')
       resumoAoa[iAm][1]     = extratoAoa.length - 1
@@ -566,13 +650,42 @@ export default function GestaoFluxoCaixaPage() {
       return s
     })
   }
-  const toggleAll = () => {
-    if (selected.size === registros.length) {
-      setSelected(new Set())
-    } else {
-      setSelected(new Set(registros.map(r=>r.id)))
-    }
+  // R4 — age SÓ na página atual. A versão anterior comparava selected.size com
+  // registros.length: com itens marcados em outras páginas, SUBSTITUÍA a
+  // seleção inteira pela da página, descartando o resto em silêncio.
+  // ── Entidade ────────────────────────────────────────────────────────────
+  // A coluna aparece sempre que a visão reúne MAIS DE UMA entidade: é quando
+  // não se sabe, olhando a linha, a qual empresa o lançamento pertence.
+  const nomeEntidade = (id) => {
+    const e = entidadesOrg.find(x => x.id === id)
+    return e?.nome || (id ? String(id).slice(0, 8) : '—')
   }
+  const variasEntidades = empIdsSel.length > 1
+  // O filtro representa TRÊS estados — uma, todas, ou uma combinação parcial
+  // feita pelo menu lateral (ex.: duas de três). Sem o terceiro, o seletor
+  // exibiria "Todas" enquanto a tela mostra só parte delas.
+  const idsOrg = entidadesOrg.map(e => e.id)
+  const valorFiltroEntidade =
+    empIdsSel.length === 1 ? empIdsSel[0]
+    : (idsOrg.length && empIdsSel.length === idsOrg.length) ? '__todas'
+    : '__parcial'
+  // Opção B: o filtro ALTERA A SELEÇÃO GLOBAL, pela mesma fonte única do menu
+  // lateral. Um filtro local independente exibiria o "Saldo do Dia" com a
+  // âncora de outras entidades — saldo errado. Assim âncoras, saldos, KPIs e
+  // exportação reagem juntos, pelo mecanismo já travado em test-escopo-entidade.
+  const aoFiltrarEntidade = (v) => {
+    if (v === '__parcial') return
+    definirSelecaoEntidades(v === '__todas' ? idsOrg : [v])
+  }
+  // Modelo de colunas ÚNICO para cabeçalho e linhas. Antes estava duplicado nos
+  // dois lugares; acrescentar a coluna em só um desalinharia a tabela.
+  const colunasGrid = variasEntidades
+    ? '40px 1fr 130px 130px 100px 132px 116px 130px 96px'
+    : '40px 1fr 140px 100px 132px 116px 130px 96px'
+
+  const toggleAll = () => setSelected(prev => alternarPagina(prev, registros.map(r => r.id)))
+  const paginaMarcada = paginaToda(selected, registros.map(r => r.id))
+  const resumoSel = resumirSelecao(selected, conjuntoFiltrado, registros.map(r => r.id))
 
   // ─── Salvar saldo inicial ───────────────────────────────────────────────────
   // Os handlers de edição do saldo inicial legado foram REMOVIDOS: gravavam em
@@ -587,9 +700,21 @@ export default function GestaoFluxoCaixaPage() {
     if (!novoForm.data || !novoForm.descricao.trim() || !val || val <= 0) {
       showToast('Preencha data, descrição e valor.', 'error'); return
     }
+    // ENTIDADE DE DESTINO. Antes gravava `empresa_id: empresaId`, que no
+    // consolidado vale 'todas' — não é um uuid, o banco rejeitava e o Novo
+    // Lançamento não funcionava com mais de uma entidade na visão.
+    // Com uma entidade só, ela é o destino; com várias, o usuário escolhe.
+    const destino = empIdsSel.length === 1 ? empIdsSel[0] : novoForm.empresa_id
+    if (!destino || !empIdsSel.includes(destino)) {
+      showToast('Selecione a entidade do lançamento.', 'error'); return
+    }
+    // organization_id preenchido: lançamentos manuais eram gravados sem ele,
+    // embora o schema o preveja em fluxo_caixa.
+    const orgDestino = entidadesOrg.find(e => e.id === destino)?.organization_id || null
     setNovoLoading(true)
     const { error } = await supabase.from('fluxo_caixa').insert({
-      empresa_id:  empresaId,
+      empresa_id:  destino,
+      ...(orgDestino ? { organization_id: orgDestino } : {}),
       data:        novoForm.data,
       descricao:   novoForm.descricao.trim(),
       tipo:        novoForm.tipo,
@@ -601,7 +726,7 @@ export default function GestaoFluxoCaixaPage() {
     if (error) { showToast('Erro ao inserir: ' + error.message, 'error'); return }
     showToast(`Lançamento inserido: ${novoForm.tipo === 'entrada' ? '+' : '-'}R$ ${val.toFixed(2)}`, 'success')
     setNovoModal(false)
-    setNovoForm({ data: today, descricao:'', tipo:'saida', valor:'', categoria:'' })
+    setNovoForm({ data: today, descricao:'', tipo:'saida', valor:'', categoria:'', empresa_id:'' })
     load()
   }
 
@@ -779,6 +904,19 @@ export default function GestaoFluxoCaixaPage() {
           <div style={{ background:'var(--fs-surface)', border:'1px solid var(--fs-border)', borderRadius:16, padding:28, width:'100%', maxWidth:440, boxShadow:'0 8px 32px rgba(0,0,0,0.4)' }}>
             <div style={{ fontSize:16, fontWeight:800, color:'var(--fs-text-1)', marginBottom:20 }}>Novo Lançamento Manual</div>
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              {/* Entidade — obrigatória quando a visão reúne mais de uma */}
+              {empIdsSel.length > 1 && (
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Entidade *</div>
+                  <select value={novoForm.empresa_id} onChange={e=>setNovoForm(f=>({...f,empresa_id:e.target.value}))}
+                    style={{ width:'100%', background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:8, color:'var(--fs-text-1)', fontSize:13, padding:'9px 11px', outline:'none' }}>
+                    <option value="">Selecione…</option>
+                    {entidadesOrg.filter(e => empIdsSel.includes(e.id)).map(e => (
+                      <option key={e.id} value={e.id}>{e.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {/* Tipo */}
               <div>
                 <div style={{ fontSize:11, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:6 }}>Tipo *</div>
@@ -832,7 +970,8 @@ export default function GestaoFluxoCaixaPage() {
       {delItem  && <ConfirmModal item={delItem} onConfirm={handleDelete} onCancel={()=>setDelItem(null)} loading={delLoading} />}
       {bulkModal && (
         <BulkModal
-          count={selected.size}
+          count={resumoSel.total}
+          resumo={resumoSel}
           periodo={periodoLabel}
           onConfirm={handleBulkDelete}
           onCancel={()=>setBulkModal(false)}
@@ -882,6 +1021,21 @@ export default function GestaoFluxoCaixaPage() {
             <option value="vencidos">Vencidos</option>
             <option value="pagos">Liquidados</option>
           </select>
+          {/* Entidade — altera a seleção GLOBAL (a mesma do menu lateral). Só
+              aparece quando a organização tem mais de uma entidade. */}
+          {entidadesOrg.length > 1 && (
+            <select value={valorFiltroEntidade} onChange={e=>{ aoFiltrarEntidade(e.target.value); setPage(0) }}
+              title="Filtra por entidade. Altera também a seleção do menu lateral."
+              style={{ background:'var(--fs-bg)', border:'1px solid var(--fs-border)', borderRadius:7, color:'var(--fs-text-2)', fontSize:12, padding:'5px 8px', outline:'none' }}>
+              <option value="__todas">Todas as entidades</option>
+              {valorFiltroEntidade === '__parcial' && (
+                <option value="__parcial" disabled>{empIdsSel.length} entidades selecionadas</option>
+              )}
+              {entidadesOrg.map(e => (
+                <option key={e.id} value={e.id}>{e.nome}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Busca */}
@@ -906,11 +1060,14 @@ export default function GestaoFluxoCaixaPage() {
         </button>
 
         {/* Botão excluir selecionados */}
-        {selected.size > 0 && (
+        {resumoSel.total > 0 && (
           <button onClick={()=>setBulkModal(true)}
             style={{ display:'flex', alignItems:'center', gap:6, background:'rgba(var(--fs-danger-rgb),0.12)', border:'1px solid rgba(var(--fs-danger-rgb),0.3)', borderRadius:8, padding:'6px 14px', color:'var(--fs-danger)', fontSize:12, fontWeight:700, cursor:'pointer' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-            Excluir {selected.size} selecionado{selected.size > 1 ? 's' : ''}
+            Excluir {resumoSel.total} selecionado{resumoSel.total > 1 ? 's' : ''}
+            {resumoSel.foraDaPagina > 0 && (
+              <span style={{ fontWeight:500, opacity:0.85 }}> · {resumoSel.foraDaPagina} em outras páginas</span>
+            )}
           </button>
         )}
       </div>
@@ -1028,9 +1185,9 @@ export default function GestaoFluxoCaixaPage() {
       <div style={{ background:'var(--fs-surface)', borderTop:'2px solid var(--fs-border-2)', borderBottom:'1px solid var(--fs-border)' }}>
 
         {/* Cabeçalho */}
-        <div style={{ display:'grid', gridTemplateColumns:'40px 1fr 140px 100px 132px 116px 130px 96px', gap:8, padding:'11px 16px', borderBottom:'2px solid var(--fs-border)', background:'var(--fs-bg)' }}>
-          <div><input type="checkbox" checked={registros.length > 0 && selected.size === registros.length} onChange={toggleAll} style={{ cursor:'pointer', accentColor:'var(--fs-brand)', width:14, height:14 }} /></div>
-          {['Descrição','Categoria','Tipo','Situação','Valor','Saldo do Dia',''].map(h=>(
+        <div style={{ display:'grid', gridTemplateColumns:colunasGrid, gap:8, padding:'11px 16px', borderBottom:'2px solid var(--fs-border)', background:'var(--fs-bg)' }}>
+          <div><input type="checkbox" checked={paginaMarcada} onChange={toggleAll} title="Marcar ou desmarcar esta página" style={{ cursor:'pointer', accentColor:'var(--fs-brand)', width:14, height:14 }} /></div>
+          {[ 'Descrição', ...(variasEntidades ? ['Entidade'] : []), 'Categoria','Tipo','Situação','Valor','Saldo do Dia',''].map(h=>(
             <div key={h} style={{ fontSize:10, fontWeight:700, color:'var(--fs-text-4)', textTransform:'uppercase', letterSpacing:'0.7px', display:'flex', alignItems:'center', justifyContent: h==='Valor'||h==='Saldo do Dia' ? 'flex-end' : 'flex-start' }}>{h}</div>
           ))}
         </div>
@@ -1074,7 +1231,7 @@ export default function GestaoFluxoCaixaPage() {
               const isLast    = li === lancamentos.length - 1
               return (
                 <div key={r.id}
-                  style={{ display:'grid', gridTemplateColumns:'40px 1fr 140px 100px 132px 116px 130px 96px', gap:8, padding:'6px 16px', minHeight:36,
+                  style={{ display:'grid', gridTemplateColumns:colunasGrid, gap:8, padding:'6px 16px', minHeight:36,
                     borderBottom: isLast ? 'none' : '1px solid rgba(var(--fs-border-rgb,55,65,81),0.5)',
                     background: isSel ? 'rgba(var(--fs-brand-rgb),0.06)' : 'transparent',
                     alignItems:'center', transition:'background 0.1s',
@@ -1094,6 +1251,13 @@ export default function GestaoFluxoCaixaPage() {
                       </span>
                     )}
                   </div>
+
+                  {/* Entidade — só quando a visão reúne mais de uma */}
+                  {variasEntidades && (
+                    <div title={nomeEntidade(r.empresa_id)} style={{ fontSize:11.5, color:'var(--fs-text-3)', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {nomeEntidade(r.empresa_id)}
+                    </div>
+                  )}
 
                   {/* Categoria */}
                   <div style={{ fontSize:12, color:'var(--fs-text-4)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.categoria || '—'}</div>

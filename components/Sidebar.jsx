@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { COLORS, TRANSITION } from '@/lib/design-tokens'
 import { useOrg } from '@/lib/org-context'
 import OrgLogo from '@/components/OrgLogo'
+import { definirSelecaoEntidades, lerSelecaoBruta, EVENTO_SELECAO } from '@/lib/selecao-entidade'
 import ThemeToggle from '@/components/ThemeToggle'
 
 // ─── Ícones SVG inline ──────────────────────────────────────────────────────────
@@ -70,26 +71,28 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
   const [selecionadas, setSelecionadas] = useState([]) // ids marcados
   const entRef = useRef(null)
 
-  // Inicializa a seleção a partir do localStorage
+  // Lê a seleção do localStorage e REAGE a mudanças feitas por outras telas.
+  // Até 30/09 o Sidebar só lia na inicialização, porque era o único a alterar
+  // a seleção. Com o filtro de entidade na Gestão, outra tela passou a
+  // alterá-la — e sem este listener o menu continuaria exibindo as entidades
+  // antigas marcadas enquanto as telas mostravam outras.
+  // Sem risco de laço: o listener apenas LÊ e atualiza estado; quem emite o
+  // evento é definirSelecaoEntidades().
   useEffect(() => {
     const initSel = () => {
-      let ids = []
-      try {
-        const raw = localStorage.getItem('empresa_ids')
-        if (raw) ids = JSON.parse(raw)
-      } catch (_) {}
-      if (!Array.isArray(ids) || ids.length === 0) {
-        const single = localStorage.getItem('empresa_id')
-        if (single && single !== 'todas') ids = [single]
-        else if (single === 'todas') ids = (empresas || []).map(e => e.id)
-      }
+      let ids = lerSelecaoBruta()
+      if (!ids.length && localStorage.getItem('empresa_id') === 'todas')
+        ids = (empresas || []).map(e => e.id)
       // Filtra ids que ainda existem
       const validos = (empresas || []).map(e => e.id)
       ids = ids.filter(id => validos.includes(id))
       if (ids.length === 0 && empresas?.length) ids = [empresas[0].id]
       setSelecionadas(ids)
     }
-    if (empresas?.length) initSel()
+    if (!empresas?.length) return
+    initSel()
+    window.addEventListener(EVENTO_SELECAO, initSel)
+    return () => window.removeEventListener(EVENTO_SELECAO, initSel)
   }, [empresas])
 
   // Fecha o dropdown ao clicar fora
@@ -101,13 +104,10 @@ export default function Sidebar({ empresa, empresas, onEmpresaChange }) {
 
   // Persiste a seleção e notifica as páginas
   const aplicarSelecao = (ids) => {
-    const total = (empresas || []).length
-    // empresa_id mantém compatibilidade: 'todas' se >1 selecionada, senão o id único
-    const empresaIdVal = ids.length === 1 ? ids[0] : 'todas'
-    localStorage.setItem('empresa_ids', JSON.stringify(ids))
-    localStorage.setItem('empresa_id', empresaIdVal)
-    // Dispara o evento que as páginas escutam (mesma aba não recebe 'storage' nativo)
-    window.dispatchEvent(new Event('storage'))
+    // Gravação e notificação vivem em lib/selecao-entidade — fonte única,
+    // compartilhada com o filtro de entidade da Gestão.
+    const empresaIdVal = definirSelecaoEntidades(ids)
+    if (!empresaIdVal) return
     onEmpresaChange?.(empresaIdVal)
     setSelecionadas(ids)
   }

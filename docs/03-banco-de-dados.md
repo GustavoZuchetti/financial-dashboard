@@ -18,7 +18,7 @@ Um registro por título do Bling. Alimentada pela sincronização.
 |---|---|---|
 | `id` | uuid | |
 | `empresa_id` | uuid | |
-| `organization_id` | uuid | |
+| `organization_id` | uuid | preenchido também no lançamento manual desde 30/09 — antes ficava nulo |
 | `tipo` | text | **Somente `entrada` e `saida`** (verificado 11/09) |
 | `valor` | numeric | valor do título |
 | `valor_liquidado` | numeric | valor efetivamente movimentado — ver § regra do liquidado |

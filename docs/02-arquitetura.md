@@ -41,6 +41,7 @@ uma regra que já existia numa lib.
 | `lib/natureza-categoria.js` | O que entra nos KPIs operacionais — `separarPorNatureza` |
 | `lib/periodo-padrao.js` | Janela inicial das telas — `mesVigente` |
 | `lib/selecao-entidade.js` | **Gravação** da seleção de entidades — `definirSelecaoEntidades`. A leitura validada segue em `getSelectedEntidadeIds` |
+| `lib/usar-versao-selecao.js` | Recarga a cada troca de entidade — `useVersaoSelecao`. **Usado pelas treze telas** que resolvem entidades |
 | `lib/selecao-lancamentos.js` | Seleção em lote para exclusão — `podarSelecao`, `alternarPagina`, `resumirSelecao` |
 | `lib/bling-cursor.js` | Posição de varredura da sincronização |
 | `lib/bling-server.js` | Todo acesso à API do Bling |
@@ -157,6 +158,7 @@ escopo da organização visualizada. Ver [07](07-seguranca.md).
 | Resolver entidades por `getSelectedEntidadeIds()` | Valida a seleção do `localStorage` contra a organização — defesa em profundidade contra acesso cruzado |
 | Listar empresas por `/api/my-empresas` | Nunca consultar `empresas` pelo client sem filtro de organização |
 | Alterar a seleção de entidade **só** por `definirSelecaoEntidades()` | Duas telas a alteram — Sidebar e Gestão. Gravar `empresa_ids` direto recria a divergência |
+| Toda tela que resolve entidades usa `useVersaoSelecao()` e o põe nas dependências da recarga | `empresa_id` vale `'todas'` para qualquer seleção múltipla — sem o hook, passar de três para duas entidades não recarrega |
 | Toda tela que lê a entidade escuta o evento `storage` | O Sidebar emite `window.dispatchEvent(new Event('storage'))` na troca. Sem o listener, a tela mostra a entidade errada — ver PR #19 |
 | Paginar leituras do Supabase | O REST devolve no máximo 1.000 linhas por requisição |
 | `cursor={false}` em todo `<Tooltip>` do Recharts | Evita artefato visual |

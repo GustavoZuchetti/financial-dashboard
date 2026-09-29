@@ -31,5 +31,5 @@ Antes de mergear:
 
 ```bash
 npm run build
-for t in scripts/test-*.mjs; do node "$t"; done   # 15 suítes, 223 testes
+for t in scripts/test-*.mjs; do node "$t"; done   # 15 suítes, 230 testes
 ```

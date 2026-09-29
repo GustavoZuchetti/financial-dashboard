@@ -5,6 +5,7 @@ import { supabase, getSelectedEntidadeIds, fetchAll } from '@/lib/supabase'
 import { efeitosCaixa } from '@/lib/fluxo-status'
 import { CHART_PALETTE, COLORS } from '@/lib/design-tokens'
 import { indexarNaturezas, separarPorNatureza, NATUREZAS } from '@/lib/natureza-categoria'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 
 const fmtFull    = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 const fmtCompact = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact', maximumFractionDigits: 1 }).format(v)
@@ -79,6 +80,7 @@ export default function FluxoCaixaAnalise() {
     return () => { vivo = false }
   }, [])
 
+  const versaoSel = useVersaoSelecao()   // recarga a cada troca de entidade
   useEffect(() => {
     if (!empresaId) return
     const fetchData = async () => {
@@ -105,7 +107,7 @@ export default function FluxoCaixaAnalise() {
       }
     }
     fetchData()
-  }, [empresaId, debStart, debEnd, isConsolidado])
+  }, [empresaId, debStart, debEnd, isConsolidado, versaoSel])
 
   // ── Cálculos ─────────────────────────────────────────────────────────────────
   const entradas = data.filter(d => d.tipo === 'entrada')

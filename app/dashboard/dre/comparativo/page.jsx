@@ -8,6 +8,7 @@ import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { calcDRE } from '@/lib/dre-calc'
 import SvgIcon from '@/components/SvgIcon'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 
 // ─── Formatadores ─────────────────────────────────────────────────────────────
 const fmt     = (v) => new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', notation:'compact', maximumFractionDigits:1 }).format(Number(v)||0)
@@ -191,6 +192,7 @@ export default function DREComparativo() {
     return () => window.removeEventListener('storage', h)
   }, [])
 
+  const versaoSel = useVersaoSelecao()   // recarga a cada troca de entidade
   useEffect(() => {
     if (!empresaId) return
     const fetch = async () => {
@@ -211,7 +213,7 @@ export default function DREComparativo() {
       } finally { setLoading(false); setFirstLoad(false) }
     }
     fetch()
-  }, [empresaId, deb])
+  }, [empresaId, deb, versaoSel])
 
   // KPIs pelo cálculo central do sistema (lib/dre-calc) — inclui impostos,
   // resultado financeiro e investimentos, consistente com o DRE oficial

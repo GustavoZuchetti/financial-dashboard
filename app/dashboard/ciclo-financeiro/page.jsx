@@ -7,6 +7,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, Cell
 } from 'recharts'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const MESES_LABEL = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -96,6 +97,7 @@ export default function CicloFinanceiroPage() {
     return () => window.removeEventListener('storage', h)
   }, [])
 
+  const versaoSel = useVersaoSelecao()   // recarga a cada troca de entidade
   const load = useCallback(async () => {
     if (!empresaId) { setLoading(false); return }
     setLoading(true)
@@ -207,7 +209,7 @@ export default function CicloFinanceiroPage() {
 
     } catch(e) { console.error('CicloFinanceiro:', e) }
     finally { setLoading(false) }
-  }, [empresaId, anoSel, mesSel, mesesHist])
+  }, [empresaId, anoSel, mesSel, mesesHist, versaoSel])
 
   const recalcular = async () => {
     if (!empresaId) return

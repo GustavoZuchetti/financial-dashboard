@@ -29,6 +29,7 @@ writeFileSync(copia, readFileSync(join(raiz, 'lib', 'selecao-entidade.js'), 'utf
 const limpar = () => { try { rmSync(copia, { force: true }) } catch {} }
 process.on('exit', limpar)
 const E = await import(pathToFileURL(copia).href)
+const LIB_TXT = readFileSync(join(raiz, 'lib', 'selecao-entidade.js'), 'utf8')
 
 let ok = 0, falhou = 0
 const testes = []
@@ -153,6 +154,42 @@ teste('[TRAVA] LogoAcesso reaproveita o cache do login', () => {
   const comp  = ler('components/LogoAcesso.jsx').match(/const CACHE = '([^']+)'/)?.[1]
   if (!login || !comp) throw new Error('chave de cache não encontrada')
   eq(comp, login, 'LogoAcesso e login precisam da mesma chave: ')
+})
+
+
+// ─── Filtro do hook de versão ────────────────────────────────────────────────
+// O hook importa React; aqui as importações viram substitutos e só a lógica
+// pura é testada — ehTrocaDeSelecao decide quando uma tela recarrega.
+const copiaHook = join(raiz, 'lib', `.usar-versao.teste.${process.pid}.mjs`)
+writeFileSync(copiaHook, readFileSync(join(raiz, 'lib', 'usar-versao-selecao.js'), 'utf8')
+  .replace(/^'use client'\n/, '')
+  .replace("import { useEffect, useState } from 'react'", 'const useEffect = () => {}, useState = () => [0, () => {}]')
+  .replace("import { EVENTO_SELECAO } from './selecao-entidade'", "const EVENTO_SELECAO = 'storage'"))
+process.on('exit', () => { try { rmSync(copiaHook, { force: true }) } catch {} })
+const H = await import(pathToFileURL(copiaHook).href)
+
+teste('[TRAVA] evento sintético (sem key) sempre conta como troca', () => {
+  // definirSelecaoEntidades emite new Event('storage'), que não tem key
+  eq(H.ehTrocaDeSelecao({ type: 'storage' }), true)
+})
+teste('[TRAVA] troca de empresa_id ou empresa_ids em outra aba conta', () => {
+  eq(H.ehTrocaDeSelecao({ key: 'empresa_id' }), true)
+  eq(H.ehTrocaDeSelecao({ key: 'empresa_ids' }), true)
+})
+teste('[TRAVA] outras chaves NÃO recarregam — ex.: trocar o tema em outra aba', () => {
+  // Sem este filtro, trocar o tema numa aba recarregaria os dados de todas.
+  for (const k of ['fs-theme', 'fs-org-logo-dark', 'fs-orcamento-escopo'])
+    eq(H.ehTrocaDeSelecao({ key: k }), false, `${k}: `)
+})
+teste('localStorage.clear() nativo (key null) conta como troca', () => {
+  // Conservador: sem saber o que mudou, recarrega.
+  eq(H.ehTrocaDeSelecao({ key: null }), true)
+})
+teste('as chaves do filtro são exatamente as gravadas pela lib', () => {
+  // Se a lib passar a gravar outra chave, o filtro precisa acompanhar.
+  eq([...H.CHAVES_SELECAO].sort(), ['empresa_id', 'empresa_ids'])
+  const gravadas = [...LIB_TXT.matchAll(/setItem\('([^']+)'/g)].map(m => m[1]).sort()
+  eq(gravadas, ['empresa_id', 'empresa_ids'], 'chaves gravadas pela lib: ')
 })
 
 for (const [n, f] of testes) {

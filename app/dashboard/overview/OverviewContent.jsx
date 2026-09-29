@@ -12,6 +12,7 @@ import {
   ComposedChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Legend
 } from 'recharts'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -414,12 +415,13 @@ export default function OverviewPage() {
 
   // Resolve as entidades selecionadas antes do carregamento pesado, para que as
   // âncoras já estejam sendo buscadas quando o load rodar (evita carregar duas vezes).
+  const versaoSel = useVersaoSelecao()   // recarga a cada troca de entidade
   useEffect(() => {
     if (!empresaId) return
     let vivo = true
     getSelectedEntidadeIds().then(ids => { if (vivo) setEmpIdsSel(ids) })
     return () => { vivo = false }
-  }, [empresaId, isConsol])
+  }, [empresaId, isConsol, versaoSel])
 
   const load = useCallback(async () => {
     // AGUARDA as âncoras: compor o saldo com a lista vazia produziria

@@ -13,6 +13,7 @@ import {
 } from 'recharts'
 import { supabase, getSelectedEntidadeIds } from '@/lib/supabase'
 import { inicioMesVigente, fimMesVigente } from '@/lib/periodo-padrao'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 
 // ─── Formatadores ─────────────────────────────────────────────────────────────
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -176,12 +177,13 @@ export default function FluxoCaixaPage() {
 
   // Resolve as entidades selecionadas antes do carregamento pesado, para que as
   // âncoras já estejam sendo buscadas quando o load rodar (evita carregar duas vezes).
+  const versaoSel = useVersaoSelecao()   // recarga a cada troca de entidade
   useEffect(() => {
     if (!empresaId) return
     let vivo = true
     getSelectedEntidadeIds().then(ids => { if (vivo) setEmpIdsSel(ids) })
     return () => { vivo = false }
-  }, [empresaId, isConsol])
+  }, [empresaId, isConsol, versaoSel])
 
   const load = useCallback(async () => {
     // AGUARDA as âncoras: compor o saldo com a lista vazia produziria

@@ -4,6 +4,7 @@ import { supabase, fetchAll, getSelectedEntidadeIds } from '@/lib/supabase'
 import { efeitosCaixa } from '@/lib/fluxo-status'
 import { KpiCardsSkeleton, ChartSkeleton } from '@/components/Skeleton'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const fC = (v) => {
@@ -70,7 +71,8 @@ export default function FluxoComparativo() {
     setLoading(false)
   }, [fetchPeriod, p1Start, p1End, p2Start, p2End])
 
-  useEffect(() => { if (empresaId !== null) load() }, [load, empresaId])
+  const versaoSel = useVersaoSelecao()   // recarga a cada troca de entidade
+  useEffect(() => { if (empresaId !== null) load() }, [load, empresaId, versaoSel])
 
   const entradas = (d) => d.filter(r=>['entrada','receita','receita_financeira','fluxo_entrada'].includes(r.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)
   const saidas   = (d) => d.filter(r=>['saida','despesa','custo','despesa_financeira','fluxo_saida'].includes(r.tipo)).reduce((a,c)=>a+Math.abs(Number(c.valor)),0)

@@ -6,6 +6,7 @@ import SvgIcon from '@/components/SvgIcon'
 import { downloadWorkbook, exportFilename } from '@/lib/export-excel'
 import { TableSkeleton } from '@/components/Skeleton'
 import { inicioMesVigente, fimMesVigente } from '@/lib/periodo-padrao'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 
 // ─── Modal de Drill-down ──────────────────────────────────────────────────────
 function DrillModal({ item, lancamentos, clientes, onClose, periodo }) {
@@ -209,6 +210,7 @@ export default function DREDetalhado() {
     window.addEventListener('storage', h); return () => window.removeEventListener('storage', h)
   }, [])
 
+  const versaoSel = useVersaoSelecao()   // recarga a cada troca de entidade
   const fetchData = useCallback(async () => {
     if (!empresaId) return
     setLoading(true)
@@ -234,7 +236,7 @@ export default function DREDetalhado() {
       setData(rows || [])
       setDataPrev(rowsPrev || [])
     } finally { setLoading(false); setFirstLoad(false) }
-  }, [empresaId, debStart, debEnd])
+  }, [empresaId, debStart, debEnd, versaoSel])
 
   useEffect(() => { fetchData() }, [fetchData])
 

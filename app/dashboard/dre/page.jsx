@@ -5,6 +5,7 @@ import SvgIcon from '@/components/SvgIcon'
 import { useOrg } from '@/lib/org-context'
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
 import { inicioMesVigente, fimMesVigente } from '@/lib/periodo-padrao'
+import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
 
 // ─── Paleta ──────────────────────────────────────────────────────────────────
 const C = {
@@ -235,6 +236,7 @@ export default function DREGeral() {
     return r || []
   }, [])
 
+  const versaoSel = useVersaoSelecao()   // recarga a cada troca de entidade
   useEffect(() => {
     if (!empresaId) return
     const run = async () => {
@@ -249,7 +251,7 @@ export default function DREGeral() {
       finally { setLoading(false) }
     }
     run()
-  }, [empresaId, debouncedStart, debouncedEnd, isConsol, fetchPeriod])
+  }, [empresaId, debouncedStart, debouncedEnd, isConsol, fetchPeriod, versaoSel])
 
   const v  = calcDRE(data)
   const pv = calcDRE(prevData)

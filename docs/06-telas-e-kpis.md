@@ -75,8 +75,6 @@ Contas com `tipo` `entrada` ou `saida` — grupo 9 — **não aparecem**.
 variações sem significado (`+557%`, `+5.834%`) — a base anterior está incompleta. Ver
 [11](11-pendencias.md).
 
-⚠️ `dre/page.jsx` tem `calcDRE` própria, duplicada. Hoje idêntica. Ver [11](11-pendencias.md).
-
 ---
 
 ## Fluxo de Caixa

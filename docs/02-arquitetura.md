@@ -34,7 +34,7 @@ uma regra que já existia numa lib.
 
 | Arquivo | É a fonte única de… |
 |---|---|
-| `lib/dre-calc.js` | Cálculo do DRE — `calcDRE`, `calcDREMap`, `DRE_LINES` |
+| `lib/dre-calc.js` | Cálculo do DRE — `calcDRE`, `calcDREMap`, `DRE_LINES` · trava em `test-fonte-unica-dre` |
 | `lib/fluxo-status.js` | Efeito de caixa de um título, tipos, sinal — `efeitosCaixa`, `sinalDe`, `ENTRADA_TIPOS` |
 | `lib/fluxo-agregados.js` | Totais de período, realizado × projetado — `agregarPeriodo` |
 | `lib/saldo-abertura.js` | Saldo de partida e série diária — `saldoEm`, `saldoDePartidaConsolidado` |
@@ -47,9 +47,6 @@ uma regra que já existia numa lib.
 | `lib/bling-server.js` | Todo acesso à API do Bling |
 | `lib/supabase.js` | Resolução de entidades selecionadas — `getSelectedEntidadeIds` |
 | `lib/export-excel.js` | Toda exportação Excel |
-
-⚠️ **Violação conhecida:** `app/dashboard/dre/page.jsx` define sua própria `calcDRE`,
-hoje byte a byte idêntica à de `lib/dre-calc.js`. Ver [11 — Pendências](11-pendencias.md).
 
 ⚠️ **Adoção incompleta:** `agregarPeriodo` é usada apenas na Gestão. As demais telas de
 fluxo calculam totais por conta própria. Ver [11 — Pendências](11-pendencias.md).
@@ -88,7 +85,7 @@ app/
 components/                       Sidebar, SvgIcon, IntegracoesTab, SaldoAberturaTab, ...
 lib/                              fontes únicas — ver tabela acima
 scripts/
-  test-*.mjs                      15 suítes de teste — ver 09
+  test-*.mjs                      16 suítes de teste — ver 09
   seed_* / setup_* / *_setup.js   ⚠️ legado, com credencial exposta — ver 07
 supabase/migrations/              migrações versionadas — aplicar no SQL Editor
 docs/                             esta documentação
@@ -119,7 +116,6 @@ docs/                             esta documentação
 | `ThemeProvider`, `ThemeToggle` | tema claro e escuro |
 | `TypeBadge` | selo semântico por tipo de lançamento |
 | `EmptyState`, `Skeleton`, `Toast` | estado vazio, carregamento, notificações |
-| `UploadExcel` | ⚠️ **código morto** — não é importado em lugar nenhum |
 
 ### "Ver como" — acesso do super_admin a outra organização
 

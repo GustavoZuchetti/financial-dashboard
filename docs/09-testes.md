@@ -1,6 +1,6 @@
 # 09 — Testes
 
-**15 suítes · 230 testes · todas passando** (verificado 30/09).
+**16 suítes · 232 testes.** 230 passando, verificados em 30/09. Os 2 de `test-fonte-unica-dre` foram validados em 15/10 por emulação e sabotagem; a execução com `node` ainda está pendente.
 
 ```bash
 for t in scripts/test-*.mjs; do node "$t"; done
@@ -41,6 +41,7 @@ Um `[TRAVA]` falhando não é teste a ajustar — é defeito a corrigir.
 | `test-selecao-lancamentos` | 22 | Seleção em lote: sobrevive à página, zera com filtro, declara o que não se vê | PR #27 |
 | `test-selecao-entidade` | 20 | Contrato de gravação da seleção; filtro de chaves do hook; logo nas telas de acesso | PRs #27, #28 |
 | `test-escopo-entidade` | 10 | Toda tela reage à troca — **inclusive entre seleções múltiplas**; só a lib grava a seleção | PRs #19, #27, #28 |
+| `test-fonte-unica-dre` | 2 | `calcDRE` definida só em `lib/dre-calc.js`; toda tela que a chama a importa de lá | T1 |
 
 ---
 
@@ -93,6 +94,7 @@ deliberadamente simples — não simulam React nem rede — para pegar o caso de
 | `test-consistencia-saldo` | período inicial vindo de `lib/periodo-padrao` |
 | `test-bling-jwt` | `JWT_HEADER` nos dois pontos de chamada, e só dois |
 | `test-caixa-disponivel` | `InfoTip` com `position:'fixed'`; cartão sem projeção |
+| `test-fonte-unica-dre` | `calcDRE` definida só em `lib/dre-calc.js`, importada por quem a usa |
 
 **Exceções documentadas:** `app/dashboard/layout.jsx` lê a entidade só na inicialização,
 para validar a seleção salva — reagir à troca ali causaria laço com o Sidebar.

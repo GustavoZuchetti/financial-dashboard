@@ -1,6 +1,6 @@
 # 11 — Pendências
 
-> Estado em 29/09/2026. Ordenado por gravidade dentro de cada seção.
+> Estado em 15/10/2026 (T1, T7 e T8 fechados). Ordenado por gravidade dentro de cada seção.
 > Ao fechar um item, mova-o para [10 — Histórico](10-historico.md) com a data.
 
 ---
@@ -95,12 +95,6 @@ Cadastro na origem. Não corrigível pelo sistema; cada variante tem conta próp
 
 ## 🟡 Dívida técnica
 
-### T1 — `calcDRE` duplicada
-
-`app/dashboard/dre/page.jsx:52` tem função própria, hoje idêntica à de `lib/dre-calc.js`.
-Qualquer ajuste na fonte única não alcança a tela principal do DRE.
-**Correção:** remover a local, importar da lib. Risco muito baixo.
-
 ### T2 — `agregarPeriodo` adotada em 1 de 8 telas
 
 Só a Gestão usa. As demais calculam totais por conta própria. Hoje convergem; sem trava,
@@ -127,11 +121,6 @@ crescimento. **Sugestão:** suprimir quando a base anterior tiver cobertura insu
 `.eslintrc.json` hoje ligaria o `next/core-web-vitals` completo, que falha em dezenas de
 violações preexistentes. Exige limpeza prévia.
 
-### T7 — PRs obsoletos abertos
-
-**#1** e **#5** continuam abertos. O conteúdo do #5 entrou pelo #12; o do #1 foi coberto
-pelos #8 e #9. Fechar.
-
 ### T8a — Emoji na tela de convite
 
 `app/aceitar-convite/page.jsx` usa ⏳ no estado "validando" — viola o padrão de ícones
@@ -142,10 +131,6 @@ por `SvgIcon`. Encontrado em 30/09, fora do escopo daquele PR.
 Antes da autenticação não se sabe a organização do usuário; `/api/public/logo` devolve a
 da primeira organização com logo, em ordem determinística. Com vários clientes, cada um
 precisaria de uma URL de login própria.
-
-### T8 — `components/UploadExcel.jsx` é código morto
-
-Não é importado em lugar nenhum (verificado 29/09). Remover.
 
 ### T9 — Scripts legados em `scripts/`
 

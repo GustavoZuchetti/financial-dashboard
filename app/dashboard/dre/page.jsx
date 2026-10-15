@@ -6,6 +6,7 @@ import { useOrg } from '@/lib/org-context'
 import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
 import { inicioMesVigente, fimMesVigente } from '@/lib/periodo-padrao'
 import { useVersaoSelecao } from '@/lib/usar-versao-selecao'
+import { calcDRE } from '@/lib/dre-calc'
 
 // ─── Paleta ──────────────────────────────────────────────────────────────────
 const C = {
@@ -49,27 +50,6 @@ const DRE_STRUCTURE = [
   { key:'investimentos',      label:'Investimentos',       tipos:['investimento'],        sign:-1, subtotal:false, color: C.yellow },
   { key:'resultado_final',    label:'Resultado Final',     tipos:[],                      sign: 0, subtotal:true,  color: C.blue   },
 ]
-
-// ─── Calcular valores do DRE ──────────────────────────────────────────────────
-function calcDRE(lancamentos) {
-  const sum = (tipos) => lancamentos.filter(l => tipos.includes(l.tipo)).reduce((a,c)=>a+Number(c.valor),0)
-
-  const rb   = sum(['receita'])
-  const ded  = sum(['deducao'])
-  const rl   = rb - ded
-  const cv   = sum(['custo'])
-  const lb   = rl - cv
-  const df   = sum(['despesa'])
-  const ebt  = lb - df
-  const imp  = sum(['imposto_lucro'])
-  const rf   = sum(['receita_financeira'])
-  const dfin = sum(['despesa_financeira'])
-  const resL = ebt - imp + rf - dfin
-  const inv  = sum(['investimento'])
-  const resF = resL - inv
-
-  return { rb, ded, rl, cv, lb, df, ebt, imp, rf, dfin, resL, inv, resF }
-}
 
 // ─── Montar dados do waterfall ────────────────────────────────────────────────
 // Técnica: spacer transparente + barra colorida empilhada

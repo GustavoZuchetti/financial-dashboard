@@ -6,6 +6,20 @@ regras existem.
 
 ---
 
+## Outubro/2026
+
+| Data | PR | Entrega |
+|---|---|---|
+| 15/10 | chore/divida-tecnica-t1-t7-t8 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
+
+### Detalhe de outubro
+
+**15/10 · Dívida técnica T1, T7 e T8**
+- **T1:** `app/dashboard/dre/page.jsx` deixou de definir `calcDRE` e importa de `@/lib/dre-calc`. As duas funções eram idênticas (a lib só acrescenta o parâmetro padrão `= []`), então nenhum número muda. Nova trava `test-fonte-unica-dre`.
+- **T7:** PRs #1 e #5 fechados com comentário. O conteúdo do #1 está na `main` por #8 e #9; o do #5, por #12.
+- **T8:** `components/UploadExcel.jsx` removido. Busca por `UploadExcel` em todo o código da `main` (95980be) achou só o próprio arquivo.
+- **Validação:** a trava nova foi validada por sabotagem emulada (cópia local reintroduzida; import removido), com reprovação nos dois casos. `npm run build` e as suítes não rodaram neste ambiente (sem Node) — conferir no preview da Vercel e com `node` antes de mergear.
+
 ## Setembro/2026
 
 | Data | PR | Entrega |

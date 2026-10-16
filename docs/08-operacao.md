@@ -49,6 +49,11 @@ npm run build                                   # tem de compilar
 for t in scripts/test-*.mjs; do node $t; done   # todas as suítes passando
 ```
 
+**No Windows/PowerShell:** `npx eslint ...` falha ao repassar os argumentos. Use
+`node node_modules/eslint/bin/eslint.js` com cada opção separada. A linha acima acusa 2 erros de
+`react-hooks/exhaustive-deps` (regra de plugin não carregado com `--no-eslintrc`); só `no-undef` conta aqui.
+O checkout no Windows traz CRLF — os testes estruturais precisam aceitar `\r\n`.
+
 `npm run build` **não detecta erro de execução** — identificador indefinido, variável
 usada antes da declaração. Para isso:
 

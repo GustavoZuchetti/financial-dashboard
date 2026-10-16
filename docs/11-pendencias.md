@@ -1,6 +1,6 @@
 # 11 — Pendências
 
-> Estado em 16/10/2026 (P0, T1, T7 e T8 fechados). Ordenado por gravidade dentro de cada seção.
+> Estado em 16/10/2026 (P0, T1, T7, T8 e T10 fechados). Ordenado por gravidade dentro de cada seção.
 > Ao fechar um item, mova-o para [10 — Histórico](10-historico.md) com a data.
 
 ---
@@ -108,28 +108,6 @@ precisaria de uma URL de login própria.
 ### T9 — Scripts legados em `scripts/`
 
 `seed_*`, `setup_*`, `*_setup.js` — sem uso atual, quatro deles com credencial (S1).
-
-### T10 — Suítes sem execução desde 30/09
-
-As 15 suítes anteriores e a `test-fonte-unica-dre` (2 testes, validada só por emulação em
-PowerShell) **não foram executadas com `node` desde o PR #28**. O PR #29 passou
-pelo build da Vercel, que não roda testes. Rodar `for t in scripts/test-*.mjs; do node "$t"; done`
-numa máquina com Node 24 e atualizar [09](09-testes.md) com o resultado. Aproveitar para
-confirmar que as suítes passam em 24 — foram escritas sob Node 20.
-
-### T11 — Plano de Contas: três armadilhas da tela com o grupo 9
-
-Descobertas em 16/10 lendo `app/dashboard/plano-contas/page.jsx`:
-
-1. **Master por contagem.** A tela elege como master a entidade com **mais contas** e replica o plano
-   dela para as outras por `codigo`, **apagando** o que o master não tem (`syncEntidades`). Hoje as três
-   têm 34 contas, então é seguro; criar conta só numa entidade a tornaria master.
-2. **A replicação não leva `natureza`.** Copia `codigo, nome, tipo, descricao`; a conta criada por essa
-   via nasce `operacional`. `alterarNatureza` propaga por código, mas a criação não.
-3. **`remapearCategoria` grava `tipo_destino` igual ao `tipo` da conta.** No grupo 9 isso é
-   `entrada`/`saida` e quebra a importação de DRE (R8.4).
-
-Até corrigir, tratar o grupo 9 **só por SQL**, com `tipo_destino = 'ignorar'`.
 
 ---
 

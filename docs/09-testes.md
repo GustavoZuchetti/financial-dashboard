@@ -1,6 +1,6 @@
 # 09 — Testes
 
-**16 suítes · 232 testes.** 230 passando, verificados em 30/09. Os 2 de `test-fonte-unica-dre` foram validados em 15/10 por emulação e sabotagem; a execução com `node` ainda está pendente.
+**16 suítes · 232 testes · todas passando.** Verificado em 16/10/2026 com Node 24.20.0, num clone da `main` (1ffc050) com a correção de `test-bling-jwt` abaixo. `npm run build` compila (36 páginas) e `no-undef` está limpo. Antes da correção, `test-bling-jwt` reprovava 1 de 12 — ver "Recortar função por limite" mais adiante.
 
 ```bash
 for t in scripts/test-*.mjs; do node "$t"; done
@@ -95,6 +95,15 @@ deliberadamente simples — não simulam React nem rede — para pegar o caso de
 | `test-bling-jwt` | `JWT_HEADER` nos dois pontos de chamada, e só dois |
 | `test-caixa-disponivel` | `InfoTip` com `position:'fixed'`; cartão sem projeção |
 | `test-fonte-unica-dre` | `calcDRE` definida só em `lib/dre-calc.js`, importada por quem a usa |
+
+**Recortar a função pelo limite, não por janela fixa.** `test-bling-jwt` recortava `blingGet` com
+`src.slice(i, i + 1400)`. Quando a função cresceu (retry de gateway, timeout, comentários), o
+tratamento de 401 ficou a 1.416 caracteres do início e a trava reprovava com o código **correto**.
+Provavelmente desde o merge do PR #25 (23/09) — a execução de 16/10 foi a primeira a mostrar. `corpo()` agora recorta
+até o `}` na coluna 0 que fecha a função, aceitando CRLF. Validado por sabotagem: sem o tratamento de
+401, sem a guarda contra laço e sem `JWT_HEADER` no `fetch`, a trava certa reprova em cada caso.
+*Limite conhecido:* a trava da guarda contra laço só exige que o nome `jaRenovou` apareça na função; remover só a declaração
+não a reprova.
 
 **Exceções documentadas:** `app/dashboard/layout.jsx` lê a entidade só na inicialização,
 para validar a seleção salva — reagir à troca ali causaria laço com o Sidebar.

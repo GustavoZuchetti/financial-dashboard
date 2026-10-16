@@ -31,11 +31,18 @@ function eq(a, e, ctx = '') {
     throw new Error(`${ctx}esperado ${JSON.stringify(e)}, recebido ${JSON.stringify(a)}`)
 }
 
-// Recorta o corpo de uma função pelo nome, para inspecionar seus headers
+// Recorta a função INTEIRA pelo nome, até o `}` na coluna 0 que a fecha.
+// Antes era uma janela fixa de 1400 caracteres: quando `blingGet` cresceu (retry
+// de gateway, timeout, comentários), o tratamento de 401 ficou a 1416 caracteres
+// do início e a trava reprovava com o código correto. Uma janela fixa falha em
+// silêncio na direção errada; o limite da função não.
 function corpo(nome) {
   const i = src.indexOf(nome)
   if (i < 0) throw new Error(`função "${nome}" não encontrada`)
-  return src.slice(i, i + 1400)
+  // `\r?` porque o checkout no Windows pode trazer CRLF
+  const m = /\r?\n\}\r?\n/.exec(src.slice(i))
+  if (!m) throw new Error(`fim da função "${nome}" não encontrado`)
+  return src.slice(i, i + m.index + 2)
 }
 
 teste('[TRAVA] o header enable-jwt está definido', () => {

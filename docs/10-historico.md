@@ -10,12 +10,22 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
+| 16/10 | — | **T10 fechada** — 16 suítes e build rodados pela primeira vez desde o PR #28; `test-bling-jwt` corrigida |
 | 16/10 | — | **Grupo 9 do Plano de Contas criado e mapeado** — P0 fechado; transferências, empréstimos e fluxos de sócios saem dos KPIs operacionais |
 | 16/10 | — | Documentação do Node corrigida; `.nvmrc` passa a 24 |
 | 15/10 | — | **Node 20.x descontinuado na Vercel** — projeto passa a 24.x; deploys voltam a compilar |
 | 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**16/10 · T10 · Suítes executadas pela primeira vez desde o PR #28**
+Node 24.20.0 e git instalados por `winget`; clone da `main` em 1ffc050; `npm ci`.
+- **Resultado inicial:** 15 suítes passando e **1 reprovando**: `test-bling-jwt`, 11 de 12. Falhava `[TRAVA] 401 dispara renovação automática do token`.
+- **Causa:** defeito do teste, não do código. `corpo()` recortava 1.400 caracteres a partir de `blingGet`, e o tratamento de 401 está a 1.416. O código sempre tratou o 401 (`status === 401 && adm && tent < tentativas && !jaRenovou`). A função cresceu (retry de gateway, timeout, comentários); o momento exato em que a trava passou a reprovar não foi investigado — provavelmente com o merge do PR #25 (23/09).
+- **Correção:** `corpo()` recorta até o `}` na coluna 0 que fecha a função, aceitando CRLF. Só `scripts/test-bling-jwt.mjs` mudou; nenhum código de aplicação.
+- **Validação:** sabotagem em `lib/bling-server.js` — sem o tratamento de 401, sem a guarda contra laço e sem `JWT_HEADER` no `fetch` — reprova a trava correspondente nos três casos. Uma primeira tentativa de sabotagem na guarda não reprovou (ver "Limite conhecido" em [09](09-testes.md)); refeita removendo a guarda inteira, reprovou. Código restaurado e conferido por `git status`.
+- **Resultado final:** **232/232 em 16 suítes**, `npm run build` ok (36 páginas), `no-undef` sem violações. Dois erros de `react-hooks/exhaustive-deps` aparecem na linha de comando do `CLAUDE.md` por causa dos comentários `eslint-disable` num arquivo com `--no-eslintrc` — não são violações de `no-undef`.
+- **Lição:** a contagem "230 passando, verificado 30/09" não valia para `test-bling-jwt`. O PR #25 registrou 12/12 na sua branch; não há registro de que as suítes tenham sido reexecutadas na `main` depois do merge.
 
 **16/10 · Grupo 9 do Plano de Contas · P0 fechado**
 A exclusão por natureza (PRs #23 e #24) **não tinha efeito em produção**: o INSERT das contas do grupo 9, disparado em 24/09, não tinha rodado (0 contas `9.%`), e as 42 contas existentes eram todas `operacional`. Transferências, empréstimos e fluxos de sócios entravam nos KPIs operacionais. 15 das 20 categorias tinham De-Para `ignorar` sem conta, que resolve para `operacional` (R7.3).

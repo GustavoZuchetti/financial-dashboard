@@ -56,10 +56,17 @@ de caixa e precisam ser tratadas na consolidação — ver
 | Planilhas | SheetJS (`xlsx`) | 0.18.5 |
 | Banco e autenticação | Supabase (PostgreSQL + Auth + RLS) | `@supabase/supabase-js` 2.105 |
 | Hospedagem | Vercel, plano **Hobby** | — |
-| Runtime | Node | **20** (fixado em `.nvmrc`) |
+| Runtime | Node | **24.x** (configuração do projeto na Vercel; `.nvmrc` alinhado) |
 | ERP | Bling API v3 | OAuth 2.0 + **JWT** |
 
-**Node 20 é obrigatório.** Node 24 quebra o build na Vercel.
+**Node 24.x.** A versão que vale em produção é a **configuração do projeto na Vercel**
+(Settings › Build and Deployment › Node.js Version), não o `.nvmrc`; os dois devem andar
+juntos. A Vercel descontinuou o Node 20.x — detectado em 15/10/2026, quando o primeiro deploy
+após 29/09 falhou antes de compilar. Ver [10 — Histórico](10-historico.md).
+
+A afirmação anterior, de que "Node 24 quebra o build", deixou de valer: o build do PR #29 e
+o deploy de produção seguinte passaram em 24.x (verificado 15/10/2026). O `admin-portal` já
+rodava em 24.x.
 
 ## Usuários de referência
 

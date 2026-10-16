@@ -39,6 +39,9 @@ Alterar variável na Vercel exige **redeploy** para ter efeito.
 
 Push em `main` → Vercel faz build e publica em **~50–60 s**.
 
+A versão do Node é a do **projeto na Vercel** (24.x), não a do `.nvmrc`. Ver
+[01 § Stack](01-visao-geral.md).
+
 ### Antes de mergear
 
 ```bash
@@ -153,6 +156,19 @@ A função serverless morreu antes de responder. Causa mais provável: **estouro
 1. Configurações › Integrações › **Reconectar ao Bling** na entidade afetada
 2. Se persistir, conferir se o Bling mudou o contrato
 3. Em último caso, `BLING_DISABLE_JWT=1`
+
+### Deploy falha sem compilar — Node descontinuado
+
+**Sintoma:** o status da Vercel no PR é `failure` e o log termina em `Node.js Version "20.x"
+is discontinued and must be upgraded`, sem nenhum erro de build. **Qualquer** deploy novo
+falha, inclusive o da `main` — o último que passou é anterior à descontinuação.
+
+1. Vercel › `financial-dashboard` › Settings › Build and Deployment › **Node.js Version** →
+   `24.x`
+2. Redeployar o último deployment que falhou
+3. Conferir que o build compila e que a produção fica `READY`
+
+*Incidente:* 15/10/2026 — ver [10 — Histórico](10-historico.md).
 
 ### Número diverge entre duas telas
 

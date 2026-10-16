@@ -136,6 +136,14 @@ precisaria de uma URL de login própria.
 
 `seed_*`, `setup_*`, `*_setup.js` — sem uso atual, quatro deles com credencial (S1).
 
+### T10 — Suítes sem execução desde 30/09
+
+As 15 suítes anteriores e a `test-fonte-unica-dre` (2 testes, validada só por emulação em
+PowerShell) **não foram executadas com `node` desde o PR #28**. O PR #29 passou
+pelo build da Vercel, que não roda testes. Rodar `for t in scripts/test-*.mjs; do node "$t"; done`
+numa máquina com Node 24 e atualizar [09](09-testes.md) com o resultado. Aproveitar para
+confirmar que as suítes passam em 24 — foram escritas sob Node 20.
+
 ---
 
 ## 🔵 Evolução

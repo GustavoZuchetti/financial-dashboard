@@ -22,7 +22,7 @@ Sessões de desenvolvimento assistido: ver **[CLAUDE.md](CLAUDE.md)**.
 ## Desenvolvimento
 
 ```bash
-nvm use                                        # Node 20 — obrigatório
+nvm use                                        # Node 24 — a mesma da Vercel
 npm install
 npm run dev
 ```

@@ -10,15 +10,23 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
-| 15/10 | chore/divida-tecnica-t1-t7-t8 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
+| 16/10 | — | Documentação do Node corrigida; `.nvmrc` passa a 24 |
+| 15/10 | — | **Node 20.x descontinuado na Vercel** — projeto passa a 24.x; deploys voltam a compilar |
+| 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**15/10 · Deploy falhando antes de compilar · Node 20.x descontinuado**
+O preview do PR #29 falhou na Vercel. O log terminava em `Node.js Version "20.x" is discontinued and must be upgraded`, antes de qualquer etapa de build. Não era o PR: o último deploy que passou foi o de 29/09, e qualquer deploy novo — inclusive da `main` — falharia igual. O projeto `financial-dashboard` estava em 20.x; o `admin-portal` já estava em 24.x. A documentação afirmava que o Node 24 quebrava o build; o `admin-portal` em 24.x e o próprio build do PR #29 mostraram que não.
+- **Correção:** Node.js Version do projeto passou a `24.x` (Vercel, 15/10), com redeploy do último deployment que falhou.
+- **Verificação:** o build de preview compilou todas as telas e o deploy de produção seguinte (`main` em 1fb804c) ficou `READY`. As suítes com `node` seguem sem execução — ver T10 em [11](11-pendencias.md).
+- **Lição:** a versão que vale é a do projeto na Vercel, não a do `.nvmrc`. Sinal de alerta: falha de deploy sem erro de build no log.
 
 **15/10 · Dívida técnica T1, T7 e T8**
 - **T1:** `app/dashboard/dre/page.jsx` deixou de definir `calcDRE` e importa de `@/lib/dre-calc`. As duas funções eram idênticas (a lib só acrescenta o parâmetro padrão `= []`), então nenhum número muda. Nova trava `test-fonte-unica-dre`.
 - **T7:** PRs #1 e #5 fechados com comentário. O conteúdo do #1 está na `main` por #8 e #9; o do #5, por #12.
 - **T8:** `components/UploadExcel.jsx` removido. Busca por `UploadExcel` em todo o código da `main` (95980be) achou só o próprio arquivo.
-- **Validação:** a trava nova foi validada por sabotagem emulada (cópia local reintroduzida; import removido), com reprovação nos dois casos. `npm run build` e as suítes não rodaram neste ambiente (sem Node) — conferir no preview da Vercel e com `node` antes de mergear.
+- **Validação:** a trava nova foi validada por sabotagem emulada (cópia local reintroduzida; import removido), com reprovação nos dois casos. `npm run build` e as suítes não rodaram neste ambiente (sem Node). **Resultado:** o build de preview e o deploy de produção passaram na Vercel (verificado 15/10); as suítes com `node` seguem sem execução.
 
 ## Setembro/2026
 

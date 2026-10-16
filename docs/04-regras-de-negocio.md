@@ -176,6 +176,16 @@ em vez de descartá-lo, para que a tela mostre o que tirou.
 "Transferência JB", "Transferências JB" e "Transferências Realizada JB" são contas
 distintas — têm origem em empresas diferentes.
 
+**R7.7 — O grupo 9 existe e está mapeado (16/10/2026).** As 20 categorias de transferência,
+empréstimo e sócios têm conta `9.x` com natureza própria nas três entidades, e De-Para ligado à
+conta onde há lançamentos. Categoria nova desse tipo precisa de conta do grupo 9 **e** De-Para
+antes de sair dos KPIs; sem isso resolve para `operacional` (R7.3).
+*Medição (16/10, consolidado, 01/01 a 16/10/2026, valor bruto das duas pontas):* R$ 7,96 mi de
+transferências, R$ 0,46 mi de empréstimos e R$ 2,61 mi de fluxos de sócios deixaram os indicadores
+operacionais; as entradas operacionais passaram de R$ 9,13 mi para R$ 3,11 mi. Antes disso a
+exclusão por natureza não tinha efeito em produção (nenhuma conta tinha natureza diferente de
+`operacional`).
+
 ---
 
 ## 8. De-Para
@@ -196,6 +206,10 @@ a mesma transferência virava despesa ou receita conforme o arquivo.
 
 **R8.4 — Contas não operacionais têm `tipo_destino = 'ignorar'`.** Com `'saida'` a
 importação de DRE inteira quebraria — ver [03](03-banco-de-dados.md#categoria_mappings--de-para).
+
+**R8.5 — O De-Para do grupo 9 é feito por SQL, nunca por "remapear categoria" da tela.**
+`remapearCategoria` grava `tipo_destino` igual ao `tipo` da conta de destino (`entrada`/`saida`
+no grupo 9), o que viola R8.4. Ver T11 em [11](11-pendencias.md).
 
 ---
 

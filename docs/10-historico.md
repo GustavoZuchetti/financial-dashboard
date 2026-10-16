@@ -10,11 +10,21 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
+| 16/10 | — | **Grupo 9 do Plano de Contas criado e mapeado** — P0 fechado; transferências, empréstimos e fluxos de sócios saem dos KPIs operacionais |
 | 16/10 | — | Documentação do Node corrigida; `.nvmrc` passa a 24 |
 | 15/10 | — | **Node 20.x descontinuado na Vercel** — projeto passa a 24.x; deploys voltam a compilar |
 | 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**16/10 · Grupo 9 do Plano de Contas · P0 fechado**
+A exclusão por natureza (PRs #23 e #24) **não tinha efeito em produção**: o INSERT das contas do grupo 9, disparado em 24/09, não tinha rodado (0 contas `9.%`), e as 42 contas existentes eram todas `operacional`. Transferências, empréstimos e fluxos de sócios entravam nos KPIs operacionais. 15 das 20 categorias tinham De-Para `ignorar` sem conta, que resolve para `operacional` (R7.3).
+- **Contas:** 60, 20 por entidade — `9.1.1` a `9.1.13` (transferência, 13), `9.2.1` a `9.2.3` (empréstimo, 3), `9.3.1` a `9.3.4` (sócios, 4). `tipo` `entrada` em Transferências Recebidas, Recebidas JAM, Obtenção de Empréstimos e Aporte de Capital; `saida` nas demais. Nomes em maiúsculas, como a tela grava.
+- **De-Para, só por SQL e sempre `ignorar` (R8.4):** JAM 10 (piloto, validado na tela pelo Controller), depois FACE 11 e JB 8. Só categorias com lançamentos na entidade. 9 foram UPDATE e 10 INSERT em FACE e JB; as 5 categorias sem De-Para em nenhuma entidade ficaram incluídas.
+- **Efeito no consolidado, realizado por data de liquidação, de 01/01 a 16/10/2026:** entradas operacionais R$ 9.125.863,74 → R$ 3.112.844,17; saídas R$ 8.746.656,59 → R$ 3.732.252,36. Em 2025: entradas R$ 14.340.856,75 → R$ 5.169.016,73; saídas R$ 17.432.010,90 → R$ 6.697.837,22. Totais realizados inalterados (2026: R$ 17.872.520,33).
+- **Atenção:** as entradas operacionais da JB em 2026 ficaram em R$ 976,44 — confirmado pelo Controller.
+- **Verificação:** pré-checagem, checagem de contagens (FACE 77/11, JAM 33/10, JB 15/8 mapeamentos/ligados ao grupo 9, tipo errado 0) e simulação por SELECT batendo com o resultado. As três telas de caixa não foram reabertas após FACE e JB.
+- **Descoberta:** três armadilhas da tela do Plano de Contas com o grupo 9 — ver T11 em [11](11-pendencias.md).
 
 **15/10 · Deploy falhando antes de compilar · Node 20.x descontinuado**
 O preview do PR #29 falhou na Vercel. O log terminava em `Node.js Version "20.x" is discontinued and must be upgraded`, antes de qualquer etapa de build. Não era o PR: o último deploy que passou foi o de 29/09, e qualquer deploy novo — inclusive da `main` — falharia igual. O projeto `financial-dashboard` estava em 20.x; o `admin-portal` já estava em 24.x. A documentação afirmava que o Node 24 quebrava o build; o `admin-portal` em 24.x e o próprio build do PR #29 mostraram que não.

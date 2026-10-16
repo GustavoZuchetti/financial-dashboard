@@ -79,8 +79,9 @@ Tipos presentes (verificado 11/09): `despesa` 5.886 · `despesa_financeira` 595 
 ⚠️ **`tipo` e `natureza` são ortogonais.** `tipo` decide onde a conta aparece no DRE;
 `natureza` decide se entra nos indicadores operacionais. Alterar um não afeta o outro.
 
-Contas: 42, códigos de `1.1` a `6.1`, todas `operacional` (verificado 23/09, antes do
-grupo 9).
+Contas: 102 (verificado 16/10): 42 operacionais, códigos `1.1` a `6.1`, e 60 do grupo 9 — 20 por
+entidade, `9.1.1` a `9.3.4`, com natureza `transferencia_interna` (13), `emprestimo` (3) e
+`aporte_socio` (4) em cada uma.
 
 ### `categoria_mappings` — De-Para
 

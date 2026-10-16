@@ -1,42 +1,13 @@
 # 11 — Pendências
 
-> Estado em 15/10/2026 (T1, T7 e T8 fechados). Ordenado por gravidade dentro de cada seção.
+> Estado em 16/10/2026 (P0, T1, T7 e T8 fechados). Ordenado por gravidade dentro de cada seção.
 > Ao fechar um item, mova-o para [10 — Histórico](10-historico.md) com a data.
 
 ---
 
 ## 🔴 Estado incerto — verificar antes de qualquer coisa
 
-### P0 — Grupo 9 do Plano de Contas: INSERT de resultado desconhecido
-
-Em 24/09, o INSERT das 20 contas do grupo 9 foi disparado e **a página travou antes
-de confirmar**. O Supabase estava com incidente de plataforma.
-
-**Não se sabe se rodou, se rodou parcialmente, ou se não rodou.**
-
-```sql
-select count(*) contas, count(distinct codigo) codigos, count(distinct empresa_id) empresas
-  from public.plano_contas where codigo like '9.%';
-```
-
-| Resultado | Significado | Ação |
-|---|---|---|
-| 0 | não rodou | executar o INSERT — é idempotente |
-| **60** (20 × 3 entidades) | rodou por completo | falta o De-Para |
-| outro | parcial | investigar antes de mexer |
-
-**Depois, o De-Para** — com `tipo_destino = 'ignorar'`, **nunca** `'saida'`. Ver R8.4.
-
-As 20 categorias, confirmadas contra o banco em 24/09:
-
-| Grupo | Categorias |
-|---|---|
-| 9.1 Transferências (13) | Transferência entre contas Facesign · …JAM · …JB · Transferência FaceSign · JAM · JB · Transferência Realizada Facesign · Transferências · Transferências Facesign · Transferências JB · Transferências Realizada JB · Transferências Recebidas · Transferências recebidas JAM |
-| 9.2 Empréstimos (3) | Empréstimo · Obtenção de Empréstimos · Pagamento de Empréstimos |
-| 9.3 Sócios (4) | Aporte de Capital · Distribuição de Resultados AF · Distribuição de Resultados JB · Retirada de Capital |
-
-Decisões do Controller: **não consolidar** variantes; **não unificar** Distribuição AF e JB;
-Devoluções e Estornos permanecem **operacional**.
+Nenhum item aberto. O P0 do grupo 9 do Plano de Contas foi fechado em 16/10/2026 — ver [10 — Histórico](10-historico.md).
 
 ---
 
@@ -81,11 +52,13 @@ Despesas e receitas reais, fora do DRE por falta de mapeamento. **Não vão para
 ### D2 — Estornos · R$ 98 mil
 
 Devoluções de Pagamentos (R$ 65.845) e Estorno Recebido (R$ 32.322). Decidido como
-operacional; falta vincular a conta.
+operacional; falta vincular a conta. Hoje `Devoluções de Pagamentos` tem De-Para `ignorar` sem conta na
+FACE (8 lançamentos), o que resolve para `operacional` — comportamento correto; só falta a conta (verificado 16/10).
 
 ### D3 — "Categoria 0"
 
-2 lançamentos, R$ 23. Nome de lixo — provável defeito de importação.
+2 lançamentos, R$ 23. Nome de lixo — provável defeito de importação. Há ainda um De-Para `-` sem
+lançamentos na JB (verificado 16/10).
 
 ### D4 — 13 variantes de nome para transferência no Bling
 
@@ -143,6 +116,20 @@ PowerShell) **não foram executadas com `node` desde o PR #28**. O PR #29 passou
 pelo build da Vercel, que não roda testes. Rodar `for t in scripts/test-*.mjs; do node "$t"; done`
 numa máquina com Node 24 e atualizar [09](09-testes.md) com o resultado. Aproveitar para
 confirmar que as suítes passam em 24 — foram escritas sob Node 20.
+
+### T11 — Plano de Contas: três armadilhas da tela com o grupo 9
+
+Descobertas em 16/10 lendo `app/dashboard/plano-contas/page.jsx`:
+
+1. **Master por contagem.** A tela elege como master a entidade com **mais contas** e replica o plano
+   dela para as outras por `codigo`, **apagando** o que o master não tem (`syncEntidades`). Hoje as três
+   têm 34 contas, então é seguro; criar conta só numa entidade a tornaria master.
+2. **A replicação não leva `natureza`.** Copia `codigo, nome, tipo, descricao`; a conta criada por essa
+   via nasce `operacional`. `alterarNatureza` propaga por código, mas a criação não.
+3. **`remapearCategoria` grava `tipo_destino` igual ao `tipo` da conta.** No grupo 9 isso é
+   `entrada`/`saida` e quebra a importação de DRE (R8.4).
+
+Até corrigir, tratar o grupo 9 **só por SQL**, com `tipo_destino = 'ignorar'`.
 
 ---
 

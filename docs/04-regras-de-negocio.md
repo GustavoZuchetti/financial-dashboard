@@ -259,6 +259,13 @@ Detalhes em [05](05-integracao-bling.md). As regras de negócio:
 **R10.1 — Título excluído no Bling sai do fluxo**, incluindo títulos em aberto.
 **R10.2 — Registro não originado do Bling nunca é removido** por "não existir lá".
 **R10.3 — Título sem detalhe não é gravado.** Registro degradado sobrescreveria dados bons.
+**R10.4 — Título em aberto que sai da listagem do Bling é conferido pelo id.** Fonte:
+`lib/bling-reconferencia.js` · trava em `test-reconferencia`. A listagem não informa o que
+deixou de existir; sem a conferência, o registro fica congelado.
+*Incidente (16/10):* DATAPREV R$ 1,34 mi "a receber vencido" e JULIANO R$ 10.000 em dobro —
+ambos excluídos e substituídos no Bling. 165 títulos sem conferência nas três entidades.
+**R10.5 — Remoção por "não existe no Bling" exige 404 nos dois recursos**, nunca outra
+falha, com teto de 15 por execução e o registro completo em `audit_logs`.
 
 ---
 

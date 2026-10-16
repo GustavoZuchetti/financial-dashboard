@@ -44,6 +44,7 @@ uma regra que já existia numa lib.
 | `lib/usar-versao-selecao.js` | Recarga a cada troca de entidade — `useVersaoSelecao`. **Usado pelas treze telas** que resolvem entidades |
 | `lib/selecao-lancamentos.js` | Seleção em lote para exclusão — `podarSelecao`, `alternarPagina`, `resumirSelecao` |
 | `lib/bling-cursor.js` | Posição de varredura da sincronização |
+| `lib/bling-reconferencia.js` | Quem entra na fila de reconferência, o que fazer com a resposta do Bling, teto de remoções, rodízio e orçamento do cron |
 | `lib/bling-server.js` | Todo acesso à API do Bling |
 | `lib/supabase.js` | Resolução de entidades selecionadas — `getSelectedEntidadeIds` |
 | `lib/export-excel.js` | Toda exportação Excel |
@@ -136,11 +137,11 @@ escopo da organização visualizada. Ver [07](07-seguranca.md).
 | `/api/admin/update-role` | POST | super_admin | altera papel · bloqueia auto-rebaixamento |
 | `/api/admin/upload-logo` | POST, DELETE | super_admin, org_admin | logo no Storage (bucket público, 2 MB) |
 | `/api/auth/forgot-password` | POST | — | recuperação de senha |
-| `/api/cron/bling` | GET | `x-vercel-cron` ou `CRON_SECRET` | sincronização agendada · 60 s |
+| `/api/cron/bling` | GET | `Bearer CRON_SECRET` (somente) | sincronização agendada · 60 s |
 | `/api/integracoes` | GET, POST | org_admin | lista e cria integrações · monta URL OAuth |
 | `/api/integracoes/bling/callback` | GET | `state` assinado | retorno do OAuth |
 | `/api/integracoes/bling/enrich` | POST | org_admin | enriquecimento por detalhe · 60 s |
-| `/api/integracoes/bling/sync` | POST | org_admin | sincronização manual · 60 s |
+| `/api/integracoes/bling/sync` | POST | org_admin | sincronização manual · 60 s · com `{ reconferir: true }`, processa a fila de reconferência |
 | `/api/invite` | GET, POST | org_admin | convites |
 | `/api/my-empresas` | GET | autenticado | empresas da organização — service role |
 | `/api/public/logo` | GET | público | logo da organização |

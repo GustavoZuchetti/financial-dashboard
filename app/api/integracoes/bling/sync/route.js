@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { proximoCursor, cursorDePartida, cursorParaSalvar } from '@/lib/bling-cursor'
-import { verificarExclusoes } from '@/lib/bling-server'
+import { verificarExclusoes, titulosEmAbertoDoBling, processarFilaReconferencia } from '@/lib/bling-server'
 import { getAuthProfile, ensureToken, fetchContas, fetchCategoriasMap, montarRegistrosFluxo } from '@/lib/bling-server'
+import { idsDaPagina, varreduraRecomecou, vistosAtualizados, montarFila } from '@/lib/bling-reconferencia'
 
 // A listagem pode precisar repetir uma página profunda após 504/timeout.
 // O padrão de 10s é insuficiente para esse caminho de recuperação.
@@ -57,6 +58,7 @@ export async function POST(request) {
   const {
     integracao_id, modulo = 'fluxo', fase: faseReq, pagina: pagReq, janela: janReq, diag = false,
     limpar_origem_arquivo = false, escopo = 'incremental', retomar = false,
+    reconferir = false,
     data_inicio = '2023-01-01',
     data_fim = new Date().toISOString().split('T')[0],
   } = await request.json()
@@ -74,6 +76,29 @@ export async function POST(request) {
   if (!ativo)    return NextResponse.json({ error: 'Módulo não está ativo nesta integração' }, { status: 400 })
 
   const T0 = Date.now()
+
+  // ── MODO RECONFERÊNCIA ────────────────────────────────────────────────
+  // Depois da varredura completa, a interface chama este modo em laço até a
+  // fila zerar: só consulta, pelo id, os títulos em aberto que a listagem não
+  // devolveu. Não toca na listagem nem no cursor. Ver lib/bling-reconferencia.js.
+  if (reconferir) {
+    if (modulo !== 'fluxo') return NextResponse.json({ error: 'Reconferência só existe no Fluxo' }, { status: 400 })
+    try {
+      integ = await ensureToken(admin, integ)
+      const fila = Array.isArray(integ.reconferir) ? integ.reconferir : []
+      if (!fila.length) return NextResponse.json({ reconferencia: null, reconferir_pendentes: 0, hasMore: false })
+      const categoriasMap = await fetchCategoriasMap(integ)
+      const nomesContato = { ...(integ.contatos_cache || {}) }
+      const rec = await processarFilaReconferencia(admin, integ, {
+        fila, prazoMs: 40000 - (Date.now() - T0), categoriasMap, nomesContato })
+      await admin.from('integracoes').update({ reconferir: rec.fila }).eq('id', integ.id)
+      const { fila: restante, ...reconferencia } = rec
+      return NextResponse.json({ reconferencia, reconferir_pendentes: restante.length, hasMore: false })
+    } catch (e) {
+      console.error('Bling reconferência:', e)
+      return NextResponse.json({ error: String(e.message || e) }, { status: 502 })
+    }
+  }
 
   // Cursor resolvido ANTES do try: o bloco catch precisa enxergar fase,
   // pagina e janela para devolver a resposta de repeticao. Declaradas
@@ -221,7 +246,41 @@ export async function POST(request) {
       retomado: partida.retomado,
       pendencias: pendencias.slice(0, 20), total_pendencias: pendencias.length,
     }
+
+    // ── VISTOS E FILA DE RECONFERÊNCIA (incremental do Fluxo) ─────────────
+    // Os ids devolvidos pela listagem são acumulados durante a varredura. Ao
+    // fechá-la, os títulos em aberto que NÃO apareceram vão para a fila e
+    // começam a ser conferidos pelo id; a interface continua o resto no modo
+    // `reconferir`. Ver lib/bling-reconferencia.js — casos DATAPREV e JULIANO.
+    const rastreia = escopo === 'incremental' && modulo === 'fluxo' && !diag
+    let vistos = null, fila = null, reconferencia = null
+    if (rastreia) {
+      vistos = vistosAtualizados({
+        salvos: integ.sync_vistos, novos: idsDaPagina(itens),
+        recomecou: varreduraRecomecou({ fase, pagina, retomado: partida.retomado }),
+      })
+      if (!next) {
+        try {
+          fila = montarFila(await titulosEmAbertoDoBling(admin, integ.empresa_id), vistos)
+          const folga = 40000 - (Date.now() - T0)
+          if (fila.length && folga > 10000) {
+            const { fila: restanteFila, ...rec } = await processarFilaReconferencia(admin, integ, {
+              fila, prazoMs: Math.min(20000, folga - 5000), categoriasMap, nomesContato })
+            fila = restanteFila
+            reconferencia = rec
+          }
+        } catch (e) {
+          // A fila é complementar: falha aqui não derruba a varredura, e a
+          // fila anterior é preservada (não é sobrescrita com null).
+          console.error('Bling fila de reconferência:', e)
+          fila = null
+        }
+      }
+    }
+
     // ── EXCLUSÕES NA ORIGEM, ao FECHAR a varredura ────────────────────────
+    // Desde 16/10/2026 cobre só os LIQUIDADOS recentes; os em aberto que somem
+    // da listagem vão para a fila de reconferência acima.
     // A sincronização é upsert-only: título excluído no Bling apenas some da
     // listagem e fica órfão na nossa base. Esta verificação só era chamada pelo
     // cron diário — e o Controller sincroniza manualmente, então na prática
@@ -254,8 +313,21 @@ export async function POST(request) {
         updated_at: new Date().toISOString(),
       }).eq('id', integ.id).then(r => r, () => null)
     }
+    // Colunas da reconferência numa gravação SEPARADA: se a migração
+    // 20261016_reconferencia ainda não tiver sido aplicada, só esta falha — o
+    // cursor acima continua sendo salvo e a varredura segue funcionando.
+    if (rastreia) {
+      await admin.from('integracoes').update({
+        sync_vistos: next ? vistos : null,
+        ...(fila ? { reconferir: fila } : {}),
+      }).eq('id', integ.id).then(r => r, () => null)
+    }
 
-    return NextResponse.json({ ...resultado, exclusoes, hasMore: !!next, next })
+    return NextResponse.json({
+      ...resultado, exclusoes, reconferencia,
+      reconferir_pendentes: fila ? fila.length : undefined,
+      hasMore: !!next, next,
+    })
   } catch (e) {
     console.error('Bling sync:', e)
 

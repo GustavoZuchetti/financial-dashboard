@@ -134,6 +134,14 @@ export default function IntegracoesTab({ empresas, showToast }) {
     let fase = null, pagina = null, janela = null
     let total = 0, pend = 0, guarda = 0, retries = 0, concluido = false, retomou = false
     let removidos = 0, valorRemov = 0, adiados = 0
+    // Reconferência: títulos em aberto que a listagem do Bling deixou de
+    // devolver, conferidos pelo id ao fim da varredura (lib/bling-reconferencia.js)
+    let recAtualizados = 0, recPendentes = 0
+    const somarReconferencia = (rc) => {
+      if (!rc) return
+      recAtualizados += rc.atualizados || 0
+      removidos += rc.removidos || 0; valorRemov += rc.valorRemovido || 0
+    }
     try {
       while (guarda++ < limiteGuard) {
         const r = await authFetch('/api/integracoes/bling/sync', {
@@ -168,8 +176,32 @@ export default function IntegracoesTab({ empresas, showToast }) {
         adiados += r.adiados || 0
         const janelaInfo = historico && r.janela ? ` · janela ${r.janela.indice + 1}/${r.janela.total}` : ''
         setSync(sx => ({ ...sx, [integ.id]: { rodando: true, log: `${r.recurso} · pág. ${r.pagina}${janelaInfo} · ${total} gravados${pend ? ` · ${pend} pendências` : ''}` } }))
-        if (!r.hasMore) { concluido = true; break }
+        if (!r.hasMore) {
+          concluido = true
+          somarReconferencia(r.reconferencia)
+          recPendentes = r.reconferir_pendentes || 0
+          break
+        }
         fase = r.next?.fase ?? 0; pagina = r.next?.pagina ?? 1; janela = r.next?.janela ?? 0
+      }
+
+      // Fila de reconferência: continua até zerar. Para quando uma rodada não
+      // avança (só falhas transitórias ou teto de remoções), para não girar à
+      // toa — o que sobrar fica salvo e o cron diário segue processando.
+      let semAvanco = 0, guardaRec = 0
+      while (concluido && recPendentes > 0 && guardaRec++ < 40 && semAvanco < 2) {
+        setSync(sx => ({ ...sx, [integ.id]: { rodando: true,
+          log: `Reconferindo no Bling títulos que saíram da listagem · ${recPendentes} restantes` } }))
+        const r = await authFetch('/api/integracoes/bling/sync', {
+          method: 'POST',
+          body: JSON.stringify({ integracao_id: integ.id, modulo, reconferir: true }),
+        })
+        if (r.retryAvel) { semAvanco++; await new Promise(res => setTimeout(res, r.aguardar_ms || 8000)); continue }
+        if (r.error) throw new Error(r.error)
+        somarReconferencia(r.reconferencia)
+        const antes = recPendentes
+        recPendentes = r.reconferir_pendentes || 0
+        semAvanco = recPendentes < antes ? 0 : semAvanco + 1
       }
       if (!concluido) {
         // Parada por teto de iterações. Diferente de antes, a posição ficou
@@ -190,7 +222,9 @@ export default function IntegracoesTab({ empresas, showToast }) {
         // é essencial: sem isso o "concluído" daria a falsa impressão de que a
         // base está integralmente conferida.
         const adi = adiados ? ` · ${adiados} título(s) adiado(s) por tempo — execute novamente para processá-los` : ''
-        const log = `${inicio}: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}${exc}${adi}`
+        const rec = (recAtualizados ? ` · ${recAtualizados} título(s) fora da listagem conferido(s) no Bling` : '')
+          + (recPendentes ? ` · ${recPendentes} ainda por reconferir (continua na próxima sincronização)` : '')
+        const log = `${inicio}: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}${exc}${rec}${adi}`
         setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log } }))
         showToast?.(`${historico ? 'Histórico' : `Sincronização ${modulo.toUpperCase()}`} concluído: ${total} títulos`, 'success')
       }

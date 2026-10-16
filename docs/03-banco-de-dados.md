@@ -129,6 +129,8 @@ Uma por entidade. RLS **deny-all**: acesso apenas por service role.
 | `cron_cursor`, `cron_resultado`, `ultima_sync_cron` | | estado do cron |
 | `ultima_sync`, `ultimo_resultado` | | última execução manual |
 | `contatos_cache` | jsonb | cache de nomes de contato |
+| `sync_vistos` | jsonb | ids devolvidos pela listagem na varredura manual em curso — `20261016_reconferencia` |
+| `reconferir` | jsonb | fila de doc_refs em aberto fora da listagem, a conferir pelo id — `20261016_reconferencia` |
 
 Tokens (verificado 24/09): formato **JWT**, 959 caracteres, nas três entidades.
 

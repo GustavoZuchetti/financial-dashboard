@@ -11,7 +11,7 @@ Configuradas na Vercel. **Nenhuma é versionada.**
 | `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase — exposta ao navegador |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | chave anônima — exposta ao navegador, **protegida por RLS** |
 | `SUPABASE_SERVICE_ROLE_KEY` | chave de serviço — **ignora RLS**, só no servidor. Ver [07 § S1](07-seguranca.md) |
-| `CRON_SECRET` | autenticação alternativa do cron |
+| `CRON_SECRET` | **única** autenticação do cron — sem ela toda execução agendada recebe 401. A Vercel envia `Authorization: Bearer <valor>` sozinha. Ausente de 15/07 a 16/10/2026 |
 
 ### Opcionais
 
@@ -146,6 +146,35 @@ JWT começa com `ey` — Base64 de `{"`.
 ---
 
 ## Runbooks de incidente
+
+### Cron não grava nada
+
+**Verificar pelo banco**, não pelo log — o plano Hobby guarda só 1 hora:
+
+```sql
+select e.nome, i.ultima_sync_cron, i.cron_resultado
+  from public.integracoes i join public.empresas e on e.id = i.empresa_id;
+```
+
+1. `ultima_sync_cron` antigo e `cron_resultado` sem `erro`: a rota não está sendo
+   autenticada — conferir se `CRON_SECRET` existe em Vercel › Settings › Environment
+   Variables (produção) e se houve redeploy depois de criá-la
+2. `cron_resultado.erro` preenchido: a execução rodou e falhou — a mensagem está ali
+3. `cron_resultado.interrompido`: Bling indisponível ou sem tempo — o cursor foi preservado
+
+### Títulos em aberto que não atualizam
+
+Título que sai da listagem do Bling (excluído, substituído, cancelado) só é
+reconferido pela **fila de reconferência**, ao fim de uma varredura manual **completa**.
+
+```sql
+select e.nome, jsonb_array_length(coalesce(i.reconferir, '[]'::jsonb)) as na_fila,
+       jsonb_array_length(coalesce(i.sync_vistos, '[]'::jsonb)) as vistos_na_varredura
+  from public.integracoes i join public.empresas e on e.id = i.empresa_id;
+```
+
+Remoções feitas pela fila ficam em `audit_logs` com `changed_by_email =
+'sistema:reconferencia'` e o registro completo em `old_data` — é de lá que se restaura.
 
 ### "Failed to fetch" ao sincronizar
 

@@ -1,6 +1,6 @@
 # 09 — Testes
 
-**16 suítes · 232 testes · todas passando.** Verificado em 16/10/2026 com Node 24.20.0, num clone da `main` (1ffc050) com a correção de `test-bling-jwt` abaixo. `npm run build` compila (36 páginas) e `no-undef` está limpo. Antes da correção, `test-bling-jwt` reprovava 1 de 12 — ver "Recortar função por limite" mais adiante.
+**17 suítes · 254 testes · todas passando.** Verificado em 16/10/2026 com Node 24.20.0, na branch da reconferência (fila dos títulos fora da listagem e cron). Antes dela: 16 suítes, 232 testes, verificados no mesmo dia na `main` (1ffc050) com a correção de `test-bling-jwt` abaixo. `npm run build` compila (36 páginas) e `no-undef` está limpo. Antes da correção, `test-bling-jwt` reprovava 1 de 12 — ver "Recortar função por limite" mais adiante.
 
 ```bash
 for t in scripts/test-*.mjs; do node "$t"; done
@@ -35,13 +35,14 @@ Um `[TRAVA]` falhando não é teste a ajustar — é defeito a corrigir.
 | `test-orcamento-sync` | 13 | Orçamento de tempo, adiamento seguro | PR #17 |
 | `test-bling-jwt` | 12 | Header JWT nos três pontos, renovação em 401 | PR #25 |
 | `test-caixa-disponivel` | 11 | Caixa só realizado e só até hoje, Runway | PRs #20, #22 |
-| `test-exclusoes-alvos` | 10 | Títulos em aberto verificados contra a origem | PR #15 |
+| `test-exclusoes-alvos` | 8 | Liquidados recentes verificados contra a origem; em aberto ficam com a fila de reconferência | PR #15, 16/10 |
 | `test-consistencia-saldo` | 8 | Mesmo saldo entre telas, período padrão | PR #21 |
 | `test-bling-resiliencia` | 5 | Degradação de página em 504 | PRs #8, #9 |
 | `test-selecao-lancamentos` | 22 | Seleção em lote: sobrevive à página, zera com filtro, declara o que não se vê | PR #27 |
 | `test-selecao-entidade` | 20 | Contrato de gravação da seleção; filtro de chaves do hook; logo nas telas de acesso | PRs #27, #28 |
 | `test-escopo-entidade` | 10 | Toda tela reage à troca — **inclusive entre seleções múltiplas**; só a lib grava a seleção | PRs #19, #27, #28 |
 | `test-fonte-unica-dre` | 2 | `calcDRE` definida só em `lib/dre-calc.js`; toda tela que a chama a importa de lá | T1 |
+| `test-reconferencia` | 24 | Título em aberto fora da listagem vai para a fila, do mais antigo; falha transitória nunca remove; teto de remoções; cron só com `CRON_SECRET`, com prazo e rodízio | 16/10 |
 
 ---
 
@@ -95,6 +96,8 @@ deliberadamente simples — não simulam React nem rede — para pegar o caso de
 | `test-bling-jwt` | `JWT_HEADER` nos dois pontos de chamada, e só dois |
 | `test-caixa-disponivel` | `InfoTip` com `position:'fixed'`; cartão sem projeção |
 | `test-fonte-unica-dre` | `calcDRE` definida só em `lib/dre-calc.js`, importada por quem a usa |
+| `test-reconferencia` | cron sem `x-vercel-cron` nem `?key=`; prazo em toda página do cron; um único `DELETE` em `fluxo_caixa` no `bling-server`; fila só no incremental do Fluxo |
+| `test-exclusoes-alvos` | `verificarExclusoes` sem o grupo "em aberto" — a réplica do predicado bate com o código |
 
 **Recortar a função pelo limite, não por janela fixa.** `test-bling-jwt` recortava `blingGet` com
 `src.slice(i, i + 1400)`. Quando a função cresceu (retry de gateway, timeout, comentários), o

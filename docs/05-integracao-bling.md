@@ -96,6 +96,7 @@ de divergência identificados na conciliação de 25/08.
 | Prazo da montagem | 34 s |
 | Reserva para borderôs e upsert | 40% do prazo |
 | Folga mínima para buscar borderô | 4 s |
+| Fila de reconferência, ao fechar | só com mais de 10 s restantes, até 20 s; o resto em laço pela interface |
 | Verificação de exclusões | só com mais de 8 s restantes, até 12 s |
 
 **Prioridade:** títulos novos antes de revisões.
@@ -115,28 +116,85 @@ Um título é reprocessado quando **não está completo**: status, valor, vencim
 *Incidente:* PR #16 — sem a verificação do liquidado, um título com status, valor e
 vencimento corretos mas liquidado deformado nunca era reprocessado.
 
-### Exclusões na origem
+### Reconferência dos títulos fora da listagem
 
-`verificarExclusoes` compara títulos da base com o Bling e marca `origem_ausente` nos
-que sumiram. Roda ao **fechar** a varredura.
+Fonte: `lib/bling-reconferencia.js` (regra pura) e `processarFilaReconferencia` em
+`lib/bling-server.js` · trava em `test-reconferencia`.
 
-- Verifica **liquidados** (pela data de liquidação) **e em aberto** (pelo vencimento)
+A varredura percorre a **listagem** do Bling. Título que sai dela — excluído,
+substituído, cancelado — deixa de aparecer, e o registro daqui ficaria congelado.
+
+1. Durante a varredura incremental do Fluxo, os ids devolvidos pela listagem são
+   acumulados em `integracoes.sync_vistos`. Zeram quando a varredura **recomeça**
+   (fase 0, página 1, sem retomar); numa **retomada** continuam.
+2. Ao fechar a varredura, todo título **em aberto ou parcial**, do Bling, que **não**
+   apareceu vai para a fila `integracoes.reconferir`, do **vencimento mais antigo**
+   para o mais novo.
+3. Cada item é consultado pelo id (`GET contas/{receber|pagar}/{id}`):
+
+| Resposta | Ação |
+|---|---|
+| existe | grava o que o Bling diz — pago, cancelado, novo valor ou vencimento |
+| 404 no recurso e 404 no outro | **remove**, com o registro completo em `audit_logs` |
+| 404 no recurso, existe no outro | sai da fila — não é exclusão |
+| qualquer outra (401, 403, 429, 5xx, timeout) | **fica na fila** — nunca remove por falha transitória |
+
+- **Teto de 15 remoções por execução.** O excedente fica na fila.
+- A interface processa a fila em laço ao fim da varredura (corpo `{ reconferir: true }`
+  na mesma rota); o cron processa uma fatia por dia.
+- A remoção é a função única `removerTituloExcluido`, compartilhada com a verificação
+  de exclusões.
+
+*Incidente:* 16/10/2026 — 165 títulos em aberto que nenhuma varredura revisitava (FACE
+R$ 2,3 mi). Confirmados com o Controller: DATAPREV `26280211663`, R$ 1,34 mi "a receber
+vencido", excluído e substituído no Bling; JULIANO BASILIO `23648043154`, parcial de
+R$ 10.000 de um título excluído, contado em dobro em julho.
+
+### Exclusões na origem — liquidados recentes
+
+`verificarExclusoes` confere a existência dos títulos **liquidados** nos últimos 90 dias
+e **remove** os que sumiram do Bling (404 nos dois recursos). Roda ao **fechar** a
+varredura e no cron.
+
 - Nunca remove registro que não começa com `bling:` — lançamento manual não é alvo
-- Registra em `audit_logs`
+- Registra em `audit_logs`, com o registro completo
+- Desde 16/10/2026 **não confere títulos em aberto** — eles vão para a fila de
+  reconferência acima
 
-*Incidente:* PR #15 — o filtro era `.gte('data_liquidacao', desde)`. Em Postgres,
-comparação com NULL é falsa: títulos em aberto nunca eram verificados. Caso TELEFÔNICA
-(JAM): valores apagados no Bling há meses continuavam como "em aberto".
+*Incidentes:*
+- PR #15 — o filtro era só `.gte('data_liquidacao', desde)`; títulos em aberto nunca eram
+  verificados (caso TELEFÔNICA, JAM). Corrigido com um segundo grupo "em aberto".
+- 16/10/2026 — esse segundo grupo pegava os ~30 em aberto de vencimento **mais distante**
+  dentro de 90 dias — parcelas futuras que existem — e nunca os vencidos que haviam
+  sumido. Substituído pela fila de reconferência.
 
 ## Cron — `/api/cron/bling`
 
-`0 9 * * *` UTC (**06:00 BRT**) · `maxDuration = 60s` · autenticação por
-`x-vercel-cron` ou `CRON_SECRET`.
+`0 9 * * *` UTC (**06:00 BRT**) · `maxDuration = 60s` · autenticação **somente** por
+`Authorization: Bearer <CRON_SECRET>`, que a Vercel envia quando a variável existe.
 
-Estado em `cron_cursor`, `cron_resultado`, `ultima_sync_cron`. Verifica exclusões com
-orçamento de 8 s e limite de 40.
+Por execução, para cada entidade, numa fatia de tempo igual ao que sobra do teto de
+50 s dividido pelas entidades restantes (ordem em **rodízio diário**):
 
-⚠️ Vercel Hobby permite crons, mas não garante o horário exato.
+| Parte da fatia | Trabalho |
+|---|---|
+| ~60% | páginas da listagem (30 títulos, prazo limitado à fatia), cursor em `cron_cursor` |
+| ~25% | fila de reconferência |
+| restante | exclusões dos liquidados recentes (limite 40) |
+
+Estado em `cron_cursor`, `cron_resultado`, `ultima_sync_cron`. Erro também é gravado em
+`cron_resultado`.
+
+*Incidente:* 15/07 a 16/10/2026 — **o cron nunca rodou**. A rota aceitava o header
+`x-vercel-cron`, que a Vercel não envia, ou `Bearer CRON_SECRET`, e a variável nunca foi
+criada: 401 todo dia. Nenhuma escrita às 06:00 BRT desde 14/07. O header e o `?key=` na
+URL também permitiam a qualquer um disparar a rota.
+
+⚠️ Vercel Hobby permite crons, mas não garante o horário exato, e guarda **só 1 hora**
+de log de execução — a verificação é pelo banco (`ultima_sync_cron`, `cron_resultado`).
+
+⚠️ O cron **não substitui** a varredura manual: com algumas páginas por dia, uma
+varredura completa da FACE pelo cron levaria semanas.
 
 ## Enriquecimento — `/api/integracoes/bling/enrich`
 

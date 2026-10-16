@@ -9,8 +9,13 @@ process.env.BLING_BACKOFF_RATE_MS = '1'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const copy = join(root, 'lib', `.bling-server.test.${process.pid}.mjs`)
-writeFileSync(copy, readFileSync(join(root, 'lib', 'bling-server.js'), 'utf8'))
-const cleanup = () => { try { rmSync(copy, { force: true }) } catch {} }
+// bling-server importa './bling-reconferencia' sem extensão, o que o Next
+// resolve e o Node puro não: a cópia aponta para uma cópia .mjs da lib.
+const copyRec = join(root, 'lib', `.bling-reconferencia.test.${process.pid}.mjs`)
+writeFileSync(copyRec, readFileSync(join(root, 'lib', 'bling-reconferencia.js'), 'utf8'))
+writeFileSync(copy, readFileSync(join(root, 'lib', 'bling-server.js'), 'utf8')
+  .replace(/from '\.\/bling-reconferencia'/g, `from './.bling-reconferencia.test.${process.pid}.mjs'`))
+const cleanup = () => { for (const f of [copy, copyRec]) { try { rmSync(f, { force: true }) } catch {} } }
 process.on('exit', cleanup)
 
 const { fetchContas, blingGet, ehGateway } = await import(pathToFileURL(copy).href)

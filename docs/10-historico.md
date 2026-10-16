@@ -10,6 +10,7 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
+| 16/10 | — | **Reconferência dos títulos fora da listagem e cron autenticado** — código e migração prontos; aplicação em produção sob aprovação |
 | 16/10 | — | **T10 fechada** — 16 suítes e build rodados pela primeira vez desde o PR #28; `test-bling-jwt` corrigida |
 | 16/10 | — | **Grupo 9 do Plano de Contas criado e mapeado** — P0 fechado; transferências, empréstimos e fluxos de sócios saem dos KPIs operacionais |
 | 16/10 | — | Documentação do Node corrigida; `.nvmrc` passa a 24 |
@@ -17,6 +18,15 @@ regras existem.
 | 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**16/10 · Sincronização "com sucesso" que não registrava atualizações · cron que nunca rodou**
+Relato do Controller: a sincronização diária retorna sucesso, mas as atualizações não chegam, e nada roda sozinho. Investigação só com leitura (código, banco, trilha de auditoria, documentação da Vercel) e teste ao vivo com a sincronização da FACE acompanhada no banco.
+- **Cron — causa confirmada:** a variável `CRON_SECRET` não existia. A Vercel autentica o cron **só** com `Authorization: Bearer <CRON_SECRET>`; a rota esperava também um header `x-vercel-cron` que a Vercel não envia. Resultado: 401 diário, nenhuma escrita às 06:00 BRT desde 14/07. Os logs não ajudaram: o plano Hobby guarda 1 hora.
+- **Sincronização manual — funciona quando roda:** o teste ao vivo de 16/10 (14:34–15:03) gravou 497 títulos novos e 43 baixas, sem duplicidade. Os dias "sem atualização" foram dias em que nenhuma chamada chegou ao servidor — a varredura roda no navegador e para em silêncio se a aba fecha.
+- **Causa estrutural — títulos congelados:** título que sai da listagem do Bling (excluído, substituído, cancelado) nunca mais era conferido. 165 títulos em aberto ou parciais sem conferência (FACE R$ 2,3 mi). Confirmados com o Controller: **DATAPREV `26280211663`**, R$ 1.335.639,20 "a receber vencido", excluído e substituído pelo título de 21/10; **JULIANO BASILIO `23648043154`**, parcial de R$ 10.000 de título excluído e substituído pelo de 10/07 — R$ 10.000 em dobro no caixa de julho. A verificação de exclusões não os alcançava: olhava os ~30 em aberto de vencimento **mais distante** dentro de 90 dias.
+- **Correção:** fila de reconferência por id (`lib/bling-reconferencia.js`, R10.4/R10.5) — títulos em aberto que a varredura não viu são consultados um a um; 404 nos dois recursos remove, com teto de 15 por execução e registro completo em `audit_logs`; qualquer outra falha mantém. `verificarExclusoes` passa a cuidar só dos liquidados recentes. Cron autenticado só por `CRON_SECRET`, com prazo por página, fatia por entidade e rodízio diário; erro gravado em `cron_resultado`.
+- **Validação:** 17 suítes, 254 testes; 10 sabotagens (uma por trava nova), todas reprovadas pela trava certa; build compila.
+- **Pendente:** aplicar a migração `20261016_reconferencia`, criar `CRON_SECRET`, mergear e rodar o piloto (JAM, JB, FACE) — sob aprovação. O item 4 do Controller (regra do borderô, ADR-004) fica para depois.
 
 **16/10 · T10 · Suítes executadas pela primeira vez desde o PR #28**
 Node 24.20.0 e git instalados por `winget`; clone da `main` em 1ffc050; `npm ci`.

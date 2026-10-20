@@ -266,6 +266,16 @@ deixou de existir; sem a conferência, o registro fica congelado.
 ambos excluídos e substituídos no Bling. 165 títulos sem conferência nas três entidades.
 **R10.5 — Remoção por "não existe no Bling" exige 404 nos dois recursos**, nunca outra
 falha, com teto de 15 por execução e o registro completo em `audit_logs`.
+**R10.6 — Título liquidado também é conferido contra o Bling, pela listagem filtrada.**
+Os pagos e parciais dos últimos 365 dias são listados no Bling por data de pagamento; o que
+existe aqui e não apareceu é conferido pelo id (R10.5). Fonte: `lib/bling-reconferencia.js`
+· trava em `test-conferencia-liquidados`. Acima de 5% dos liquidados do período (mínimo
+20) sem aparecer, a rodada é **suspensa** e nada é removido — listagem incompleta não pode
+virar remoção em massa.
+*Incidente (20/10):* conciliação das saídas da FACE contra o relatório de pagamentos do
+Bling — MERCADO LIVRE R$ 1.805,99 e RAPHAEL BERBEL PITTA R$ 946,40 (julho) e PLAYSTATION
+R$ 43,90 (agosto, em dobro) existiam só aqui. A verificação de exclusões olhava sempre os
+40–60 liquidados mais recentes: na FACE, a última semana.
 
 ---
 

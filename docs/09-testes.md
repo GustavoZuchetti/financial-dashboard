@@ -1,6 +1,6 @@
 # 09 — Testes
 
-**17 suítes · 254 testes · todas passando.** Verificado em 16/10/2026 com Node 24.20.0, na branch da reconferência (fila dos títulos fora da listagem e cron). Antes dela: 16 suítes, 232 testes, verificados no mesmo dia na `main` (1ffc050) com a correção de `test-bling-jwt` abaixo. `npm run build` compila (36 páginas) e `no-undef` está limpo. Antes da correção, `test-bling-jwt` reprovava 1 de 12 — ver "Recortar função por limite" mais adiante.
+**18 suítes · 285 testes · todas passando.** Verificado em 20/10/2026 com Node 24.20.0, na branch da conferência dos liquidados. Em 16/10, na branch da reconferência: 17 suítes, 254 testes. Antes dela: 16 suítes, 232 testes, verificados no mesmo dia na `main` (1ffc050) com a correção de `test-bling-jwt` abaixo. `npm run build` compila (36 páginas) e `no-undef` está limpo. Antes da correção, `test-bling-jwt` reprovava 1 de 12 — ver "Recortar função por limite" mais adiante.
 
 ```bash
 for t in scripts/test-*.mjs; do node "$t"; done
@@ -43,6 +43,7 @@ Um `[TRAVA]` falhando não é teste a ajustar — é defeito a corrigir.
 | `test-escopo-entidade` | 10 | Toda tela reage à troca — **inclusive entre seleções múltiplas**; só a lib grava a seleção | PRs #19, #27, #28 |
 | `test-fonte-unica-dre` | 2 | `calcDRE` definida só em `lib/dre-calc.js`; toda tela que a chama a importa de lá | T1 |
 | `test-reconferencia` | 24 | Título em aberto fora da listagem vai para a fila, do mais antigo; falha transitória nunca remove; teto de remoções; cron só com `CRON_SECRET`, com prazo e rodízio | 16/10 |
+| `test-conferencia-liquidados` | 31 | Pago que a listagem filtrada não devolveu é candidato; margem do borderô; trava de 5%; só compara com a listagem inteira; retomada e rodízio da rodada | 20/10 |
 
 ---
 
@@ -98,6 +99,7 @@ deliberadamente simples — não simulam React nem rede — para pegar o caso de
 | `test-fonte-unica-dre` | `calcDRE` definida só em `lib/dre-calc.js`, importada por quem a usa |
 | `test-reconferencia` | cron sem `x-vercel-cron` nem `?key=`; prazo em toda página do cron; um único `DELETE` em `fluxo_caixa` no `bling-server`; fila só no incremental do Fluxo |
 | `test-exclusoes-alvos` | `verificarExclusoes` sem o grupo "em aberto" — a réplica do predicado bate com o código |
+| `test-conferencia-liquidados` | página com erro não avança; plausibilidade antes da fila; remoção só pela fila única; `select *` antes de remover; histórico com as fases e filtros únicos; cron com prazo |
 
 **Recortar a função pelo limite, não por janela fixa.** `test-bling-jwt` recortava `blingGet` com
 `src.slice(i, i + 1400)`. Quando a função cresceu (retry de gateway, timeout, comentários), o

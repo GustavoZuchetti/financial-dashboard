@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server'
-import { getAdmin, ensureToken, fetchCategoriasMap, processarPaginaFluxo, pausa, verificarExclusoes, processarFilaReconferencia } from '@/lib/bling-server'
-import { ordemRodizio, diaDoAno, janelaCron, CRON_LIMITE_PAGINA, CRON_TETO_MS } from '@/lib/bling-reconferencia'
+import { getAdmin, ensureToken, fetchCategoriasMap, processarPaginaFluxo, pausa, verificarExclusoes, processarFilaReconferencia, conferirLiquidados } from '@/lib/bling-server'
+import {
+  ordemRodizio, diaDoAno, janelaCron, CRON_LIMITE_PAGINA, CRON_TETO_MS,
+  acaoCronLiquidados, novaRodadaLiquidados, resumoEstadoLiquidados,
+} from '@/lib/bling-reconferencia'
 
 // ─── Cron diário: sincroniza o fluxo em segundo plano ───────────────────────
 // Agendado em vercel.json. Cada execução: algumas páginas da listagem por
 // entidade (o cursor persiste em integracoes.cron_cursor e continua no dia
-// seguinte), uma fatia da fila de reconferência e a verificação de exclusões
-// dos liquidados recentes.
+// seguinte), uma fatia da fila de reconferência, uma fatia da conferência dos
+// liquidados (rodada nova a cada 7 dias) e a verificação de exclusões dos
+// liquidados recentes.
 //
 // ── Por que nunca rodou (de 15/07 a 16/10/2026) ─────────────────────────────
 // A rota aceitava o header `x-vercel-cron: 1` ou `Bearer CRON_SECRET`. A
@@ -52,9 +56,11 @@ export async function GET(request) {
     const janela = janelaCron({ inicioGlobal, agora: inicio, entidadesRestantes: integs.length - ix })
     const r = { integracao: raw.id, empresa_id: raw.empresa_id, paginas: 0, gravados: 0, janela_ms: janela }
     if (janela < 5000) { r.interrompido = 'sem tempo nesta execução'; relatorio.push(r); continue }
-    // Fatias: ~60% listagem, ~25% fila de reconferência, o resto exclusões.
-    const fimListagem = inicio + Math.floor(janela * 0.6)
-    const fimFila = inicio + Math.floor(janela * 0.85)
+    // Fatias: ~50% listagem, ~20% fila de reconferência, ~20% conferência dos
+    // liquidados, o resto exclusões recentes.
+    const fimListagem = inicio + Math.floor(janela * 0.5)
+    const fimFila = inicio + Math.floor(janela * 0.7)
+    const fimLiquidados = inicio + Math.floor(janela * 0.9)
     const fimEntidade = inicio + janela
 
     let integ = raw
@@ -91,6 +97,21 @@ export async function GET(request) {
         r.reconferencia = { ...rec, pendentes: restante.length }
         await admin.from('integracoes').update({ reconferir: restante }).eq('id', integ.id)
           .then(x => x, () => null)
+      }
+
+      // Conferência dos liquidados: continua a rodada em curso ou abre uma nova
+      // a cada 7 dias. Poucas páginas por dia; a sincronização manual fecha a
+      // rodada inteira de uma vez.
+      const acaoLiq = acaoCronLiquidados(integ.conferencia_liquidados)
+      if (acaoLiq !== 'pular' && fimLiquidados - Date.now() > 6000) {
+        try {
+          const estado = acaoLiq === 'continuar' ? integ.conferencia_liquidados : novaRodadaLiquidados()
+          const { estado: novo, resumo } = await conferirLiquidados(admin, integ, {
+            estado, prazoMs: fimLiquidados - Date.now(), categoriasMap, nomesContato })
+          r.liquidados = { ...resumo, estado: resumoEstadoLiquidados(novo) }
+          await admin.from('integracoes').update({ conferencia_liquidados: novo }).eq('id', integ.id)
+            .then(x => x, () => null)
+        } catch (e) { r.liquidados = { erro: String(e.message || e) } }
       }
 
       // Exclusões na origem dos liquidados recentes (últimos 90 dias).

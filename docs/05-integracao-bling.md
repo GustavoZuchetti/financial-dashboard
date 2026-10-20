@@ -98,6 +98,7 @@ de divergência identificados na conciliação de 25/08.
 | Folga mínima para buscar borderô | 4 s |
 | Fila de reconferência, ao fechar | só com mais de 10 s restantes, até 20 s; o resto em laço pela interface |
 | Verificação de exclusões | só com mais de 8 s restantes, até 12 s |
+| Conferência dos liquidados | chamada própria (`{ conferir_liquidados: true }`), até 40 s por chamada, em laço pela interface |
 
 **Prioridade:** títulos novos antes de revisões.
 
@@ -150,6 +151,44 @@ R$ 2,3 mi). Confirmados com o Controller: DATAPREV `26280211663`, R$ 1,34 mi "a 
 vencido", excluído e substituído no Bling; JULIANO BASILIO `23648043154`, parcial de
 R$ 10.000 de um título excluído, contado em dobro em julho.
 
+### Conferência dos liquidados — listagem filtrada por data de pagamento
+
+Fonte: `lib/bling-reconferencia.js` (regra pura) e `conferirLiquidados` em
+`lib/bling-server.js` · trava em `test-conferencia-liquidados` · regra R10.6.
+
+O mesmo defeito da seção anterior, do lado dos pagos: pagamento excluído no Bling some
+da listagem e, completo aqui, nunca mais era conferido. A varredura incremental não
+ajuda — percorre os ~3.000 em aberto e só toca os pagos dos últimos dias.
+
+Uma **rodada**, com estado em `integracoes.conferencia_liquidados`:
+
+1. **listagem** — as três fases da carga histórica (`FASES_LIQUIDADOS`: recebidos e
+   parciais; pagos; pagos parciais), filtradas pela **data de pagamento** de hoje e dos
+   365 dias anteriores, **100 por página**, só os ids. Na FACE, ~25 páginas.
+   **Página com erro não avança**: a rodada só compara depois de uma listagem inteira
+   lida com sucesso.
+2. **comparar** — candidatos: pagos e parciais do Bling daqui, liquidados no período, que
+   a listagem não devolveu. Os liquidados nos **45 primeiros dias** da janela ficam de
+   fora: a data gravada vem do borderô (ADR-004) e pode diferir da data de pagamento do
+   Bling (FGTS: 16/01 aqui, 20/02 lá).
+3. **Trava de plausibilidade** — acima de 5% dos liquidados do período (mínimo 20), a
+   rodada termina como `suspeita`: **nada é consultado nem removido**, e a interface avisa.
+4. **fila** — cada candidato pelo id, com a mesma regra e o mesmo teto da reconferência
+   (`processarFilaReconferencia` com `statusAlvo` pago/parcial). Existir lá com outra
+   situação — um pagamento **estornado** — atualiza o título; 404 nos dois recursos remove.
+
+| Quem roda | Quando |
+|---|---|
+| Interface | depois da reconferência, em laço até a rodada fechar. Continua uma rodada em curso de até 3 dias; não repete uma concluída há menos de 24 h |
+| Cron | uma fatia por dia; continua a rodada em curso e abre uma nova a cada 7 dias |
+
+*Incidente:* 20/10/2026 — conciliação do Controller contra o relatório de pagamentos do
+Bling. MERCADO LIVRE `26414983916` (R$ 1.805,99, 23/07) e RAPHAEL BERBEL PITTA
+`26317080212` (R$ 946,40, 10/07; no Bling virou dois títulos de R$ 173,53 e R$ 772,87)
+existiam só aqui e foram removidos com confirmação do Controller. PLAYSTATION CURITIBA
+R$ 43,90 de 17/08 está em dobro (`26652202409` e `26751577999`); a primeira rodada decide
+qual dos dois saiu do Bling.
+
 ### Exclusões na origem — liquidados recentes
 
 `verificarExclusoes` confere a existência dos títulos **liquidados** nos últimos 90 dias
@@ -160,6 +199,9 @@ varredura e no cron.
 - Registra em `audit_logs`, com o registro completo
 - Desde 16/10/2026 **não confere títulos em aberto** — eles vão para a fila de
   reconferência acima
+- ⚠️ Confere só os 40–60 liquidados **mais recentes** (`order desc, limit`): na FACE, a
+  última semana. A cobertura do período inteiro é da conferência dos liquidados, acima;
+  esta fica como checagem rápida do que acabou de ser pago
 
 *Incidentes:*
 - PR #15 — o filtro era só `.gte('data_liquidacao', desde)`; títulos em aberto nunca eram
@@ -178,8 +220,9 @@ Por execução, para cada entidade, numa fatia de tempo igual ao que sobra do te
 
 | Parte da fatia | Trabalho |
 |---|---|
-| ~60% | páginas da listagem (30 títulos, prazo limitado à fatia), cursor em `cron_cursor` |
-| ~25% | fila de reconferência |
+| ~50% | páginas da listagem (30 títulos, prazo limitado à fatia), cursor em `cron_cursor` |
+| ~20% | fila de reconferência |
+| ~20% | conferência dos liquidados — rodada nova a cada 7 dias |
 | restante | exclusões dos liquidados recentes (limite 40) |
 
 Estado em `cron_cursor`, `cron_resultado`, `ultima_sync_cron`. Erro também é gravado em

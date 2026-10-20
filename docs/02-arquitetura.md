@@ -44,7 +44,7 @@ uma regra que já existia numa lib.
 | `lib/usar-versao-selecao.js` | Recarga a cada troca de entidade — `useVersaoSelecao`. **Usado pelas treze telas** que resolvem entidades |
 | `lib/selecao-lancamentos.js` | Seleção em lote para exclusão — `podarSelecao`, `alternarPagina`, `resumirSelecao` |
 | `lib/bling-cursor.js` | Posição de varredura da sincronização |
-| `lib/bling-reconferencia.js` | Quem entra na fila de reconferência, o que fazer com a resposta do Bling, teto de remoções, rodízio e orçamento do cron |
+| `lib/bling-reconferencia.js` | Quem entra na fila de reconferência, o que fazer com a resposta do Bling, teto de remoções, rodízio e orçamento do cron, e a conferência dos liquidados (fases e filtros por data de pagamento, candidatos, trava de plausibilidade) |
 | `lib/bling-server.js` | Todo acesso à API do Bling |
 | `lib/supabase.js` | Resolução de entidades selecionadas — `getSelectedEntidadeIds` |
 | `lib/export-excel.js` | Toda exportação Excel |
@@ -86,7 +86,7 @@ app/
 components/                       Sidebar, SvgIcon, IntegracoesTab, SaldoAberturaTab, ...
 lib/                              fontes únicas — ver tabela acima
 scripts/
-  test-*.mjs                      16 suítes de teste — ver 09
+  test-*.mjs                      18 suítes de teste — ver 09
   seed_* / setup_* / *_setup.js   ⚠️ legado, com credencial exposta — ver 07
 supabase/migrations/              migrações versionadas — aplicar no SQL Editor
 docs/                             esta documentação
@@ -141,7 +141,7 @@ escopo da organização visualizada. Ver [07](07-seguranca.md).
 | `/api/integracoes` | GET, POST | org_admin | lista e cria integrações · monta URL OAuth |
 | `/api/integracoes/bling/callback` | GET | `state` assinado | retorno do OAuth |
 | `/api/integracoes/bling/enrich` | POST | org_admin | enriquecimento por detalhe · 60 s |
-| `/api/integracoes/bling/sync` | POST | org_admin | sincronização manual · 60 s · com `{ reconferir: true }`, processa a fila de reconferência |
+| `/api/integracoes/bling/sync` | POST | org_admin | sincronização manual · 60 s · com `{ reconferir: true }`, processa a fila de reconferência · com `{ conferir_liquidados: true }`, a conferência dos liquidados |
 | `/api/invite` | GET, POST | org_admin | convites |
 | `/api/my-empresas` | GET | autenticado | empresas da organização — service role |
 | `/api/public/logo` | GET | público | logo da organização |

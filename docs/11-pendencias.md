@@ -1,25 +1,30 @@
 # 11 — Pendências
 
-> Estado em 16/10/2026 (P0, T1, T7, T8 e T10 fechados; reconferência e cron em aprovação). Ordenado por gravidade dentro de cada seção.
+> Estado em 20/10/2026 (P0, T1, T7, T8, T10 e a reconferência com cron fechados; conferência dos liquidados em aprovação). Ordenado por gravidade dentro de cada seção.
 > Ao fechar um item, mova-o para [10 — Histórico](10-historico.md) com a data.
 
 ---
 
 ## 🔴 Estado incerto — verificar antes de qualquer coisa
 
-### P1 — Reconferência e cron: aplicar em produção
+### P1 — Conferência dos liquidados: aplicar em produção
 
-Código pronto (fila de reconferência, `verificarExclusoes` só para liquidados, cron com
-`CRON_SECRET`). Falta, nesta ordem e com aprovação do Controller:
+Código pronto (R10.6, `lib/bling-reconferencia.js`, `conferirLiquidados`). Falta, nesta
+ordem e com aprovação do Controller:
 
-1. Aplicar `supabase/migrations/20261016_reconferencia.sql`
-2. Criar `CRON_SECRET` na Vercel (produção) e redeployar
-3. Mergear o PR
-4. Piloto: sincronizar **JAM**, conferir fila, remoções e KPIs antes e depois; depois JB e FACE
+1. Aplicar `supabase/migrations/20261020_conferencia_liquidados.sql` e conferir a coluna
+2. Mergear o PR
+3. Piloto: sincronizar **JAM**, conferir a rodada (`conferencia_liquidados`), remoções e KPIs
+   antes e depois; depois JB e FACE
 
-Esperado na FACE: saem o DATAPREV `26280211663` (R$ 1,34 mi a receber vencido) e o
-JULIANO `23648043154` (R$ 10.000 em dobro em julho), ambos confirmados como excluídos
-no Bling. Fila inicial estimada: 165 títulos (FACE 62, JAM 33, JB 70).
+Esperado na FACE: **1 remoção** — um dos dois PLAYSTATION de R$ 43,90 de 17/08
+(`26652202409` ou `26751577999`). Qualquer outro número: parar e conferir com o Controller.
+
+Também pendente de confirmação no Bling pelo Controller: as remoções da reconferência de
+16/10 na FACE para **FACESING** (9 títulos, R$ 507.000) e **ST HETTA** (2 títulos,
+R$ 300.000) — restauráveis por `audit_logs` se estiverem erradas. E o título
+`25075178427`, a receber, com vencimento **03/03/3036** no Bling (erro de digitação): soma
+R$ 1.000 ao "a receber futuro".
 
 O P0 do grupo 9 do Plano de Contas foi fechado em 16/10/2026 — ver [10 — Histórico](10-historico.md).
 
@@ -87,6 +92,15 @@ relançado como título próprio de R$ 9.000; depois o título de R$ 22.000 foi 
 integralmente em 14/09. O sistema mostra R$ 31.000. O Controller confirmou que o título foi
 pago em R$ 22.000; resta saber se o pagamento de 14/09 moveu R$ 22.000 ou R$ 13.000 no
 banco. Reavaliar a ADR-004 depois da reconferência — item 4 do Controller.
+
+A conciliação de 20/10 achou mais dois efeitos da regra, sem erro de total no ano:
+- **Juros e multas pagos não entram** — R$ 1.294,47 nas saídas da FACE de jan–set (30
+  títulos, quase todos da Receita Federal): o sistema fica **abaixo** do Bling
+- **Data de liquidação diferente da do Bling** em 19 títulos, 4 trocando de mês: FGTS
+  `24516253677` (R$ 4.079,26, 16/01 aqui × 20/02 lá), FGTS `24794238295` (R$ 3.673,81,
+  16/01 × 20/03), SANTANDER `20885879585` (R$ 2.745,57, 16/01 × 03/02) e ALEXANDRE
+  FRANCISCO `23648056951` (R$ 22.000, 24/03 × 16/04). Explicam as diferenças mensais de
+  janeiro a abril
 
 ### D6 — JAM: nenhuma baixa desde 27/07
 

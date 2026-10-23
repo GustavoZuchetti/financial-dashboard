@@ -1,6 +1,6 @@
 # 11 — Pendências
 
-> Estado em 20/10/2026 (P0, T1, T7, T8, T10 e a reconferência com cron fechados; conferência dos liquidados em aprovação). Ordenado por gravidade dentro de cada seção.
+> Estado em 23/10/2026 (P0, T1, T7, T8, T10 e a reconferência com cron fechados; conferência dos liquidados em produção, piloto em andamento). Ordenado por gravidade dentro de cada seção.
 > Ao fechar um item, mova-o para [10 — Histórico](10-historico.md) com a data.
 
 ---
@@ -9,13 +9,14 @@
 
 ### P1 — Conferência dos liquidados: aplicar em produção
 
-Código pronto (R10.6, `lib/bling-reconferencia.js`, `conferirLiquidados`). Falta, nesta
-ordem e com aprovação do Controller:
+Em produção desde 23/10 (PR #34, migração aplicada). Piloto: **JAM** concluída com 0
+candidatos; **JB** suspensa pela trava (listagem parava na primeira página incompleta —
+nada removido). Falta, com aprovação do Controller:
 
-1. Aplicar `supabase/migrations/20261020_conferencia_liquidados.sql` e conferir a coluna
-2. Mergear o PR
-3. Piloto: sincronizar **JAM**, conferir a rodada (`conferencia_liquidados`), remoções e KPIs
-   antes e depois; depois JB e FACE
+1. Mergear a correção da paginação (fim só com página vazia, 30 por página, diagnóstico)
+2. Repetir a **JB** e conferir `por_fase` em `conferencia_liquidados`: as páginas lidas
+   têm de somar os pagos do período
+3. Só então a **FACE**
 
 Esperado na FACE: **1 remoção** — um dos dois PLAYSTATION de R$ 43,90 de 17/08
 (`26652202409` ou `26751577999`). Qualquer outro número: parar e conferir com o Controller.

@@ -164,7 +164,10 @@ Uma **rodada**, com estado em `integracoes.conferencia_liquidados`:
 
 1. **listagem** — as três fases da carga histórica (`FASES_LIQUIDADOS`: recebidos e
    parciais; pagos; pagos parciais), filtradas pela **data de pagamento** de hoje e dos
-   365 dias anteriores, **100 por página**, só os ids. Na FACE, ~25 páginas.
+   365 dias anteriores, **30 por página** (o tamanho da carga histórica), só os ids. Na
+   FACE, ~90 páginas. A fase **só termina com página vazia** — ou com uma página que só
+   repete ids já vistos —, nunca por página incompleta; acima de 400 páginas numa fase a
+   rodada é suspensa. Cada página fica em `paginas_log` (fase, página, recebidos, novos).
    **Página com erro não avança**: a rodada só compara depois de uma listagem inteira
    lida com sucesso.
 2. **comparar** — candidatos: pagos e parciais do Bling daqui, liquidados no período, que
@@ -173,6 +176,8 @@ Uma **rodada**, com estado em `integracoes.conferencia_liquidados`:
    Bling (FGTS: 16/01 aqui, 20/02 lá).
 3. **Trava de plausibilidade** — acima de 5% dos liquidados do período (mínimo 20), a
    rodada termina como `suspeita`: **nada é consultado nem removido**, e a interface avisa.
+   A rodada guarda o `motivo` e um `diagnostico` — candidatos por tipo e por mês e uma
+   amostra de 20 — para conferir no Bling.
 4. **fila** — cada candidato pelo id, com a mesma regra e o mesmo teto da reconferência
    (`processarFilaReconferencia` com `statusAlvo` pago/parcial). Existir lá com outra
    situação — um pagamento **estornado** — atualiza o título; 404 nos dois recursos remove.
@@ -188,6 +193,12 @@ Bling. MERCADO LIVRE `26414983916` (R$ 1.805,99, 23/07) e RAPHAEL BERBEL PITTA
 existiam só aqui e foram removidos com confirmação do Controller. PLAYSTATION CURITIBA
 R$ 43,90 de 17/08 está em dobro (`26652202409` e `26751577999`); a primeira rodada decide
 qual dos dois saiu do Bling.
+
+*Incidente:* 23/10/2026 — piloto. A JAM fechou com 0 candidatos (59 pagos, uma página
+por fase). A JB foi **suspensa pela trava**: 721 de 961 pagos não apareceram — a rodada
+levou 3 s, menos que as ~13 páginas de 100 necessárias. A listagem tratava página com
+menos itens que o pedido como fim da fase. Nada foi removido. Corrigido: fim só com página
+vazia, 30 por página, registro por página e diagnóstico na suspensão.
 
 ### Exclusões na origem — liquidados recentes
 

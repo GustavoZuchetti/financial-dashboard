@@ -10,7 +10,9 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
-| 20/10 | — | **Conferência dos liquidados pela listagem filtrada** — código e migração prontos; aplicação em produção sob aprovação |
+| 23/10 | — | **Paginação da conferência dos liquidados corrigida** — piloto da JB suspenso pela trava; nada removido |
+| 23/10 | #34 | **Conferência dos liquidados em produção** — migração aplicada; JAM 0 candidatos; JB suspensa |
+| 20/10 | — | **Conferência dos liquidados pela listagem filtrada** — código e migração |
 | 20/10 | — | **Conciliação das saídas da FACE com o Bling** — diferenças de julho e do ano explicadas ao centavo; 2 pagos inexistentes no Bling removidos |
 | 16–19/10 | #33 | **Reconferência e cron em produção** — piloto JAM, JB e FACE; cron grava todos os dias desde 17/10 |
 | 16/10 | — | **Reconferência dos títulos fora da listagem e cron autenticado** — código e migração |
@@ -21,6 +23,13 @@ regras existem.
 | 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**23/10 · Piloto da conferência dos liquidados · paginação corrigida**
+Migração `20261020_conferencia_liquidados` aplicada e conferida, PR #34 mergeado (`d42d780`), deploy READY.
+- **JAM:** rodada concluída em 2 s — 59 pagos no período, 51 conferíveis, **0 candidatos**, nada removido; KPIs iguais. Cada fase cabia numa página.
+- **JB:** rodada **suspensa pela trava** — 721 de 961 conferíveis não apareceram (limite 56). Nada consultado nem removido; KPIs iguais. A rodada levou 3 s, menos que as ~13 páginas de 100 necessárias: a listagem tratava página com menos itens que o pedido como fim da fase. Os ids lidos foram descartados na suspensão, então a página exata não pôde ser confirmada.
+- **Correção:** fase termina só com página vazia (ou que só repete ids já vistos); 30 por página, o tamanho da carga histórica; teto de 400 páginas por fase; cada página registrada em `paginas_log`; rodada suspensa guarda motivo e diagnóstico (candidatos por tipo e mês, amostra de 20). FACE não rodada.
+- **Validação:** 18 suítes, 292 testes; 20 sabotagens (7 novas), todas reprovadas pela trava certa; build compila.
 
 **20/10 · Conferência dos liquidados pela listagem filtrada**
 - **Causa:** a verificação de exclusões dos liquidados lia os 40–60 **mais recentes** (`order desc, limit`); na FACE, 2.160 pagos em 2026, isso é a última semana. Pagamento excluído no Bling depois disso ficava aqui para sempre. A varredura incremental não cobria: no dia 16 tocou ~3.000 em aberto e ~70 pagos.

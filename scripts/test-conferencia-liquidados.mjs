@@ -60,20 +60,48 @@ teste('[TRAVA] filtros por data de pagamento idênticos aos da carga histórica'
 })
 
 // ─── 2. Avanço da listagem ───────────────────────────────────────────────────
-teste('página cheia avança a página e acumula ids sem repetir', () => {
-  const e = R.avancarListagem({ ...R.novaRodadaLiquidados(HOJE), vistos: ['1'] }, { ids: ['1', '2'], paginaCheia: true })
+teste('página com itens avança a página e acumula ids sem repetir', () => {
+  const e = R.avancarListagem({ ...R.novaRodadaLiquidados(HOJE), vistos: ['1'] }, { ids: ['1', '2'] })
   eq([e.etapa, e.fase, e.pagina, e.vistos], ['listagem', 0, 2, ['1', '2']])
 })
-teste('página incompleta passa para a fase seguinte', () => {
-  const e = R.avancarListagem({ ...R.novaRodadaLiquidados(HOJE), pagina: 7 }, { ids: ['9'], paginaCheia: false })
+teste('[TRAVA] página INCOMPLETA não encerra a fase (piloto JB, 23/10)', () => {
+  const e = R.avancarListagem({ ...R.novaRodadaLiquidados(HOJE), pagina: 2 }, { ids: ['9'] })
+  eq([e.etapa, e.fase, e.pagina], ['listagem', 0, 3])
+})
+teste('página vazia passa para a fase seguinte', () => {
+  const e = R.avancarListagem({ ...R.novaRodadaLiquidados(HOJE), pagina: 7, vistos: ['1'] }, { ids: [] })
   eq([e.etapa, e.fase, e.pagina], ['listagem', 1, 1])
 })
-teste('[TRAVA] só compara depois da ÚLTIMA página da ÚLTIMA fase', () => {
+teste('[TRAVA] só compara depois da página VAZIA da ÚLTIMA fase', () => {
   const ultima = R.FASES_LIQUIDADOS.length - 1
-  const cheia = R.avancarListagem({ ...R.novaRodadaLiquidados(HOJE), fase: ultima }, { ids: ['1'], paginaCheia: true })
-  eq(cheia.etapa, 'listagem', 'página cheia na última fase: ')
-  const fim = R.avancarListagem({ ...R.novaRodadaLiquidados(HOJE), fase: ultima }, { ids: ['1'], paginaCheia: false })
+  const curta = R.avancarListagem({ ...R.novaRodadaLiquidados(HOJE), fase: ultima }, { ids: ['1'] })
+  eq(curta.etapa, 'listagem', 'página com itens na última fase: ')
+  const fim = R.avancarListagem({ ...R.novaRodadaLiquidados(HOJE), fase: ultima, pagina: 2, vistos: ['1'] }, { ids: [] })
   eq(fim.etapa, 'comparar')
+})
+teste('[TRAVA] página que só repete ids já vistos encerra a fase (sem laço)', () => {
+  const e = R.avancarListagem({ ...R.novaRodadaLiquidados(HOJE), pagina: 2, vistos: ['1', '2'] }, { ids: ['1', '2'] })
+  eq([e.etapa, e.fase, e.pagina], ['listagem', 1, 1])
+  eq(e.paginas_log.at(-1), { fase: 0, pagina: 2, recebidos: 2, novos: 0 })
+})
+teste('[TRAVA] teto de páginas por fase suspende a rodada', () => {
+  const e = R.avancarListagem({ ...R.novaRodadaLiquidados(HOJE), pagina: R.MAX_PAGINAS_FASE_LIQUIDADOS }, { ids: ['novo'] })
+  eq(e.etapa, 'suspeita')
+  if (!/páginas/.test(e.motivo || '')) throw new Error('suspensão sem motivo')
+})
+teste('[TRAVA] páginas de 30, o tamanho provado na carga histórica', () => {
+  eq(R.LIMITE_PAGINA_LIQUIDADOS, 30)
+})
+teste('cada página fica registrada, e o resumo soma por fase', () => {
+  let e = R.novaRodadaLiquidados(HOJE)
+  e = R.avancarListagem(e, { ids: ['1', '2'] })
+  e = R.avancarListagem(e, { ids: ['3'] })
+  e = R.avancarListagem(e, { ids: [] })
+  e = R.avancarListagem(e, { ids: ['4'] })
+  eq(e.paginas_log.length, 4)
+  eq(R.resumoPaginas(e.paginas_log), [
+    { fase: 0, paginas: 3, recebidos: 3, novos: 3 },
+    { fase: 1, paginas: 1, recebidos: 1, novos: 1 }])
 })
 
 // ─── 3. Candidatos ───────────────────────────────────────────────────────────
@@ -117,6 +145,27 @@ teste('[TRAVA] listagem incompleta não vira remoção em massa: teto de 5% (mí
   eq([R.filaPlausivel(108, 2160), R.filaPlausivel(109, 2160)], [true, false], 'FACE 2.160 pagos: ')
   eq([R.filaPlausivel(20, 51), R.filaPlausivel(21, 51)], [true, false], 'JAM 51 pagos: ')
   eq(R.filaPlausivel(2160, 2160), false, 'listagem vazia: ')
+})
+
+teste('diagnóstico da suspeita: lado, mês e amostra dos candidatos', () => {
+  const titulos = [
+    t({ doc_ref: 'bling:saida:2', data_liquidacao: '2026-08-17' }),
+    t({ doc_ref: 'bling:entrada:1', data_liquidacao: '2026-07-10' }),
+    t({ doc_ref: 'bling:saida:3', data_liquidacao: '2026-08-01' }),
+    t({ doc_ref: 'bling:saida:9', data_liquidacao: '2026-08-01' })]
+  const d = R.diagnosticoSuspeita(titulos, ['bling:saida:2', 'bling:entrada:1', 'bling:saida:3'], 2)
+  eq(d.por_tipo, { entrada: 1, saida: 2 })
+  eq(d.por_mes, { '2026-07': 1, '2026-08': 2 })
+  eq(d.amostra.map(a => a.doc_ref), ['bling:entrada:1', 'bling:saida:3'])
+})
+teste('[TRAVA] rodada suspensa guarda motivo e diagnóstico', () => {
+  const fn = corpoDe(fonte('lib/bling-server.js'), 'export async function conferirLiquidados')
+  if (!/diagnostico: diagnosticoSuspeita\(liquidados, fila\)/.test(fn)) throw new Error('suspeita sem diagnóstico')
+  if (!/motivo:/.test(fn)) throw new Error('suspeita sem motivo')
+  if (!/if \(e\.etapa === 'suspeita'\)/.test(fn)) throw new Error('teto de páginas não encerra a rodada')
+  const r = R.resumoEstadoLiquidados({ etapa: 'suspeita', motivo: 'x', diagnostico: { por_tipo: { saida: 1 }, por_mes: {}, amostra: [{ doc_ref: 'bling:saida:1' }] } })
+  eq([r.motivo, r.diagnostico.por_tipo], ['x', { saida: 1 }])
+  if (JSON.stringify(r).includes('bling:saida')) throw new Error('amostra vazou no resumo')
 })
 
 // ─── 5. Retomada e repetição ─────────────────────────────────────────────────

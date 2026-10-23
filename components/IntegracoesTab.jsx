@@ -261,7 +261,9 @@ export default function IntegracoesTab({ empresas, showToast }) {
         const liq = liqErro ? ` · conferência dos pagos não executada: ${liqErro}`
           : !liqEstado ? ''
           : liqEstado.etapa === 'suspeita'
-            ? ` · conferência dos pagos SUSPENSA: ${liqEstado.candidatos} de ${liqEstado.liquidados} não apareceram no Bling, acima do limite de segurança — nada foi removido`
+            ? ` · conferência dos pagos SUSPENSA: ${liqEstado.candidatos != null
+                ? `${liqEstado.candidatos} de ${liqEstado.liquidados} não apareceram no Bling, acima do limite de segurança`
+                : (liqEstado.motivo || 'listagem do Bling fora do esperado')} — nada foi removido`
             : (liqAtualizados ? ` · ${liqAtualizados} pago(s) atualizado(s) pelo Bling` : '')
               + (['listagem', 'comparar', 'fila'].includes(liqEstado.etapa) ? ' · conferência dos pagos continua na próxima sincronização' : '')
         const log = `${inicio}: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}${exc}${rec}${liq}${adi}`

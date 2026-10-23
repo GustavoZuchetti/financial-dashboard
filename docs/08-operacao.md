@@ -192,7 +192,11 @@ select e.nome, i.conferencia_liquidados->>'etapa' as etapa,
   from public.integracoes i join public.empresas e on e.id = i.empresa_id;
 ```
 
-1. `etapa = suspeita`: candidatos acima de 5% dos liquidados — **nada foi removido**.
+1. `etapa = suspeita`: candidatos acima de 5% dos liquidados, ou paginação em laço —
+   **nada foi removido**. Ler `conferencia_liquidados->'motivo'`,
+   `->'diagnostico'` (candidatos por tipo e mês, amostra) e `->'paginas_log'` (recebidos
+   por página): página com poucos itens no meio da fase, ou fase inteira com 0, aponta
+   para a listagem do Bling, não para exclusões.
    Não forçar: comparar uma amostra dos candidatos com o Bling antes de qualquer ação
 2. `etapa = listagem` parada há dias: a página da posição salva está falhando no Bling —
    ver `cron_resultado.liquidados.interrompido`

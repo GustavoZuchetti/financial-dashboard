@@ -176,6 +176,34 @@ select e.nome, jsonb_array_length(coalesce(i.reconferir, '[]'::jsonb)) as na_fil
 Remoções feitas pela fila ficam em `audit_logs` com `changed_by_email =
 'sistema:reconferencia'` e o registro completo em `old_data` — é de lá que se restaura.
 
+### Pago no sistema que não existe mais no Bling
+
+Sintoma: as saídas ou entradas de um mês ficam **acima** do relatório de pagamentos do
+Bling. Quem cobre é a **conferência dos liquidados** (R10.6), que roda depois da
+reconferência na sincronização manual e numa fatia diária do cron.
+
+```sql
+select e.nome, i.conferencia_liquidados->>'etapa' as etapa,
+       i.conferencia_liquidados->'janela' as janela,
+       i.conferencia_liquidados->>'candidatos' as candidatos,
+       i.conferencia_liquidados->>'liquidados' as liquidados,
+       jsonb_array_length(coalesce(i.conferencia_liquidados->'fila', '[]'::jsonb)) as na_fila,
+       i.conferencia_liquidados->>'concluida_em' as concluida_em
+  from public.integracoes i join public.empresas e on e.id = i.empresa_id;
+```
+
+1. `etapa = suspeita`: candidatos acima de 5% dos liquidados — **nada foi removido**.
+   Não forçar: comparar uma amostra dos candidatos com o Bling antes de qualquer ação
+2. `etapa = listagem` parada há dias: a página da posição salva está falhando no Bling —
+   ver `cron_resultado.liquidados.interrompido`
+3. Remoções ficam em `audit_logs` com `changed_by_email =
+   'sistema:conferencia-liquidados'` e o registro completo em `old_data`
+
+Para conciliar contra o relatório do Bling, cruzar por **valor do título + data de
+liquidação**, não por nome: a descrição daqui às vezes é o histórico do título
+("FORNECEDOR", "MULTA E JUROS DE ATRASO"), não o contato. Juros e multas pagos ficam de
+fora daqui por regra (ADR-004) e aparecem como o sistema **abaixo** do Bling.
+
 ### "Failed to fetch" ao sincronizar
 
 A função serverless morreu antes de responder. Causa mais provável: **estouro do

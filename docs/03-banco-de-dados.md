@@ -131,6 +131,7 @@ Uma por entidade. RLS **deny-all**: acesso apenas por service role.
 | `contatos_cache` | jsonb | cache de nomes de contato |
 | `sync_vistos` | jsonb | ids devolvidos pela listagem na varredura manual em curso — `20261016_reconferencia` |
 | `reconferir` | jsonb | fila de doc_refs em aberto fora da listagem, a conferir pelo id — `20261016_reconferencia` |
+| `conferencia_liquidados` | jsonb | rodada da conferência dos liquidados: etapa, janela, posição da listagem, ids vistos, fila de candidatos — `20261020_conferencia_liquidados` |
 
 Tokens (verificado 24/09): formato **JWT**, 959 caracteres, nas três entidades.
 

@@ -203,6 +203,38 @@ export default function IntegracoesTab({ empresas, showToast }) {
         recPendentes = r.reconferir_pendentes || 0
         semAvanco = recPendentes < antes ? 0 : semAvanco + 1
       }
+
+      // Conferência dos liquidados: pagos dos últimos 365 dias que sumiram do
+      // Bling (caso MERCADO LIVRE / RAPHAEL, julho/2026). A rota decide se
+      // continua, abre ou pula a rodada; aqui só se repete até ela fechar.
+      let liqEstado = null, liqAtualizados = 0, liqFalhas = 0, guardaLiq = 0, liqErro = null, liqPend = Infinity
+      while (concluido && !historico && modulo === 'fluxo' && guardaLiq++ < 60 && liqFalhas < 3) {
+        const r = await authFetch('/api/integracoes/bling/sync', {
+          method: 'POST',
+          body: JSON.stringify({ integracao_id: integ.id, modulo, conferir_liquidados: true }),
+        })
+        if (r.retryAvel) { liqFalhas++; await new Promise(res => setTimeout(res, r.aguardar_ms || 8000)); continue }
+        // Etapa complementar: um erro aqui não desfaz a varredura já concluída.
+        if (r.error) { liqErro = r.error; break }
+        const lq = r.liquidados
+        if (lq) {
+          liqAtualizados += lq.atualizados || 0
+          removidos += lq.removidos || 0; valorRemov += lq.valorRemovido || 0
+          if (lq.interrompido) { liqFalhas++; await new Promise(res => setTimeout(res, 8000)) }
+        }
+        liqEstado = r.liquidados_estado
+        if (!liqEstado || !['listagem', 'comparar', 'fila'].includes(liqEstado.etapa)) break
+        // Fila que não diminui (só falhas transitórias ou teto de remoções): para
+        // de girar; o que sobrar fica salvo e o cron continua.
+        if (liqEstado.etapa === 'fila') {
+          if (liqEstado.pendentes >= liqPend) liqFalhas++
+          liqPend = liqEstado.pendentes
+        }
+        setSync(sx => ({ ...sx, [integ.id]: { rodando: true,
+          log: liqEstado.etapa === 'listagem'
+            ? `Conferindo no Bling os pagos dos últimos 12 meses · ${liqEstado.vistos} lidos`
+            : `Conferindo pelo id os pagos que não apareceram no Bling · ${liqEstado.pendentes} restantes` } }))
+      }
       if (!concluido) {
         // Parada por teto de iterações. Diferente de antes, a posição ficou
         // GRAVADA: basta executar de novo que continua daqui.
@@ -224,7 +256,15 @@ export default function IntegracoesTab({ empresas, showToast }) {
         const adi = adiados ? ` · ${adiados} título(s) adiado(s) por tempo — execute novamente para processá-los` : ''
         const rec = (recAtualizados ? ` · ${recAtualizados} título(s) fora da listagem conferido(s) no Bling` : '')
           + (recPendentes ? ` · ${recPendentes} ainda por reconferir (continua na próxima sincronização)` : '')
-        const log = `${inicio}: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}${exc}${rec}${adi}`
+        // Liquidados: 'suspeita' significa que a listagem veio incompleta demais
+        // para confiar — nada foi removido, e o Controller precisa saber.
+        const liq = liqErro ? ` · conferência dos pagos não executada: ${liqErro}`
+          : !liqEstado ? ''
+          : liqEstado.etapa === 'suspeita'
+            ? ` · conferência dos pagos SUSPENSA: ${liqEstado.candidatos} de ${liqEstado.liquidados} não apareceram no Bling, acima do limite de segurança — nada foi removido`
+            : (liqAtualizados ? ` · ${liqAtualizados} pago(s) atualizado(s) pelo Bling` : '')
+              + (['listagem', 'comparar', 'fila'].includes(liqEstado.etapa) ? ' · conferência dos pagos continua na próxima sincronização' : '')
+        const log = `${inicio}: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}${exc}${rec}${liq}${adi}`
         setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log } }))
         showToast?.(`${historico ? 'Histórico' : `Sincronização ${modulo.toUpperCase()}`} concluído: ${total} títulos`, 'success')
       }

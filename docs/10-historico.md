@@ -10,7 +10,10 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
-| 16/10 | — | **Reconferência dos títulos fora da listagem e cron autenticado** — código e migração prontos; aplicação em produção sob aprovação |
+| 20/10 | — | **Conferência dos liquidados pela listagem filtrada** — código e migração prontos; aplicação em produção sob aprovação |
+| 20/10 | — | **Conciliação das saídas da FACE com o Bling** — diferenças de julho e do ano explicadas ao centavo; 2 pagos inexistentes no Bling removidos |
+| 16–19/10 | #33 | **Reconferência e cron em produção** — piloto JAM, JB e FACE; cron grava todos os dias desde 17/10 |
+| 16/10 | — | **Reconferência dos títulos fora da listagem e cron autenticado** — código e migração |
 | 16/10 | — | **T10 fechada** — 16 suítes e build rodados pela primeira vez desde o PR #28; `test-bling-jwt` corrigida |
 | 16/10 | — | **Grupo 9 do Plano de Contas criado e mapeado** — P0 fechado; transferências, empréstimos e fluxos de sócios saem dos KPIs operacionais |
 | 16/10 | — | Documentação do Node corrigida; `.nvmrc` passa a 24 |
@@ -18,6 +21,24 @@ regras existem.
 | 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**20/10 · Conferência dos liquidados pela listagem filtrada**
+- **Causa:** a verificação de exclusões dos liquidados lia os 40–60 **mais recentes** (`order desc, limit`); na FACE, 2.160 pagos em 2026, isso é a última semana. Pagamento excluído no Bling depois disso ficava aqui para sempre. A varredura incremental não cobria: no dia 16 tocou ~3.000 em aberto e ~70 pagos.
+- **Correção (R10.6):** rodada que lista no Bling os pagos e parciais dos últimos 365 dias **por data de pagamento** (as fases da carga histórica, agora fonte única em `bling-reconferencia`), 100 por página, só ids; compara com os liquidados daqui e confere pelo id o que não apareceu, pela fila e pela regra da reconferência. Página com erro não avança; margem de 45 dias no início da janela por causa da data do borderô; acima de 5% de candidatos a rodada é suspensa sem remover nada. Interface em laço depois da reconferência; cron com fatia diária e rodada nova a cada 7 dias. Junto: o `audit_logs` das remoções passa a guardar o registro inteiro.
+- **Validação:** 18 suítes, 285 testes (`test-conferencia-liquidados` nova, 31); 14 sabotagens, uma por trava, todas reprovadas pela trava certa; build compila.
+
+**20/10 · Conciliação das saídas da FACE contra o relatório de pagamentos do Bling**
+Relato do Controller: julho com o sistema R$ 2.567,98 acima do Bling, 2026 com R$ 1.501,82 acima. Cruzamento linha a linha das 1.803 linhas do relatório por valor do título e data de liquidação.
+- **Julho:** MERCADO LIVRE `26414983916` (R$ 1.805,99) e RAPHAEL BERBEL PITTA `26317080212` (R$ 946,40, que no Bling virou R$ 173,53 + R$ 772,87) existiam só aqui; menos R$ 184,41 de juros pagos que o sistema não registra (ADR-004). Fecha ao centavo.
+- **Jan–set:** os dois de julho + PLAYSTATION R$ 43,90 em dobro em 17/08 = R$ 2.796,29, menos R$ 1.294,47 de juros e multas = R$ 1.501,82. Outubro: o parcial de R$ 5.000 da DataDog, que o relatório do Bling não lista. Nada do Bling falta aqui.
+- **Remoção:** os dois de julho, com confirmação do Controller no Bling, por SQL com o motivo e o registro completo em `audit_logs` (`controller:conciliacao-2026-10-20`). Julho passou de R$ 1.065.070,12 para R$ 1.062.317,73 — igual ao valor dos títulos no Bling. O PLAYSTATION fica para a primeira rodada da conferência dos liquidados, que identifica qual dos dois saiu do Bling.
+- Datas de liquidação diferentes e juros: ver D5 em [11](11-pendencias.md).
+
+**16–19/10 · Reconferência e cron em produção (PR #33)**
+Migração `20261016_reconferencia` aplicada, `CRON_SECRET` criada como variável sensível, merge e piloto JAM → JB → FACE acompanhado no banco.
+- **Removidos por exclusão no Bling:** JAM 36 títulos (R$ 52.356,02), JB 72 (R$ 24.165,52), FACE 58 (R$ 2.287.519,04), além de 4 atualizados. Saíram o DATAPREV `26280211663` e o JULIANO `23648043154`; os títulos que os substituíram ficaram intactos.
+- **Cron:** gravou em 17, 18 e 19/10.
+- Na primeira tentativa da JAM a aba usava o JavaScript anterior ao deploy e parou em 15 remoções; resolvido recarregando a página (Ctrl+Shift+R).
 
 **16/10 · Sincronização "com sucesso" que não registrava atualizações · cron que nunca rodou**
 Relato do Controller: a sincronização diária retorna sucesso, mas as atualizações não chegam, e nada roda sozinho. Investigação só com leitura (código, banco, trilha de auditoria, documentação da Vercel) e teste ao vivo com a sincronização da FACE acompanhada no banco.

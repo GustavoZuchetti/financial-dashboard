@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
 import { proximoCursor, cursorDePartida, cursorParaSalvar } from '@/lib/bling-cursor'
-import { verificarExclusoes, titulosEmAbertoDoBling, processarFilaReconferencia } from '@/lib/bling-server'
+import { verificarExclusoes, titulosEmAbertoDoBling, processarFilaReconferencia, conferirLiquidados } from '@/lib/bling-server'
 import { getAuthProfile, ensureToken, fetchContas, fetchCategoriasMap, montarRegistrosFluxo } from '@/lib/bling-server'
-import { idsDaPagina, varreduraRecomecou, vistosAtualizados, montarFila } from '@/lib/bling-reconferencia'
+import {
+  idsDaPagina, varreduraRecomecou, vistosAtualizados, montarFila,
+  FASES_LIQUIDADOS, filtrosPorPagamento, acaoManualLiquidados, novaRodadaLiquidados, resumoEstadoLiquidados,
+} from '@/lib/bling-reconferencia'
 
 // A listagem pode precisar repetir uma página profunda após 504/timeout.
 // O padrão de 10s é insuficiente para esse caminho de recuperação.
@@ -19,12 +22,9 @@ const FASES = [
   { recurso: 'contas/receber', tipoFluxo: 'entrada' },
   { recurso: 'contas/pagar',   tipoFluxo: 'saida'   },
 ]
-// Contas a pagar aceita uma situação por consulta; o histórico percorre pago e parcial.
-const FASES_HISTORICO = [
-  { recurso: 'contas/receber', tipoFluxo: 'entrada', situacoes: [2, 3], filtro: 'recebimento' },
-  { recurso: 'contas/pagar',   tipoFluxo: 'saida',   situacao: 2, filtro: 'pagamento' },
-  { recurso: 'contas/pagar',   tipoFluxo: 'saida',   situacao: 3, filtro: 'pagamento_parcial' },
-]
+// O histórico percorre pago e parcial por data de pagamento — as mesmas fases
+// e filtros da conferência dos liquidados (fonte única em bling-reconferencia).
+const FASES_HISTORICO = FASES_LIQUIDADOS
 const MAX_DIAS_JANELA = 366
 
 function isoUTC(d) {
@@ -58,7 +58,7 @@ export async function POST(request) {
   const {
     integracao_id, modulo = 'fluxo', fase: faseReq, pagina: pagReq, janela: janReq, diag = false,
     limpar_origem_arquivo = false, escopo = 'incremental', retomar = false,
-    reconferir = false,
+    reconferir = false, conferir_liquidados = false,
     data_inicio = '2023-01-01',
     data_fim = new Date().toISOString().split('T')[0],
   } = await request.json()
@@ -96,6 +96,34 @@ export async function POST(request) {
       return NextResponse.json({ reconferencia, reconferir_pendentes: restante.length, hasMore: false })
     } catch (e) {
       console.error('Bling reconferência:', e)
+      return NextResponse.json({ error: String(e.message || e) }, { status: 502 })
+    }
+  }
+
+  // ── MODO CONFERÊNCIA DOS LIQUIDADOS ───────────────────────────────────
+  // Depois da reconferência, a interface chama este modo em laço até a
+  // rodada fechar: lista no Bling os pagos dos últimos 365 dias por data de
+  // pagamento, compara com os daqui e confere pelo id o que não apareceu.
+  // Não toca no cursor da varredura. Ver lib/bling-reconferencia.js.
+  if (conferir_liquidados) {
+    if (modulo !== 'fluxo') return NextResponse.json({ error: 'Conferência dos liquidados só existe no Fluxo' }, { status: 400 })
+    try {
+      integ = await ensureToken(admin, integ)
+      const salvo = integ.conferencia_liquidados
+      const acao = acaoManualLiquidados(salvo)
+      if (acao === 'pular') return NextResponse.json({ liquidados: null, liquidados_estado: resumoEstadoLiquidados(salvo), hasMore: false })
+      const estado = acao === 'continuar' ? salvo : novaRodadaLiquidados()
+      const categoriasMap = await fetchCategoriasMap(integ)
+      const nomesContato = { ...(integ.contatos_cache || {}) }
+      const { estado: novo, resumo } = await conferirLiquidados(admin, integ, {
+        estado, prazoMs: 40000 - (Date.now() - T0), categoriasMap, nomesContato })
+      const { error } = await admin.from('integracoes').update({ conferencia_liquidados: novo }).eq('id', integ.id)
+      // Sem a coluna (migração 20261020 não aplicada) a rodada não avança:
+      // devolver erro evita que a interface repita a mesma fatia em laço.
+      if (error) return NextResponse.json({ error: `Conferência dos liquidados não gravada: ${error.message}` }, { status: 500 })
+      return NextResponse.json({ liquidados: resumo, liquidados_estado: resumoEstadoLiquidados(novo), hasMore: false })
+    } catch (e) {
+      console.error('Bling conferência dos liquidados:', e)
       return NextResponse.json({ error: String(e.message || e) }, { status: 502 })
     }
   }
@@ -157,9 +185,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Janela histórica inválida', janela, total_janelas: janelas.length }, { status: 400 })
 
     const filtrosHistorico = escopo === 'historico' && modulo === 'fluxo'
-      ? (faseAtual.filtro === 'recebimento'
-        ? { situacoes: faseAtual.situacoes, tipoFiltroData: 'R', dataInicial: janelaAtual.inicio, dataFinal: janelaAtual.fim }
-        : { situacao: faseAtual.situacao, dataPagamentoInicial: janelaAtual.inicio, dataPagamentoFinal: janelaAtual.fim })
+      ? filtrosPorPagamento(faseAtual, janelaAtual)
       : {}
     const itens = await fetchContas(integ, recurso, pagina, LIMITE, filtrosHistorico)
 

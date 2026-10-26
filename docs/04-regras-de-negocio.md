@@ -265,7 +265,9 @@ deixou de existir; sem a conferência, o registro fica congelado.
 *Incidente (16/10):* DATAPREV R$ 1,34 mi "a receber vencido" e JULIANO R$ 10.000 em dobro —
 ambos excluídos e substituídos no Bling. 165 títulos sem conferência nas três entidades.
 **R10.5 — Remoção por "não existe no Bling" exige 404 nos dois recursos**, nunca outra
-falha, com teto de 15 por execução e o registro completo em `audit_logs`.
+falha, com teto de 15 por execução e o registro completo em `audit_logs`. Título que o
+Bling confirma existir e que já está completo aqui sai da fila como **conferido** — nunca
+fica preso nela.
 **R10.6 — Título liquidado também é conferido contra o Bling, pela listagem filtrada.**
 Os pagos e parciais dos últimos 365 dias são listados no Bling por data de pagamento; o que
 existe aqui e não apareceu é conferido pelo id (R10.5). Fonte: `lib/bling-reconferencia.js`

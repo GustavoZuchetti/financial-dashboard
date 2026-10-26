@@ -117,6 +117,28 @@ teste('doc_ref decomposto no recurso certo', () => {
   eq(R.partesDocRef('bling:dre:entrada:9'), null)
 })
 
+// ─── 3b. Título que o Bling confirmou existir ────────────────────────────────
+teste('veio registro: grava', () => {
+  eq(R.destinoAtualizacao({ registros: [{}], adiados: 0, temDetalhe: true }), 'gravar')
+})
+teste('[TRAVA] completo e igual ao Bling: conferido, sai da fila (piloto FACE 26/10)', () => {
+  eq(R.destinoAtualizacao({ registros: [], adiados: 0, temDetalhe: false }), 'confirmado')
+})
+teste('[TRAVA] adiado por tempo continua na fila', () => {
+  eq(R.destinoAtualizacao({ registros: [], adiados: 1, temDetalhe: false }), 'manter')
+})
+teste('[TRAVA] detalhe buscado sem virar registro continua na fila', () => {
+  eq(R.destinoAtualizacao({ registros: [], adiados: 0, temDetalhe: true }), 'manter')
+})
+teste('[TRAVA] a fila usa o desfecho único e não reenfileira o conferido', () => {
+  const fn = corpoDe(fonte('lib/bling-server.js'), 'export async function processarFilaReconferencia')
+  if (!/destinoAtualizacao\(\{ registros, adiados, temDetalhe/.test(fn)) throw new Error('desfecho da atualização fora da regra única')
+  const m = /if \(fim === 'confirmado'\) \{([^}]*)\}/.exec(fn)
+  if (!m) throw new Error('caso confirmado não tratado')
+  if (/restante\.push/.test(m[1])) throw new Error('título conferido voltou para a fila')
+  if (!/r\.confirmados\+\+/.test(m[1])) throw new Error('conferido não contabilizado')
+})
+
 // ─── 4. Cron: rodízio e orçamento ────────────────────────────────────────────
 teste('[TRAVA] rodízio: cada entidade é a primeira em algum dia', () => {
   const ents = ['FACE', 'JAM', 'JB']

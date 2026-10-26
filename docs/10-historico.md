@@ -10,6 +10,9 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
+| 26/10 | — | **Fila: título confirmado e completo sai como conferido** — rodada da FACE presa em 4 pagamentos legítimos |
+| 26/10 | — | **Conciliação das saídas da FACE fechada** — jan–set difere do Bling só pelos juros (R$ 1.294,47, ADR-004) |
+| 26/10 | #35 | **Piloto da conferência dos liquidados concluído** — JB 0 removidos; FACE: PLAYSTATION em dobro removido |
 | 23/10 | — | **Paginação da conferência dos liquidados corrigida** — piloto da JB suspenso pela trava; nada removido |
 | 23/10 | #34 | **Conferência dos liquidados em produção** — migração aplicada; JAM 0 candidatos; JB suspensa |
 | 20/10 | — | **Conferência dos liquidados pela listagem filtrada** — código e migração |
@@ -23,6 +26,15 @@ regras existem.
 | 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**26/10 · Piloto da conferência dos liquidados concluído · conciliação fechada · fila corrigida**
+PR #35 em produção (`7277f9a`, deploy READY).
+- **JB:** rodada concluída em 31 s — 42 páginas, 164 recebidos, 959 pagos e 0 parciais lidos para 165, 961 e 8 aqui. **8 candidatos**, os FGTS parciais de 16/01 e 20/02: o Bling confirmou os oito, atualizados sem mudança. **Nada removido**; KPIs iguais aos de 23/10. Confirmou a causa da suspensão anterior: o Bling devolve páginas incompletas no meio da listagem (29, 28, 14).
+- **FACE:** rodada aberta pelo cron em 24/10 e fechada na sincronização manual — 90 páginas, 427 recebidos e 2.101 pagos para 2.531 aqui. **6 candidatos** (limite 126): **removido o PLAYSTATION `26652202409`** (R$ 43,90, 17/08, o que não existe no Bling; o `26751577999` ficou); o parcial da DataDog conferido sem mudança; e quatro pagamentos de 23–24/10 (ST HETTA R$ 450.000, JULIANO R$ 2.500, AUTO POSTO R$ 142,46, ALEXANDRE R$ 1.000) presos na fila — ver abaixo.
+- **Conciliação fechada:** saídas de agosto R$ 896.379,53 → R$ 896.335,63; jan–set R$ 7.806.860,42 contra R$ 7.808.154,89 do Bling — diferença de R$ 1.294,47, **exatamente os juros e multas** que a ADR-004 deixa de fora. Nenhum título fantasma restante nas saídas de 2026.
+- **Defeito encontrado:** os quatro pagamentos foram pagos depois de o cron ler aquelas páginas e gravados pela varredura do dia. O Bling confirmou os quatro, mas título completo não gera registro e a fila tratava "nenhum registro" como falha: a rodada ficava presa e o cron os reconsultaria todo dia. Nada errado foi gravado nem removido. **Correção:** `destinoAtualizacao` — confirmado e completo sai como conferido; adiado ou com detalhe sem registro continua. Vale também para a fila dos títulos em aberto.
+- **Também:** o título `25075178427` (vencimento 03/03/3036, R$ 1.000 no "a receber futuro") foi removido pela reconferência em 23/10 por não existir mais no Bling.
+- **Validação:** 18 suítes, 297 testes; 25 sabotagens (5 novas), todas reprovadas pela trava certa; build compila.
 
 **23/10 · Piloto da conferência dos liquidados · paginação corrigida**
 Migração `20261020_conferencia_liquidados` aplicada e conferida, PR #34 mergeado (`d42d780`), deploy READY.

@@ -136,6 +136,7 @@ substituído, cancelado — deixa de aparecer, e o registro daqui ficaria congel
 | Resposta | Ação |
 |---|---|
 | existe | grava o que o Bling diz — pago, cancelado, novo valor ou vencimento |
+| existe e já está completo e igual aqui | **conferido** — sai da fila sem gravar (`destinoAtualizacao`) |
 | 404 no recurso e 404 no outro | **remove**, com o registro completo em `audit_logs` |
 | 404 no recurso, existe no outro | sai da fila — não é exclusão |
 | qualquer outra (401, 403, 429, 5xx, timeout) | **fica na fila** — nunca remove por falha transitória |
@@ -199,6 +200,19 @@ por fase). A JB foi **suspensa pela trava**: 721 de 961 pagos não apareceram �
 levou 3 s, menos que as ~13 páginas de 100 necessárias. A listagem tratava página com
 menos itens que o pedido como fim da fase. Nada foi removido. Corrigido: fim só com página
 vazia, 30 por página, registro por página e diagnóstico na suspensão.
+
+*Incidente:* 26/10/2026 — piloto refeito. **JB**: 42 páginas (164 + 959 + 0 lidos para 165 +
+961 + 8 pagos), 8 candidatos — os FGTS parciais —, todos existentes no Bling, nada removido.
+**FACE**: 90 páginas (427 + 2.101 + 0 para 2.531 pagos), 6 candidatos: removido o
+PLAYSTATION `26652202409`; conferido o parcial da DataDog; e **quatro pagamentos de
+23–24/10 presos na fila** — pagos depois de o cron ler aquelas páginas, gravados pela
+varredura do dia, confirmados pelo Bling, mas completos não geram registro e a fila os
+tratava como falha. A rodada não fechava e o cron os reconsultaria todo dia. Corrigido:
+título confirmado e completo sai da fila como conferido.
+
+⚠️ No Bling, a listagem de **pagos parciais** filtrada por data de pagamento volta vazia (JAM,
+JB e FACE). Os parciais daqui viram sempre candidatos e são conferidos pelo id — custo de
+poucas consultas por rodada, sem efeito nos números.
 
 ### Exclusões na origem — liquidados recentes
 

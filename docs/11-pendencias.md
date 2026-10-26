@@ -1,31 +1,24 @@
 # 11 — Pendências
 
-> Estado em 23/10/2026 (P0, T1, T7, T8, T10 e a reconferência com cron fechados; conferência dos liquidados em produção, piloto em andamento). Ordenado por gravidade dentro de cada seção.
+> Estado em 26/10/2026 (P0, T1, T7, T8, T10, a reconferência com cron e o piloto da conferência dos liquidados fechados; correção da fila em aprovação). Ordenado por gravidade dentro de cada seção.
 > Ao fechar um item, mova-o para [10 — Histórico](10-historico.md) com a data.
 
 ---
 
 ## 🔴 Estado incerto — verificar antes de qualquer coisa
 
-### P1 — Conferência dos liquidados: aplicar em produção
+### P1 — Conferência dos liquidados: fechar a rodada da FACE
 
-Em produção desde 23/10 (PR #34, migração aplicada). Piloto: **JAM** concluída com 0
-candidatos; **JB** suspensa pela trava (listagem parava na primeira página incompleta —
-nada removido). Falta, com aprovação do Controller:
+Piloto concluído em 26/10 (JAM, JB e FACE — ver [10](10-historico.md)). Falta, com
+aprovação do Controller:
 
-1. Mergear a correção da paginação (fim só com página vazia, 30 por página, diagnóstico)
-2. Repetir a **JB** e conferir `por_fase` em `conferencia_liquidados`: as páginas lidas
-   têm de somar os pagos do período
-3. Só então a **FACE**
-
-Esperado na FACE: **1 remoção** — um dos dois PLAYSTATION de R$ 43,90 de 17/08
-(`26652202409` ou `26751577999`). Qualquer outro número: parar e conferir com o Controller.
+1. Mergear a correção da fila (título confirmado e completo sai como conferido)
+2. Na próxima sincronização da FACE — ou no cron —, conferir que a rodada passa a
+   `concluida` com os 4 pagamentos de 23–24/10 como **conferidos**, sem remoção
 
 Também pendente de confirmação no Bling pelo Controller: as remoções da reconferência de
 16/10 na FACE para **FACESING** (9 títulos, R$ 507.000) e **ST HETTA** (2 títulos,
-R$ 300.000) — restauráveis por `audit_logs` se estiverem erradas. E o título
-`25075178427`, a receber, com vencimento **03/03/3036** no Bling (erro de digitação): soma
-R$ 1.000 ao "a receber futuro".
+R$ 300.000) — restauráveis por `audit_logs` se estiverem erradas.
 
 O P0 do grupo 9 do Plano de Contas foi fechado em 16/10/2026 — ver [10 — Histórico](10-historico.md).
 

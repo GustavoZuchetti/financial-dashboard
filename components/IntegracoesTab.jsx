@@ -139,7 +139,7 @@ export default function IntegracoesTab({ empresas, showToast }) {
     let recAtualizados = 0, recPendentes = 0
     const somarReconferencia = (rc) => {
       if (!rc) return
-      recAtualizados += rc.atualizados || 0
+      recAtualizados += (rc.atualizados || 0) + (rc.confirmados || 0)
       removidos += rc.removidos || 0; valorRemov += rc.valorRemovido || 0
     }
     try {
@@ -218,7 +218,7 @@ export default function IntegracoesTab({ empresas, showToast }) {
         if (r.error) { liqErro = r.error; break }
         const lq = r.liquidados
         if (lq) {
-          liqAtualizados += lq.atualizados || 0
+          liqAtualizados += (lq.atualizados || 0) + (lq.confirmados || 0)
           removidos += lq.removidos || 0; valorRemov += lq.valorRemovido || 0
           if (lq.interrompido) { liqFalhas++; await new Promise(res => setTimeout(res, 8000)) }
         }
@@ -264,7 +264,7 @@ export default function IntegracoesTab({ empresas, showToast }) {
             ? ` · conferência dos pagos SUSPENSA: ${liqEstado.candidatos != null
                 ? `${liqEstado.candidatos} de ${liqEstado.liquidados} não apareceram no Bling, acima do limite de segurança`
                 : (liqEstado.motivo || 'listagem do Bling fora do esperado')} — nada foi removido`
-            : (liqAtualizados ? ` · ${liqAtualizados} pago(s) atualizado(s) pelo Bling` : '')
+            : (liqAtualizados ? ` · ${liqAtualizados} pago(s) conferido(s) no Bling` : '')
               + (['listagem', 'comparar', 'fila'].includes(liqEstado.etapa) ? ' · conferência dos pagos continua na próxima sincronização' : '')
         const log = `${inicio}: ${total} títulos gravados${pend ? ` · ${pend} pendências (ver último resultado)` : ''}${exc}${rec}${liq}${adi}`
         setSync(sx => ({ ...sx, [integ.id]: { rodando: false, log } }))

@@ -1,26 +1,21 @@
 # 11 — Pendências
 
-> Estado em 26/10/2026 (P0, T1, T7, T8, T10, a reconferência com cron e o piloto da conferência dos liquidados fechados; correção da fila em aprovação). Ordenado por gravidade dentro de cada seção.
+> Estado em 28/10/2026 (P0, T1, T7, T8, T10, a reconferência com cron e a conferência dos liquidados fechados). Ordenado por gravidade dentro de cada seção.
 > Ao fechar um item, mova-o para [10 — Histórico](10-historico.md) com a data.
 
 ---
 
 ## 🔴 Estado incerto — verificar antes de qualquer coisa
 
-### P1 — Conferência dos liquidados: fechar a rodada da FACE
+### P1 — Confirmar no Bling as remoções de 16/10 na FACE
 
-Piloto concluído em 26/10 (JAM, JB e FACE — ver [10](10-historico.md)). Falta, com
-aprovação do Controller:
+A reconferência de 16/10 removeu da FACE, por não existirem mais no Bling, os títulos de
+**FACESING** (9, R$ 507.000) e **ST HETTA** (2, R$ 300.000). Falta o Controller confirmar
+no Bling; se alguma estiver errada, restaurar pelo registro completo em `audit_logs`
+(`changed_by_email = 'sistema:reconferencia'`).
 
-1. Mergear a correção da fila (título confirmado e completo sai como conferido)
-2. Na próxima sincronização da FACE — ou no cron —, conferir que a rodada passa a
-   `concluida` com os 4 pagamentos de 23–24/10 como **conferidos**, sem remoção
-
-Também pendente de confirmação no Bling pelo Controller: as remoções da reconferência de
-16/10 na FACE para **FACESING** (9 títulos, R$ 507.000) e **ST HETTA** (2 títulos,
-R$ 300.000) — restauráveis por `audit_logs` se estiverem erradas.
-
-O P0 do grupo 9 do Plano de Contas foi fechado em 16/10/2026 — ver [10 — Histórico](10-historico.md).
+A conferência dos liquidados (antigo P1) foi fechada em 27/10/2026 e o P0 do grupo 9 do
+Plano de Contas em 16/10/2026 — ver [10 — Histórico](10-historico.md).
 
 ---
 

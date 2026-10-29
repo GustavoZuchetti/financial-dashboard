@@ -10,7 +10,8 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
-| 26/10 | — | **Fila: título confirmado e completo sai como conferido** — rodada da FACE presa em 4 pagamentos legítimos |
+| 27/10 | — | **Conferência dos liquidados fechada** — rodada da FACE concluída pelo cron; 4 pagamentos conferidos, nenhuma remoção |
+| 26/10 | #36 | **Fila: título confirmado e completo sai como conferido** — rodada da FACE presa em 4 pagamentos legítimos |
 | 26/10 | — | **Conciliação das saídas da FACE fechada** — jan–set difere do Bling só pelos juros (R$ 1.294,47, ADR-004) |
 | 26/10 | #35 | **Piloto da conferência dos liquidados concluído** — JB 0 removidos; FACE: PLAYSTATION em dobro removido |
 | 23/10 | — | **Paginação da conferência dos liquidados corrigida** — piloto da JB suspenso pela trava; nada removido |
@@ -26,6 +27,9 @@ regras existem.
 | 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**27/10 · Conferência dos liquidados fechada nas três entidades**
+PR #36 em produção (`395ae1c`, deploy READY em 26/10). O cron de 27/10 (06:50 BRT) continuou a rodada da FACE e a concluiu às 09:50:13 UTC: os quatro pagamentos de 23–24/10 (ST HETTA R$ 450.000, JULIANO R$ 2.500, AUTO POSTO R$ 142,46, ALEXANDRE R$ 1.000) foram confirmados pelo Bling e saíram da fila como **conferidos**, sem nenhuma gravação nem remoção. Nenhuma remoção em nenhuma entidade depois do PLAYSTATION de 26/10. Indicadores da FACE inalterados: saídas de jan–set R$ 7.806.860,42, R$ 1.294,47 abaixo do Bling — os juros e multas da ADR-004. Rodadas: JAM 23/10 (0 candidatos), JB 26/10 (8, nenhum removido), FACE 27/10 (6, 1 removido). Daqui em diante o cron abre uma rodada por entidade a cada 7 dias.
 
 **26/10 · Piloto da conferência dos liquidados concluído · conciliação fechada · fila corrigida**
 PR #35 em produção (`7277f9a`, deploy READY).

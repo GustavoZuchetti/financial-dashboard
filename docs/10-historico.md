@@ -10,6 +10,7 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
+| 28/10 | — | **Remoções de 19/10 na FACE confirmadas pelo Controller** — FACESING (10) e ST HETTA (2) excluídas de propósito no Bling; nada a restaurar |
 | 27/10 | — | **Conferência dos liquidados fechada** — rodada da FACE concluída pelo cron; 4 pagamentos conferidos, nenhuma remoção |
 | 26/10 | #36 | **Fila: título confirmado e completo sai como conferido** — rodada da FACE presa em 4 pagamentos legítimos |
 | 26/10 | — | **Conciliação das saídas da FACE fechada** — jan–set difere do Bling só pelos juros (R$ 1.294,47, ADR-004) |
@@ -27,6 +28,13 @@ regras existem.
 | 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**28/10 · Remoções de 19/10 na FACE confirmadas**
+No piloto da reconferência na FACE (19/10, 16:19–16:20 UTC), a fila removeu por 404 nos dois recursos 12 títulos em aberto que o Controller conferiu no Bling e confirmou como exclusões intencionais. Antes registradas como "16/10, FACESING 9 títulos" — a data e a contagem corretas são estas:
+- **FACESING IDENTIDADE DIGITAL BIOMETRICA LTDA** — 9 a pagar, R$ 507.000: três séries mensais de agosto a outubro, R$ 43.000 e R$ 75.000 (Salários_Gestão) e R$ 51.000 (_Desenvolvedores P&D); e 1 a receber de R$ 2.000 (22/06, Transferência entre contas Facesign)
+- **ST HETTA PARTICIPACOES E INVESTIMENTOS SA** — 2 a receber, R$ 300.000 (15/01 e 15/02/2027, Aporte de Capital)
+
+Nada a restaurar. O `old_data` da remoção daquele dia não trazia categoria nem tipo (o `select` era parcial — corrigido no PR #34); o registro completo está na linha do gatilho de auditoria da mesma remoção.
 
 **27/10 · Conferência dos liquidados fechada nas três entidades**
 PR #36 em produção (`395ae1c`, deploy READY em 26/10). O cron de 27/10 (06:50 BRT) continuou a rodada da FACE e a concluiu às 09:50:13 UTC: os quatro pagamentos de 23–24/10 (ST HETTA R$ 450.000, JULIANO R$ 2.500, AUTO POSTO R$ 142,46, ALEXANDRE R$ 1.000) foram confirmados pelo Bling e saíram da fila como **conferidos**, sem nenhuma gravação nem remoção. Nenhuma remoção em nenhuma entidade depois do PLAYSTATION de 26/10. Indicadores da FACE inalterados: saídas de jan–set R$ 7.806.860,42, R$ 1.294,47 abaixo do Bling — os juros e multas da ADR-004. Rodadas: JAM 23/10 (0 candidatos), JB 26/10 (8, nenhum removido), FACE 27/10 (6, 1 removido). Daqui em diante o cron abre uma rodada por entidade a cada 7 dias.

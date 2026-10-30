@@ -1,6 +1,6 @@
 # 11 — Pendências
 
-> Estado em 28/10/2026 (P0, P1, T1, T7, T8, T10, a reconferência com cron e a conferência dos liquidados fechados). Ordenado por gravidade dentro de cada seção.
+> Estado em 30/10/2026 (P0, P1, T1, T7, T8, T10, a reconferência com cron e a conferência dos liquidados fechados; D5 e D6 investigados). Ordenado por gravidade dentro de cada seção.
 > Ao fechar um item, mova-o para [10 — Histórico](10-historico.md) com a data.
 
 ---
@@ -68,30 +68,64 @@ Cadastro na origem. Não corrigível pelo sistema; cada variante tem conta próp
 
 ---
 
-### D5 — Parcial estornado e relançado: regra do borderô (ADR-004)
+### D5 — Regra do borderô (ADR-004): datas trocadas, juros fora, parcial estornado — item 4
 
-Caso JULIANO BASILIO `23648043162`, setembro: parcial de R$ 9.000 em 08/09, estornado e
-relançado como título próprio de R$ 9.000; depois o título de R$ 22.000 foi pago
-integralmente em 14/09. O sistema mostra R$ 31.000. O Controller confirmou que o título foi
-pago em R$ 22.000; resta saber se o pagamento de 14/09 moveu R$ 22.000 ou R$ 13.000 no
-banco. Reavaliar a ADR-004 depois da reconferência — item 4 do Controller.
+Investigado em 30/10. O sistema grava a data do **último borderô da lista**
+(`borderos[length-1]`) e, no título quitado, ignora o valor pago (ADR-004).
 
-A conciliação de 20/10 achou mais dois efeitos da regra, sem erro de total no ano:
-- **Juros e multas pagos não entram** — R$ 1.294,47 nas saídas da FACE de jan–set (30
-  títulos, quase todos da Receita Federal): o sistema fica **abaixo** do Bling
-- **Data de liquidação diferente da do Bling** em 19 títulos, 4 trocando de mês: FGTS
-  `24516253677` (R$ 4.079,26, 16/01 aqui × 20/02 lá), FGTS `24794238295` (R$ 3.673,81,
-  16/01 × 20/03), SANTANDER `20885879585` (R$ 2.745,57, 16/01 × 03/02) e ALEXANDRE
-  FRANCISCO `23648056951` (R$ 22.000, 24/03 × 16/04). Explicam as diferenças mensais de
-  janeiro a abril
+- **Datas trocadas:** FGTS da FACE pagos em 20/02 no Bling estão com 16/01 aqui desde a
+  carga de 07/07 (`24516253677`, `24794238295`); ALEXANDRE `23648056951` 24/03 aqui ×
+  16/04 lá — título com retiradas parciais estornadas. Hipótese: o último da lista é um
+  borderô anterior ou estornado
+- **Instabilidade:** nos FGTS parciais da JB o liquidado alternou entre sincronizações
+  (177,09 ↔ 196,37 ↔ 1.146,76, de 30/07 a 02/09) — borderô diferente a cada leitura
+- **Juros e multas fora:** R$ 1.294,47 nas saídas da FACE de jan–set. O borderô traz a
+  lista `pagamentos` com `valorPago` por item; se o item identificar o título, existe a
+  "alocação por título" que a ADR-004 pede para reabrir
+- **JULIANO `23648043162` (setembro):** parcial de R$ 9.000 em 08/09 → pago R$ 22.000 em
+  14/09, e um título próprio de R$ 9.000 (`26875823621`). Só o borderô de 14/09 diz se
+  saíram R$ 22.000 ou R$ 13.000
 
-### D6 — JAM: nenhuma baixa desde 27/07
+**Plano.**
+1. **Fase A — evidência** (código pronto, sem efeito nos números): aplicar
+   `20261030_diagnostico_bling`, mergear, gravar os pedidos `bling:saida:24516253677`, `bling:saida:24794238295`, `bling:saida:20885879585`,
+`bling:saida:23648056951`, `bling:saida:23648043162`, `bling:saida:26875823621`,
+`bling:saida:24481066296`, `bling:saida:25921192455` (FACE) e `bling:saida:24173217180` (JB); o cron coleta
+2. **Decisão do Controller** com o JSON: data = borderô válido mais recente; valor pago real
+   com juros (ADR nova no lugar da ADR-004) e onde os juros aparecem; regra do parcial
+   estornado
+3. **Fase B — correção** com testes e sabotagens; `liquidadoCoerente` ajustado para que os
+   títulos já gravados sejam reprocessados
+4. **Fase C — reprocessar 2026**, JAM → JB → FACE, com KPIs antes e depois e nova
+   conciliação contra o xls do Bling (esperado: diferença zero por mês). ⚠️ Muda números de
+   jan–abr já reportados (FACE: janeiro ~R$ 10,5 mil menor, março ~R$ 18 mil menor) —
+   decidir antes
 
-A varredura de 14/10 revisitou 240 de 260 títulos vencidos da JAM e todos continuam em
-aberto no Bling. Pista: parcelas **Bradesco de R$ 666,67 e R$ 466,92** aparecem pagas na
-**FACE** (inseridas em 16/10) e em aberto na JAM todo mês — possível mesmo empréstimo nas
-duas entidades. Conferir no Bling; se confirmado, os atrasos e o projetado da JAM estão
-inflados.
+### D6 — Empréstimo Bradesco da JAM lançado em três entidades
+
+Investigado em 30/10. Empréstimo da JAM emitido em 29/01/2026, 60 parcelas mensais no dia
+15 de R$ 1.133,59 (R$ 666,67 de principal + R$ 466,92 de juros). O sistema reflete o Bling
+de cada entidade; o problema está nos lançamentos:
+
+| Parcela | No Bling | Problema |
+|---|---|---|
+| mar, abr | JAM, paga | — |
+| mai | JB, paga | lançada na JB |
+| jun | JAM pagou o Bradesco em 27/07 **e** FACE pagou "JAM SERVIÇOS FINANCEIROS" em 29/06 como empréstimo e juros | **em dobro no grupo** — o repasse devia ser transferência interna |
+| jul | nenhuma entidade | **parcela faltando** |
+| ago | FACE, paga | lançada na FACE |
+| set | FACE paga em 14/10 **e** JAM em aberto | **duplicada** — infla o vencido da JAM |
+| out | JAM em aberto **e** 7 "Tarifa bancária" BRADESCO em 13/10 somando R$ 1.133,59, com dinheiro da JB | provável duplicidade e categoria errada |
+
+O "a pagar vencido" da JAM está inflado em R$ 2.267,18 (set + out). "Nenhuma baixa desde
+27/07" não vale mais: a JAM teve 8 baixas em 13/10.
+
+**Correção — no Bling, pela equipe do Controller:** decidir quem paga e como o repasse é
+lançado (recomendado: parcela sempre na JAM; repasse de FACE ou JB como transferência
+interna nas duas pontas); baixar ou excluir set e out na JAM; reclassificar o repasse de jun
+na FACE; localizar jul; reclassificar as 7 tarifas de out. A sincronização e a conferência
+dos liquidados refletem. Opcional depois: checagem de "mesma contraparte, valor e
+vencimento em duas entidades".
 
 ## 🟡 Dívida técnica
 

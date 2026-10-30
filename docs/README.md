@@ -3,7 +3,7 @@
 > **Fonte da verdade** do sistema. Mantida junto ao código, versionada no mesmo
 > repositório, atualizada a cada mudança relevante.
 >
-> **Última revisão completa:** 29/09/2026 · **Última atualização:** 28/10/2026 · 297 testes ✓ e build ✓ (verificado 26/10, Node 24.20.0 e Vercel 24.x)
+> **Última revisão completa:** 29/09/2026 · **Última atualização:** 30/10/2026 · 309 testes ✓ e build ✓ (verificado 30/10, Node 24.20.0 e Vercel 24.x)
 
 ---
 

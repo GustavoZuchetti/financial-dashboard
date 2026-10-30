@@ -10,6 +10,7 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
+| 30/10 | — | **Item 4 e D6 investigados; diagnóstico de borderôs** — coleta de evidência pronta, sem efeito nos números |
 | 28/10 | — | **Remoções de 19/10 na FACE confirmadas pelo Controller** — FACESING (10) e ST HETTA (2) excluídas de propósito no Bling; nada a restaurar |
 | 27/10 | — | **Conferência dos liquidados fechada** — rodada da FACE concluída pelo cron; 4 pagamentos conferidos, nenhuma remoção |
 | 26/10 | #36 | **Fila: título confirmado e completo sai como conferido** — rodada da FACE presa em 4 pagamentos legítimos |
@@ -28,6 +29,9 @@ regras existem.
 | 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**30/10 · Item 4 (regra do borderô) e D6 (Bradesco) investigados**
+Só leitura no banco e no código. Achados e plano em [11](11-pendencias.md), D5 e D6. Item 4: a data vem do último borderô da lista (FGTS 16/01 aqui × 20/02 no Bling; ALEXANDRE 24/03 × 16/04), o liquidado dos FGTS parciais da JB alternou entre sincronizações e os juros ficam fora pela ADR-004. D6: o empréstimo Bradesco da JAM tem parcelas lançadas na JB e na FACE, uma faltando (jul) e duas duplicadas (set, out) — correção no Bling. Para o item 4, coleta de evidência (`diagnostico_bling`): o cron guarda o detalhe e todos os borderôs dos títulos pedidos, só GET no Bling, nunca `fluxo_caixa`. 19 suítes, 309 testes; 33 sabotagens (8 novas), todas reprovadas pela trava certa; build compila.
 
 **28/10 · Remoções de 19/10 na FACE confirmadas**
 No piloto da reconferência na FACE (19/10, 16:19–16:20 UTC), a fila removeu por 404 nos dois recursos 12 títulos em aberto que o Controller conferiu no Bling e confirmou como exclusões intencionais. Antes registradas como "16/10, FACESING 9 títulos" — a data e a contagem corretas são estas:

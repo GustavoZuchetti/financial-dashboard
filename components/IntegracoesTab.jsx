@@ -235,6 +235,18 @@ export default function IntegracoesTab({ empresas, showToast }) {
             ? `Conferindo no Bling os pagos dos últimos 12 meses · ${liqEstado.vistos} lidos`
             : `Conferindo pelo id os pagos que não apareceram no Bling · ${liqEstado.pendentes} restantes` } }))
       }
+      // Diagnóstico de borderôs (item 4): coleta de evidência, só quando há
+      // pedidos. Complementar — um erro aqui não afeta a varredura.
+      let diagAvanco = Infinity
+      for (let g = 0; concluido && !historico && modulo === 'fluxo' && g < 5; g++) {
+        const r = await authFetch('/api/integracoes/bling/sync', {
+          method: 'POST',
+          body: JSON.stringify({ integracao_id: integ.id, modulo, coletar_diagnostico: true }),
+        })
+        const pend = r?.diagnostico?.pendentes
+        if (r.error || r.retryAvel || !pend || pend >= diagAvanco) break
+        diagAvanco = pend
+      }
       if (!concluido) {
         // Parada por teto de iterações. Diferente de antes, a posição ficou
         // GRAVADA: basta executar de novo que continua daqui.

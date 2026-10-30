@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { getAdmin, ensureToken, fetchCategoriasMap, processarPaginaFluxo, pausa, verificarExclusoes, processarFilaReconferencia, conferirLiquidados } from '@/lib/bling-server'
+import { getAdmin, ensureToken, fetchCategoriasMap, processarPaginaFluxo, pausa, verificarExclusoes, processarFilaReconferencia, conferirLiquidados, coletarDiagnostico } from '@/lib/bling-server'
 import {
   ordemRodizio, diaDoAno, janelaCron, CRON_LIMITE_PAGINA, CRON_TETO_MS,
-  acaoCronLiquidados, novaRodadaLiquidados, resumoEstadoLiquidados,
+  acaoCronLiquidados, novaRodadaLiquidados, resumoEstadoLiquidados, pendentesDiagnostico,
 } from '@/lib/bling-reconferencia'
 
 // ─── Cron diário: sincroniza o fluxo em segundo plano ───────────────────────
@@ -69,6 +69,14 @@ export async function GET(request) {
       integ = await ensureToken(admin, raw)
       const categoriasMap = await fetchCategoriasMap(integ)
       const nomesContato = { ...(integ.contatos_cache || {}) }
+
+      // Diagnóstico de borderôs (item 4): só quando há pedidos pendentes, com
+      // no máximo 40% da fatia — o resto da entidade segue normal.
+      if (pendentesDiagnostico(integ.diagnostico_bling).length) {
+        try {
+          r.diagnostico = await coletarDiagnostico(admin, integ, { prazoMs: Math.min(10000, Math.floor(janela * 0.4)) })
+        } catch (e) { r.diagnostico = { erro: String(e.message || e) } }
+      }
 
       while (Date.now() < fimListagem - 3000 && Date.now() - inicioGlobal < CRON_TETO_MS) {
         const { recurso, tipoFluxo } = FASES[fase] || FASES[0]

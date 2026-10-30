@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { proximoCursor, cursorDePartida, cursorParaSalvar } from '@/lib/bling-cursor'
-import { verificarExclusoes, titulosEmAbertoDoBling, processarFilaReconferencia, conferirLiquidados } from '@/lib/bling-server'
+import { verificarExclusoes, titulosEmAbertoDoBling, processarFilaReconferencia, conferirLiquidados, coletarDiagnostico } from '@/lib/bling-server'
 import { getAuthProfile, ensureToken, fetchContas, fetchCategoriasMap, montarRegistrosFluxo } from '@/lib/bling-server'
 import {
   idsDaPagina, varreduraRecomecou, vistosAtualizados, montarFila,
@@ -58,7 +58,7 @@ export async function POST(request) {
   const {
     integracao_id, modulo = 'fluxo', fase: faseReq, pagina: pagReq, janela: janReq, diag = false,
     limpar_origem_arquivo = false, escopo = 'incremental', retomar = false,
-    reconferir = false, conferir_liquidados = false,
+    reconferir = false, conferir_liquidados = false, coletar_diagnostico = false,
     data_inicio = '2023-01-01',
     data_fim = new Date().toISOString().split('T')[0],
   } = await request.json()
@@ -96,6 +96,22 @@ export async function POST(request) {
       return NextResponse.json({ reconferencia, reconferir_pendentes: restante.length, hasMore: false })
     } catch (e) {
       console.error('Bling reconferência:', e)
+      return NextResponse.json({ error: String(e.message || e) }, { status: 502 })
+    }
+  }
+
+  // ── MODO DIAGNÓSTICO DE BORDERÔS ──────────────────────────────────────
+  // Coleta de evidência para o item 4: detalhe e todos os borderôs dos títulos
+  // pedidos em integracoes.diagnostico_bling. Só leitura no Bling; nunca grava
+  // em fluxo_caixa. Ver coletarDiagnostico em lib/bling-server.js.
+  if (coletar_diagnostico) {
+    if (modulo !== 'fluxo') return NextResponse.json({ error: 'Diagnóstico só existe no Fluxo' }, { status: 400 })
+    try {
+      integ = await ensureToken(admin, integ)
+      const diagnostico = await coletarDiagnostico(admin, integ, { prazoMs: 40000 - (Date.now() - T0) })
+      return NextResponse.json({ diagnostico, hasMore: false })
+    } catch (e) {
+      console.error('Bling diagnóstico de borderôs:', e)
       return NextResponse.json({ error: String(e.message || e) }, { status: 502 })
     }
   }

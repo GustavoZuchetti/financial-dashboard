@@ -214,6 +214,19 @@ título confirmado e completo sai da fila como conferido.
 JB e FACE). Os parciais daqui viram sempre candidatos e são conferidos pelo id — custo de
 poucas consultas por rodada, sem efeito nos números.
 
+### Diagnóstico de borderôs — coleta de evidência
+
+Fonte: `coletarDiagnostico` em `lib/bling-server.js` e regras puras em
+`lib/bling-reconferencia.js` · trava em `test-diagnostico-bling`.
+
+Para decidir a regra do borderô (item 4, ADR-004) é preciso ver o JSON do Bling. Os
+títulos a examinar vão, por SQL, em `integracoes.diagnostico_bling.pedidos` (até 20). O
+cron — até 40% da fatia da entidade, só quando há pedidos — e a sincronização manual
+(`{ coletar_diagnostico: true }`, chamado pela interface depois da conferência dos
+liquidados) guardam em `.resultados` o detalhe do título e **todos** os borderôs dele,
+como o Bling os devolve. Só GET no Bling; **nunca grava em `fluxo_caixa`**. O que não
+couber no prazo fica `incompleto` e é retomado.
+
 ### Exclusões na origem — liquidados recentes
 
 `verificarExclusoes` confere a existência dos títulos **liquidados** nos últimos 90 dias

@@ -1,6 +1,6 @@
 # 09 — Testes
 
-**18 suítes · 297 testes · todas passando.** Verificado em 26/10/2026 com Node 24.20.0, na branch da correção da fila (título completo conferido). Em 23/10, na correção da paginação: 292. Em 20/10, na branch da conferência dos liquidados: 285. Em 16/10, na branch da reconferência: 17 suítes, 254 testes. Antes dela: 16 suítes, 232 testes, verificados no mesmo dia na `main` (1ffc050) com a correção de `test-bling-jwt` abaixo. `npm run build` compila (36 páginas) e `no-undef` está limpo. Antes da correção, `test-bling-jwt` reprovava 1 de 12 — ver "Recortar função por limite" mais adiante.
+**19 suítes · 309 testes · todas passando.** Verificado em 30/10/2026 com Node 24.20.0, na branch do diagnóstico de borderôs. Em 26/10, na correção da fila: 18 suítes, 297. Em 23/10, na correção da paginação: 292. Em 20/10, na branch da conferência dos liquidados: 285. Em 16/10, na branch da reconferência: 17 suítes, 254 testes. Antes dela: 16 suítes, 232 testes, verificados no mesmo dia na `main` (1ffc050) com a correção de `test-bling-jwt` abaixo. `npm run build` compila (36 páginas) e `no-undef` está limpo. Antes da correção, `test-bling-jwt` reprovava 1 de 12 — ver "Recortar função por limite" mais adiante.
 
 ```bash
 for t in scripts/test-*.mjs; do node "$t"; done
@@ -42,6 +42,7 @@ Um `[TRAVA]` falhando não é teste a ajustar — é defeito a corrigir.
 | `test-selecao-entidade` | 20 | Contrato de gravação da seleção; filtro de chaves do hook; logo nas telas de acesso | PRs #27, #28 |
 | `test-escopo-entidade` | 10 | Toda tela reage à troca — **inclusive entre seleções múltiplas**; só a lib grava a seleção | PRs #19, #27, #28 |
 | `test-fonte-unica-dre` | 2 | `calcDRE` definida só em `lib/dre-calc.js`; toda tela que a chama a importa de lá | T1 |
+| `test-diagnostico-bling` | 12 | Coleta de borderôs: só GET no Bling, nunca `fluxo_caixa` (teste com Bling e banco simulados); todos os borderôs; prazo; teto de 20; guardas no cron, na rota e na interface | 30/10 |
 | `test-reconferencia` | 29 | Título em aberto fora da listagem vai para a fila, do mais antigo; falha transitória nunca remove; teto de remoções; título confirmado e completo sai da fila; cron só com `CRON_SECRET`, com prazo e rodízio | 16/10, 26/10 |
 | `test-conferencia-liquidados` | 38 | Pago que a listagem filtrada não devolveu é candidato; margem do borderô; trava de 5%; fase só termina com página vazia (ou repetida), 30 por página, teto de páginas; diagnóstico na suspensão; retomada e rodízio da rodada | 20/10, 23/10 |
 

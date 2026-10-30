@@ -176,6 +176,28 @@ select e.nome, jsonb_array_length(coalesce(i.reconferir, '[]'::jsonb)) as na_fil
 Remoções feitas pela fila ficam em `audit_logs` com `changed_by_email =
 'sistema:reconferencia'` e o registro completo em `old_data` — é de lá que se restaura.
 
+### Coletar o JSON de borderôs de um título
+
+Para examinar como o Bling registrou o pagamento de um título (data, borderôs, estornos,
+valor pago por título). Requer a migração `20261030_diagnostico_bling`.
+
+```sql
+-- pedir (até 20 doc_refs por entidade)
+update public.integracoes
+   set diagnostico_bling = jsonb_build_object('pedidos', jsonb_build_array('bling:saida:ID1', 'bling:saida:ID2'))
+ where empresa_id = '<empresa>';
+
+-- acompanhar
+select e.nome, jsonb_array_length(i.diagnostico_bling->'pedidos') pedidos,
+       (select count(*) from jsonb_object_keys(coalesce(i.diagnostico_bling->'resultados', '{}'::jsonb))) coletados
+  from public.integracoes i join public.empresas e on e.id = i.empresa_id;
+
+-- depois da análise: esvaziar (o JSON bruto traz dados de contato)
+update public.integracoes set diagnostico_bling = null where empresa_id = '<empresa>';
+```
+
+A coleta roda no cron do dia seguinte ou na próxima sincronização manual.
+
 ### Pago no sistema que não existe mais no Bling
 
 Sintoma: as saídas ou entradas de um mês ficam **acima** do relatório de pagamentos do

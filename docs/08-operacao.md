@@ -176,6 +176,23 @@ select e.nome, jsonb_array_length(coalesce(i.reconferir, '[]'::jsonb)) as na_fil
 Remoções feitas pela fila ficam em `audit_logs` com `changed_by_email =
 'sistema:reconferencia'` e o registro completo em `old_data` — é de lá que se restaura.
 
+### Reprocessar a liquidação dos pagos (ADR-012)
+
+Depois de mudar a regra de liquidação, os pagos gravados pela regra antiga ficam
+incompletos (`regra_liquidacao < 2`) e são relidos. Para fazer de uma vez: Configurações ›
+Integrações › **Reprocessar pagos de 2026**, uma entidade por vez (JAM → JB → FACE). A
+FACE leva cerca de 40 minutos; o que não couber continua na próxima execução.
+
+```sql
+select e.nome, f.regra_liquidacao, f.liquidacoes->>'confianca' confianca, count(*)
+  from public.fluxo_caixa f join public.empresas e on e.id = f.empresa_id
+ where f.status in ('pago','parcial') and f.data_liquidacao >= '2026-01-01' and f.doc_ref like 'bling:%'
+ group by 1, 2, 3 order by 1, 2, 3;
+```
+
+`fallback` com `motivo` em `liquidacoes` = valor do título por não reconhecer o item na
+baixa agrupada, ou principal divergente — conferir uma amostra no Bling.
+
 ### Coletar o JSON de borderôs de um título
 
 Para examinar como o Bling registrou o pagamento de um título (data, borderôs, estornos,

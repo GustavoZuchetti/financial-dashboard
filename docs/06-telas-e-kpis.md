@@ -162,8 +162,8 @@ Regime **C**. Consolidação por R9.1: numeradores e denominadores somados antes
 | Ciclo Operacional | PME + PMR |
 | Ciclo Financeiro | Ciclo Operacional − PMP |
 
-⚠️ Usa valor do título para `pago`, não o borderô. Hoje converge pela R3.1, mas é base
-divergente. Ver [11](11-pendencias.md).
+⚠️ Usa valor do título para `pago`, não o liquidado. Desde a ADR-012 o liquidado inclui
+juros: a diferença entre os dois são os juros. Ver T4 em [11](11-pendencias.md).
 
 ---
 

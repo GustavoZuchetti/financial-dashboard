@@ -227,6 +227,9 @@ liquidados) guardam em `.resultados` o detalhe do título e **todos** os border�
 como o Bling os devolve. Só GET no Bling; **nunca grava em `fluxo_caixa`**. O que não
 couber no prazo fica `incompleto` e é retomado.
 
+*Resultado (31/10–02/11):* a lista de borderôs vem do mais recente para o mais antigo,
+pagamento estornado sai dela e o item do título é reconhecível — base da ADR-012.
+
 ### Exclusões na origem — liquidados recentes
 
 `verificarExclusoes` confere a existência dos títulos **liquidados** nos últimos 90 dias
@@ -295,8 +298,10 @@ Busca detalhe e borderô de títulos sem data de liquidação. `maxDuration = 60
 ## Limitações conhecidas
 
 - **Listagem não traz data de liquidação** — exige detalhe e borderô, que custam chamada
-- **Borderô compartilhado não informa alocação por título** — ver R3.1 em
-  [04](04-regras-de-negocio.md)
+- **Borderô não traz o id do título** — o item do título na baixa agrupada é reconhecido
+  por `numeroDocumento` ou por contato e valor; sem isso vale o valor do título (R3.3 em
+  [04](04-regras-de-negocio.md))
+- **Título pago em parcelas** fica inteiro no mês do último pagamento (ADR-012)
 - **Categorias com 13 variantes de nome** para a mesma operação de transferência —
   cadastro no Bling, não corrigível pelo sistema
 - **`Accept: '1.0'`** no endpoint de token — versão antiga, mantida porque a documentação

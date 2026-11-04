@@ -45,6 +45,8 @@ convive com o valor principal e induz leitura somada.
 
 ## ADR-004 · Título quitado: liquidado igual ao valor do título
 
+> **Substituída pela [ADR-012](#adr-012--liquidação-pelos-borderôs-último-pagamento-e-valor-pago) em 03/11/2026.**
+
 **Contexto.** PR #16. O borderô do Bling é compartilhado entre títulos quitados pela
 mesma guia e não informa a alocação por título.
 
@@ -140,3 +142,30 @@ no mesmo PR da mudança.
 
 **Descartado.** Documento externo — desatualiza sem que ninguém perceba. A documentação
 anterior, de 02/07, afirmava timeout de 10 s quando as rotas já rodavam com 60 s.
+
+---
+
+## ADR-012 · Liquidação pelos borderôs: último pagamento e valor pago
+
+**Contexto.** A ADR-004 previa reabrir "se o JSON do borderô revelar alocação por título".
+O diagnóstico de 31/10–02/11 (9 títulos) mostrou: a lista `borderos` vem do mais recente
+para o mais antigo e o sistema lia o mais antigo; pagamento estornado sai da lista; cada
+borderô traz `pagamentos[]` com `valorPago`, `juros`, `acrescimo`, `desconto`,
+`tarifa`, `numeroDocumento` e `contato` — o item do título se reconhece mesmo na baixa
+agrupada. A conciliação das saídas da FACE mostrava datas no primeiro pagamento e
+R$ 1.294,47 de juros fora.
+
+**Decisão (03/11, Controller — opção A).** Data = pagamento mais recente; valor liquidado =
+soma do pago pelo título, com juros. Só quando todos os borderôs foram lidos, o item do
+título foi reconhecido em cada um e o principal bate com o esperado; senão, o valor
+esperado e o motivo. A lista de pagamentos fica em `fluxo_caixa.liquidacoes`.
+
+**Descartado.**
+- *Opção B — um lançamento por pagamento* — caixa exato contra o extrato em títulos pagos
+  em parcelas, mas não bate com o relatório do Bling e exige tabela nova e mudança em todas
+  as telas de caixa. Reavaliar medindo `liquidacoes` depois do reprocessamento
+- *Ratear a guia agrupada* — números que parecem exatos sem ser
+
+**Custo.** Título pago em parcelas fica inteiro no mês do último pagamento (ALEXANDRE:
+R$ 3 mil de março aparecem em abril). Mais chamadas ao Bling: um GET por borderô, com
+cache do borderô agrupado por chamada.

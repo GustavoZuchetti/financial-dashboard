@@ -24,7 +24,9 @@ Um registro por título do Bling. Alimentada pela sincronização.
 | `valor_liquidado` | numeric | valor efetivamente movimentado — ver § regra do liquidado |
 | `status` | text | `aberto` · `pago` · `parcial` · `cancelado` |
 | `data` | date | **vencimento** |
-| `data_liquidacao` | date | quando o dinheiro moveu — do borderô |
+| `data_liquidacao` | date | pagamento mais recente do título — do borderô (R3.1) |
+| `regra_liquidacao` | smallint | `2` = liquidação pelos borderôs (ADR-012); pago sem `2` é relido · `1` = borderô não lido — `20261103_liquidacao_borderos` |
+| `liquidacoes` | jsonb | `{ confianca, pagamentos: [{ bordero, data, valorPago, juros, acrescimo, desconto, tarifa }], motivo? }` — `20261103_liquidacao_borderos` |
 | `data_emissao` | date | |
 | `competencia` | date | |
 | `categoria` | text | nome da categoria no Bling — chave do De-Para |

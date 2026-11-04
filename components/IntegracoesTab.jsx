@@ -401,6 +401,11 @@ export default function IntegracoesTab({ empresas, showToast }) {
                         style={{ background: 'rgba(var(--fs-brand-rgb),0.10)', border: '1px solid rgba(var(--fs-brand-rgb),0.35)', borderRadius: 8, padding: '8px 14px', color: 'var(--fs-brand)', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: st.rodando ? 0.5 : 1 }}>
                         Reprocessar pagos desde 2023
                       </button>
+                      <button onClick={() => sincronizar(integ, 'fluxo', { escopo: 'historico', data_inicio: '2026-01-01' })} disabled={st.rodando}
+                        title="Relê os pagos e parciais de 2026 com a regra de liquidação pelos borderôs: data do último pagamento e valor pago com juros"
+                        style={{ background: 'rgba(var(--fs-brand-rgb),0.10)', border: '1px solid rgba(var(--fs-brand-rgb),0.35)', borderRadius: 8, padding: '8px 14px', color: 'var(--fs-brand)', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: st.rodando ? 0.5 : 1 }}>
+                        Reprocessar pagos de 2026
+                      </button>
                     </>
                   )}
                   {integ.modulo_dre_ativo && (

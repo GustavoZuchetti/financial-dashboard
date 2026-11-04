@@ -10,7 +10,8 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
-| 30/10 | — | **Item 4 e D6 investigados; diagnóstico de borderôs** — coleta de evidência pronta, sem efeito nos números |
+| 03/11 | — | **Liquidação pelos borderôs (ADR-012)** — data do último pagamento e valor pago com juros; substitui a ADR-004 |
+| 30/10 | #39 | **Item 4 e D6 investigados; diagnóstico de borderôs** — coleta de evidência pronta, sem efeito nos números |
 | 28/10 | — | **Remoções de 19/10 na FACE confirmadas pelo Controller** — FACESING (10) e ST HETTA (2) excluídas de propósito no Bling; nada a restaurar |
 | 27/10 | — | **Conferência dos liquidados fechada** — rodada da FACE concluída pelo cron; 4 pagamentos conferidos, nenhuma remoção |
 | 26/10 | #36 | **Fila: título confirmado e completo sai como conferido** — rodada da FACE presa em 4 pagamentos legítimos |
@@ -29,6 +30,9 @@ regras existem.
 | 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**03/11 · Liquidação pelos borderôs (ADR-012) · item 4**
+Diagnóstico coletado pelo cron de 31/10 a 02/11 (9 títulos, 0 incompletos). Achados: a lista `borderos` vem do mais recente para o mais antigo, e o sistema lia o mais antigo (FGTS 16/01 × 20/02; SANTANDER 16/01 × 03/02; ALEXANDRE, pago em quatro vezes, 24/03 × 16/04); estorno sai da lista; o item do título se reconhece na baixa agrupada por `numeroDocumento` ou contato e valor (Receita: 234,75 = 111,11 + 123,64 de juros). JULIANO `23648043162`: um único pagamento de R$ 22.000 em 14/09 — o parcial estornado não está na lista; com o título próprio de R$ 9.000 em 08/09, setembro tem R$ 31.000, como o sistema mostra. Controller escolheu a opção A. Implementado em `liquidacaoDoTitulo`/`liquidarTitulo` (sincronização, cron e enriquecimento, que repetia o mesmo erro); `fetchBordero`, que somava a guia inteira, removido; colunas `regra_liquidacao` e `liquidacoes`; botão "Reprocessar pagos de 2026". 19 suítes, 311 testes; 43 sabotagens (10 novas), todas reprovadas pela trava certa; build compila.
 
 **30/10 · Item 4 (regra do borderô) e D6 (Bradesco) investigados**
 Só leitura no banco e no código. Achados e plano em [11](11-pendencias.md), D5 e D6. Item 4: a data vem do último borderô da lista (FGTS 16/01 aqui × 20/02 no Bling; ALEXANDRE 24/03 × 16/04), o liquidado dos FGTS parciais da JB alternou entre sincronizações e os juros ficam fora pela ADR-004. D6: o empréstimo Bradesco da JAM tem parcelas lançadas na JB e na FACE, uma faltando (jul) e duas duplicadas (set, out) — correção no Bling. Para o item 4, coleta de evidência (`diagnostico_bling`): o cron guarda o detalhe e todos os borderôs dos títulos pedidos, só GET no Bling, nunca `fluxo_caixa`. 19 suítes, 309 testes; 33 sabotagens (8 novas), todas reprovadas pela trava certa; build compila.

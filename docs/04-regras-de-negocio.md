@@ -54,30 +54,31 @@ autonomia real era de dias.
 
 ## 3. Valor liquidado
 
-Fonte: `montarRegistrosFluxo` em `lib/bling-server.js` · trava em `test-valor-liquidado`.
+Fonte: `liquidacaoDoTitulo` em `lib/bling-reconferencia.js`, aplicada por
+`liquidarTitulo` em `lib/bling-server.js` (sincronização, cron e enriquecimento) ·
+trava em `test-valor-liquidado` · [12 § ADR-012](12-decisoes.md).
 
-**R3.1 — Título integralmente pago tem `valor_liquidado` igual ao valor do título.**
-Nenhum borderô pode reduzi-lo.
+**R3.1 — Data de liquidação é a do pagamento MAIS RECENTE do título.** O sistema lê
+**todos** os borderôs. A lista do Bling vem do mais recente para o mais antigo; ler
+`borderos[length-1]` dava o primeiro pagamento.
 
-*Incidente:* PR #16 — dois cenários reais:
+**R3.2 — Valor liquidado é a soma do que foi pago pelo título, com juros, multa e
+acréscimos** — o "Valor pago" do relatório do Bling. Na baixa agrupada, o item do título
+é reconhecido pelo `numeroDocumento` ou pelo contato e valor; só vale se o principal
+pago bate com o esperado (valor do título, ou valor − saldo no parcial).
 
-- **Borderô compartilhado.** Uma guia única quita vários títulos (parcelamentos da
-  Receita Federal). O borderô traz o valor da guia inteira; atribuí-lo a cada título
-  replicava o mesmo número. Em 31/07/2026: nove títulos com `−1.553,63` idênticos,
-  onde o Bling tinha dezoito valores distintos.
-- **Múltiplos borderôs com estorno.** Retiradas parciais estornadas e reclassificadas
-  como empréstimo, título quitado depois. Caso ALEXANDRE FRANCISCO, título `1414/11`:
-  valor R$ 22.000, gravado como R$ 5.000 — soma de três retiradas estornadas.
-  Somar todos os borderôs também erraria: daria R$ 27.000.
+**R3.3 — Sem identificação segura, vale o valor esperado** (a regra antiga) e o motivo fica
+em `liquidacoes`. Uma guia inteira nunca vira o liquidado de um título.
 
-**R3.2 — O borderô define o valor apenas quando o título está parcial e o saldo não
-informou**, e ainda assim limitado ao valor do título.
+**R3.4 — Pago lido pela regra antiga é relido.** `regra_liquidacao < 2` torna o título
+incompleto; a sincronização o detalha de novo. Borderô não lido grava regra 1.
 
-**R3.3 — A data continua vindo do borderô em todos os casos.**
-
-**Custo conhecido:** juros, multa e desconto embutidos no pagamento deixam de aparecer
-por título. Pelos extratos, R$ 11.074,91 em 143 títulos de todo o histórico (~0,03% do
-movimentado). Decisão documentada em [12 § ADR-004](12-decisoes.md).
+*Incidentes:*
+- PR #16 — guia agrupada da Receita replicada em nove títulos (−1.553,63); ALEXANDRE
+  `1414/11` gravado como R$ 5.000. Levou à ADR-004 (valor do título), agora substituída.
+- 03/11/2026 — conciliação contra o relatório do Bling: datas no primeiro pagamento (FGTS
+  16/01 × 20/02; ALEXANDRE 24/03 × 16/04) e R$ 1.294,47 de juros fora nas saídas da FACE
+  de jan–set. Evidência coletada com o diagnóstico de borderôs.
 
 ---
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAuthProfile, ensureToken, fetchDetalhe, fetchCategoriasMap, fetchContatoNome, fetchBorderoData, chunk, pausa, blingGet } from '@/lib/bling-server'
+import { getAuthProfile, ensureToken, fetchDetalhe, fetchCategoriasMap, fetchContatoNome, liquidarTitulo, chunk, pausa, blingGet } from '@/lib/bling-server'
 
 // POST /api/integracoes/bling/enrich — enriquecimento retomável dos títulos
 // sincronizados: nome do contato, categoria, competência, data de liquidação
@@ -59,6 +59,7 @@ export async function POST(request) {
     // Cache PERSISTENTE de nomes (sobrevive entre chamadas — grande ganho de
     // velocidade: fornecedores recorrentes só são consultados uma vez)
     const nomesCache = { ...(integ.contatos_cache || {}) }
+    const cacheBorderos = new Map()   // borderô agrupado lido uma vez por chamada
     let escopoContatosOk = true
     let processados = 0, erros = 0, orfaos = 0
     const amostrasErro = []
@@ -130,10 +131,15 @@ export async function POST(request) {
             upd.valor_liquidado = Number((valor - saldo).toFixed(2))
           }
 
-          // Data de liquidação (borderô) — apenas para pagos sem data
-          if (row.status === 'pago' && Array.isArray(det?.borderos) && det.borderos.length) {
-            const dt = await fetchBorderoData(integ, det.borderos[det.borderos.length - 1])
-            if (dt && dt !== '0000-00-00') upd.data_liquidacao = dt
+          // Liquidação pelos borderôs (regra 2) — a mesma da sincronização:
+          // pagamento mais recente e valor pago com juros. Ver liquidarTitulo.
+          const stLiq = upd.status || row.status
+          if (['pago', 'parcial'].includes(stLiq)) {
+            const lq = await liquidarTitulo(integ, det, stLiq, cacheBorderos)
+            if (lq.data) upd.data_liquidacao = lq.data
+            if (lq.valor_liquidado != null) upd.valor_liquidado = lq.valor_liquidado
+            upd.regra_liquidacao = lq.regra
+            upd.liquidacoes = { confianca: lq.confianca, pagamentos: lq.pagamentos, ...(lq.motivo ? { motivo: lq.motivo } : {}) }
           }
 
           if (Object.keys(upd).length) {

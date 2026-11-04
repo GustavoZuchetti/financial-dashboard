@@ -1,6 +1,6 @@
 # 09 — Testes
 
-**19 suítes · 309 testes · todas passando.** Verificado em 30/10/2026 com Node 24.20.0, na branch do diagnóstico de borderôs. Em 26/10, na correção da fila: 18 suítes, 297. Em 23/10, na correção da paginação: 292. Em 20/10, na branch da conferência dos liquidados: 285. Em 16/10, na branch da reconferência: 17 suítes, 254 testes. Antes dela: 16 suítes, 232 testes, verificados no mesmo dia na `main` (1ffc050) com a correção de `test-bling-jwt` abaixo. `npm run build` compila (36 páginas) e `no-undef` está limpo. Antes da correção, `test-bling-jwt` reprovava 1 de 12 — ver "Recortar função por limite" mais adiante.
+**19 suítes · 311 testes · todas passando.** Verificado em 03/11/2026 com Node 24.20.0, na branch da liquidação pelos borderôs (ADR-012). Em 30/10, no diagnóstico de borderôs: 309. Em 26/10, na correção da fila: 18 suítes, 297. Em 23/10, na correção da paginação: 292. Em 20/10, na branch da conferência dos liquidados: 285. Em 16/10, na branch da reconferência: 17 suítes, 254 testes. Antes dela: 16 suítes, 232 testes, verificados no mesmo dia na `main` (1ffc050) com a correção de `test-bling-jwt` abaixo. `npm run build` compila (36 páginas) e `no-undef` está limpo. Antes da correção, `test-bling-jwt` reprovava 1 de 12 — ver "Recortar função por limite" mais adiante.
 
 ```bash
 for t in scripts/test-*.mjs; do node "$t"; done
@@ -28,7 +28,7 @@ Um `[TRAVA]` falhando não é teste a ajustar — é defeito a corrigir.
 |---|---:|---|---|
 | `test-saldo-abertura` | 32 | Saldo por âncora, série diária, consolidação | PRs #2–#4 |
 | `test-fluxo-agregados` | 19 | Realizado × projetado, base do borderô, amarração do Excel | PRs #5, #12, #14 |
-| `test-valor-liquidado` | 19 | Liquidado de título quitado, coerência que força reprocessamento | PR #16 |
+| `test-valor-liquidado` | 21 | Liquidação pelos borderôs (ADR-012): pagamento mais recente, juros no valor, item da baixa agrupada, guia inteira nunca no título, regra 1 em leitura incompleta, releitura dos pagos da regra antiga; `montarRegistrosFluxo` com Bling e banco simulados | PR #16, 03/11 |
 | `test-bling-cursor` | 17 | Posição de varredura persistente | PR #10 |
 | `test-natureza-categoria` | 17 | Exclusão de transferências dos KPIs | PRs #23, #24 |
 | `test-importacao-mapeamento` | 15 | Bloqueio de importação sem De-Para | PR #18 |

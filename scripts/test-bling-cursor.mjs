@@ -152,6 +152,29 @@ teste('[REGRESSÃO] sem persistência, a cobertura trava em 3.000 títulos', () 
   if (vistos >= 5407) throw new Error('o defeito não foi reproduzido')
 })
 
+// ─── Fim de fase no histórico (04/11/2026) ───────────────────────────────────
+// "Reprocessar pagos de 2026" na JB: a 3ª página de pagamentos veio com 29 de
+// 30 itens e a fase acabou ali — 89 de 784 saídas relidas.
+teste('[TRAVA] histórico: página CURTA não encerra a fase (caso JB, 29 de 30)', () => {
+  eq(C.paginaContinua({ escopo: 'historico', recebidos: 29, limite: 30, pagina: 3 }), true)
+})
+teste('[TRAVA] histórico: só página vazia encerra a fase', () => {
+  eq(C.paginaContinua({ escopo: 'historico', recebidos: 0, limite: 30, pagina: 27 }), false)
+})
+teste('[TRAVA] histórico: teto de páginas contra paginação em laço', () => {
+  eq(C.paginaContinua({ escopo: 'historico', recebidos: 30, limite: 30, pagina: C.MAX_PAGINAS_FASE_HISTORICO }), false)
+})
+teste('incremental mantém o critério de página cheia', () => {
+  eq([C.paginaContinua({ escopo: 'incremental', recebidos: 30, limite: 30 }),
+      C.paginaContinua({ escopo: 'incremental', recebidos: 29, limite: 30 })], [true, false])
+})
+teste('[TRAVA] a rota decide a página pela regra única', () => {
+  const src = readFileSync(join(raiz, 'app', 'api', 'integracoes', 'bling', 'sync', 'route.js'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  if (!/const cheia = paginaContinua\(\{ escopo: escopo === 'historico'/.test(src)) throw new Error('rota fora de paginaContinua')
+  if (/const cheia = itens\.length >= LIMITE/.test(src)) throw new Error('critério antigo de página cheia voltou')
+})
+
 // ─── Execução ────────────────────────────────────────────────────────────────
 for (const [n, f] of testes) {
   try { await f(); ok++; console.log(`  ok   ${n}`) }

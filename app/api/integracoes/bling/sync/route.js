@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { proximoCursor, cursorDePartida, cursorParaSalvar } from '@/lib/bling-cursor'
+import { proximoCursor, cursorDePartida, cursorParaSalvar, paginaContinua } from '@/lib/bling-cursor'
 import { verificarExclusoes, titulosEmAbertoDoBling, processarFilaReconferencia, conferirLiquidados, coletarDiagnostico } from '@/lib/bling-server'
 import { getAuthProfile, ensureToken, fetchContas, fetchCategoriasMap, montarRegistrosFluxo } from '@/lib/bling-server'
 import {
@@ -273,7 +273,9 @@ export async function POST(request) {
     }
 
     // Avanço do cursor — lógica única em lib/bling-cursor.js
-    const cheia = itens.length >= LIMITE
+    // Histórico: fase termina só com página vazia (Bling devolve páginas curtas
+    // no meio da listagem por data de pagamento). Ver paginaContinua.
+    const cheia = paginaContinua({ escopo: escopo === 'historico' && modulo === 'fluxo' ? 'historico' : 'incremental', recebidos: itens.length, limite: LIMITE, pagina })
     const next = proximoCursor({
       fase, pagina, janela, paginaCheia: cheia,
       totalFases: fasesAtivas.length,

@@ -10,7 +10,9 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
-| 03/11 | — | **Liquidação pelos borderôs (ADR-012)** — data do último pagamento e valor pago com juros; substitui a ADR-004 |
+| 04/11 | — | **Reprocessamento: fase só termina com página vazia** — JB parou na 3ª página de pagamentos (29 de 30 itens) |
+| 04/11 | #40 | **ADR-012 em produção; JAM reprocessada** — 51/51 com leitura completa, só juros mudaram (+R$ 64,29) |
+| 03/11 | #40 | **Liquidação pelos borderôs (ADR-012)** — data do último pagamento e valor pago com juros; substitui a ADR-004 |
 | 30/10 | #39 | **Item 4 e D6 investigados; diagnóstico de borderôs** — coleta de evidência pronta, sem efeito nos números |
 | 28/10 | — | **Remoções de 19/10 na FACE confirmadas pelo Controller** — FACESING (10) e ST HETTA (2) excluídas de propósito no Bling; nada a restaurar |
 | 27/10 | — | **Conferência dos liquidados fechada** — rodada da FACE concluída pelo cron; 4 pagamentos conferidos, nenhuma remoção |
@@ -30,6 +32,9 @@ regras existem.
 | 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**04/11 · Reprocessamento da liquidação: JAM concluída, JB interrompida**
+Migração `20261103_liquidacao_borderos` aplicada, PR #40 mergeado (`e977498`), deploy READY. **JAM:** 51 de 51 pagos de 2026 na regra 2, todos com leitura completa; nenhuma data mudou; dois títulos ganharam juros — JULIANO BASÍLIO GONÇALVES 359,90 → 373,68 (abril) e Prefeitura de Votuporanga 652,44 → 702,95 (julho). **JB:** 224 de 919 — as 135 entradas e só 89 saídas. A 3ª página da listagem de pagamentos veio com 29 de 30 itens e o histórico encerrou a fase: o mesmo comportamento do Bling que suspendeu a conferência dos liquidados em 23/10. Nada gravado errado; 695 pagos seguiam na regra antiga. **Correção:** `paginaContinua` em `lib/bling-cursor.js` — no histórico a fase só termina com página vazia, teto de 400 páginas; a incremental mantém o critério de página cheia. 19 suítes, 316 testes; 46 sabotagens (3 novas), todas reprovadas pela trava certa; build compila.
 
 **03/11 · Liquidação pelos borderôs (ADR-012) · item 4**
 Diagnóstico coletado pelo cron de 31/10 a 02/11 (9 títulos, 0 incompletos). Achados: a lista `borderos` vem do mais recente para o mais antigo, e o sistema lia o mais antigo (FGTS 16/01 × 20/02; SANTANDER 16/01 × 03/02; ALEXANDRE, pago em quatro vezes, 24/03 × 16/04); estorno sai da lista; o item do título se reconhece na baixa agrupada por `numeroDocumento` ou contato e valor (Receita: 234,75 = 111,11 + 123,64 de juros). JULIANO `23648043162`: um único pagamento de R$ 22.000 em 14/09 — o parcial estornado não está na lista; com o título próprio de R$ 9.000 em 08/09, setembro tem R$ 31.000, como o sistema mostra. Controller escolheu a opção A. Implementado em `liquidacaoDoTitulo`/`liquidarTitulo` (sincronização, cron e enriquecimento, que repetia o mesmo erro); `fetchBordero`, que somava a guia inteira, removido; colunas `regra_liquidacao` e `liquidacoes`; botão "Reprocessar pagos de 2026". 19 suítes, 311 testes; 43 sabotagens (10 novas), todas reprovadas pela trava certa; build compila.

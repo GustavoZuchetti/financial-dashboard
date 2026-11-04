@@ -178,6 +178,10 @@ Remoções feitas pela fila ficam em `audit_logs` com `changed_by_email =
 
 ### Reprocessar a liquidação dos pagos (ADR-012)
 
+⚠️ Antes de 04/11, o reprocessamento parava a fase na primeira página curta do Bling (JB: 89
+de 784 saídas). Se `regra_liquidacao` ficar abaixo do total depois de uma execução, rodar
+de novo — e conferir que a versão em produção é a do fim de fase só com página vazia.
+
 Depois de mudar a regra de liquidação, os pagos gravados pela regra antiga ficam
 incompletos (`regra_liquidacao < 2`) e são relidos. Para fazer de uma vez: Configurações ›
 Integrações › **Reprocessar pagos de 2026**, uma entidade por vez (JAM → JB → FACE). A

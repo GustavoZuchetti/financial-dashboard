@@ -75,7 +75,9 @@ pago com juros. O caso JULIANO de setembro foi esclarecido — o Bling registra 
 14/09 e R$ 9.000 em 08/09 em títulos distintos: nada a corrigir. Falta, com aprovação:
 
 1. Aplicar `20261103_liquidacao_borderos` e mergear
-2. **Reprocessar pagos de 2026** — JAM → JB → FACE, com KPIs antes e depois
+2. **Reprocessar pagos de 2026** — JAM → JB → FACE, com KPIs antes e depois. JAM feita
+   (04/11, 51/51). JB parcial (224/919) até o fim de fase só com página vazia entrar em
+   produção; depois rodar de novo
 3. Conciliar a FACE contra o xls do Bling: esperado diferença zero de jan a set
 4. Esvaziar `integracoes.diagnostico_bling`
 5. Medir em `liquidacoes` quanto pesam os títulos pagos em parcelas (base para a opção B)

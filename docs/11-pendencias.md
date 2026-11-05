@@ -1,6 +1,6 @@
 # 11 — Pendências
 
-> Estado em 30/10/2026 (P0, P1, T1, T7, T8, T10, a reconferência com cron e a conferência dos liquidados fechados; D5 e D6 investigados). Ordenado por gravidade dentro de cada seção.
+> Estado em 05/11/2026 (P0, P1, T1, T7, T8, T10, a reconferência com cron, a conferência dos liquidados e o item 4 fechados; D6 com o Controller). Ordenado por gravidade dentro de cada seção.
 > Ao fechar um item, mova-o para [10 — Histórico](10-historico.md) com a data.
 
 ---
@@ -68,22 +68,21 @@ Cadastro na origem. Não corrigível pelo sistema; cada variante tem conta próp
 
 ---
 
-### D5 — Liquidação pelos borderôs: aplicar e reprocessar 2026 — item 4
+### D5 — Liquidação pelos borderôs: resíduos depois do reprocessamento
 
-Regra decidida (ADR-012, opção A) e implementada: data do pagamento mais recente e valor
-pago com juros. O caso JULIANO de setembro foi esclarecido — o Bling registra R$ 22.000 em
-14/09 e R$ 9.000 em 08/09 em títulos distintos: nada a corrigir. Falta, com aprovação:
+O item 4 foi fechado em 05/11 (ver [10](10-historico.md)). Restam:
 
-1. Aplicar `20261103_liquidacao_borderos` e mergear
-2. **Reprocessar pagos de 2026** — JAM → JB → FACE, com KPIs antes e depois. JAM feita
-   (04/11, 51/51). JB parcial (224/919) até o fim de fase só com página vazia entrar em
-   produção; depois rodar de novo
-3. Conciliar a FACE contra o xls do Bling: esperado diferença zero de jan a set
-4. Esvaziar `integracoes.diagnostico_bling`
-5. Medir em `liquidacoes` quanto pesam os títulos pagos em parcelas (base para a opção B)
-
-⚠️ Muda números de jan–abr já reportados (FACE: ~R$ 10,5 mil saem de janeiro, ~R$ 18 mil
-de março) e acrescenta os juros.
+- **Conferir no Bling (Controller), na JB:** LOURENS SOLUTIONS `23638347139` — R$ 6.500
+  passaram de 03/12/2025 para 17/03/2026 (último pagamento); PPRO ADOBE `24173118745` —
+  R$ 322,51 pagos num título de R$ 165,00 (acréscimo de R$ 157,51: câmbio ou IOF?)
+- **Baixa agrupada não identificada:** 5 títulos da FACE ficaram no valor do título
+  (`confianca = fallback`) — R$ 157,62 de juros fora (mar: SANTANDER `20885879599`,
+  R$ 44,88; mai: 3 da Receita de 28/05, R$ 112,74). Melhoria possível: em título com vários
+  borderôs, reconhecer o item do borderô agrupado pelo contato e o valor que falta
+- **Parciais fora do reprocessamento:** a listagem de pagos parciais do Bling volta vazia;
+  os 9 parciais de 2026 (8 JB, 1 FACE) entram na regra 2 pela sincronização incremental
+- **Medir em `liquidacoes`** quanto pesam os títulos pagos em parcelas (base para a opção
+  B da ADR-012)
 
 ### D6 — Empréstimo Bradesco da JAM lançado em três entidades
 

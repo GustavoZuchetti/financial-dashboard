@@ -10,7 +10,8 @@ regras existem.
 
 | Data | PR | Entrega |
 |---|---|---|
-| 04/11 | — | **Reprocessamento: fase só termina com página vazia** — JB parou na 3ª página de pagamentos (29 de 30 itens) |
+| 05/11 | — | **Item 4 fechado — saídas da FACE de jan–set conciliadas com o Bling** — 7 de 9 meses ao centavo; resíduo de R$ 157,62 em juros |
+| 04/11 | #41 | **Reprocessamento: fase só termina com página vazia** — JB parou na 3ª página de pagamentos (29 de 30 itens) |
 | 04/11 | #40 | **ADR-012 em produção; JAM reprocessada** — 51/51 com leitura completa, só juros mudaram (+R$ 64,29) |
 | 03/11 | #40 | **Liquidação pelos borderôs (ADR-012)** — data do último pagamento e valor pago com juros; substitui a ADR-004 |
 | 30/10 | #39 | **Item 4 e D6 investigados; diagnóstico de borderôs** — coleta de evidência pronta, sem efeito nos números |
@@ -32,6 +33,28 @@ regras existem.
 | 15/10 | #29 | **Dívida técnica T1, T7 e T8** — `calcDRE` única, PRs obsoletos fechados, código morto removido |
 
 ### Detalhe de outubro
+
+**04–05/11 · Item 4 fechado: reprocessamento de 2026 e conciliação**
+PR #41 em produção (`a670e10`). "Reprocessar pagos de 2026" — pagos e parciais de 2026 na regra 2:
+
+| Entidade | Regra 2 | Leitura | Efeito |
+|---|---|---|---|
+| JAM | 51/51 | todas completas | só juros (+R$ 64,29) |
+| JB | 921/929 | todas completas | juros (Prefeitura, Unimed); LOURENS `23638347139` R$ 6.500 de 03/12/2025 para 17/03/2026; PPRO ADOBE `24173118745` 165,00 → 322,51 |
+| FACE | 2.280/2.281 | 2.275 completas, 5 no valor do título | datas e juros |
+
+Os 9 parciais que faltam não vêm na listagem de pagos parciais do Bling (volta vazia) e entram pela sincronização incremental. A primeira tentativa na FACE não chegou ao servidor (nenhuma chamada no log, nenhuma escrita); a segunda rodou.
+
+**Conciliação das saídas da FACE contra o relatório de pagamentos do Bling** (diferença sistema − Bling):
+
+| | jan | fev | mar | abr | mai | jun | jul | ago | set |
+|---|---|---|---|---|---|---|---|---|---|
+| antes | +10.484,77 | −6.951,67 | +18.238,70 | −22.000,00 | −119,74 | −267,16 | −184,41 | −228,01 | −266,95 |
+| depois | **0,00** | **0,00** | −44,88 | **0,00** | −112,74 | **0,00** | **0,00** | **0,00** | **0,00** |
+
+O resíduo são os juros de 5 títulos pagos em baixa agrupada cujo item a regra não reconheceu com segurança (SANTANDER `20885879599`; 3 da Receita de 28/05) — ficaram no valor do título, como desenhado. Os números de jan–abr já reportados mudaram (FACE, saídas: jan −10.484,77; fev +6.951,67; mar −18.283,58; abr +22.000,00). Outubro subiu por dados novos — 45 títulos novos e 39 pagos desde 26/10, a maior parte transferências entre contas da Facesign —, não pela regra.
+
+`integracoes.diagnostico_bling` esvaziado nas três entidades.
 
 **04/11 · Reprocessamento da liquidação: JAM concluída, JB interrompida**
 Migração `20261103_liquidacao_borderos` aplicada, PR #40 mergeado (`e977498`), deploy READY. **JAM:** 51 de 51 pagos de 2026 na regra 2, todos com leitura completa; nenhuma data mudou; dois títulos ganharam juros — JULIANO BASÍLIO GONÇALVES 359,90 → 373,68 (abril) e Prefeitura de Votuporanga 652,44 → 702,95 (julho). **JB:** 224 de 919 — as 135 entradas e só 89 saídas. A 3ª página da listagem de pagamentos veio com 29 de 30 itens e o histórico encerrou a fase: o mesmo comportamento do Bling que suspendeu a conferência dos liquidados em 23/10. Nada gravado errado; 695 pagos seguiam na regra antiga. **Correção:** `paginaContinua` em `lib/bling-cursor.js` — no histórico a fase só termina com página vazia, teto de 400 páginas; a incremental mantém o critério de página cheia. 19 suítes, 316 testes; 46 sabotagens (3 novas), todas reprovadas pela trava certa; build compila.
